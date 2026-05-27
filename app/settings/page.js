@@ -13,7 +13,12 @@ export default function SettingsPage() {
 
   const [showLogout, setShowLogout]     = useState(false)
   const [savingPeriod, setSavingPeriod] = useState(false)
-  const [periodDate, setPeriodDate]     = useState(profile?.pay_period_date || 25)
+  const [periodDate, setPeriodDate]     = useState(25)
+
+  // Sync periodDate ketika profile selesai load
+  useEffect(() => {
+    if (profile?.pay_period_date) setPeriodDate(profile.pay_period_date)
+  }, [profile?.pay_period_date])
   const [theme, setTheme]               = useState('auto')
 
   // Load theme from localStorage on mount
