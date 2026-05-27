@@ -20,13 +20,14 @@ export function DataProvider({ children }) {
 
   // Period filter
   const payPeriodDate = profile?.pay_period_date || 25
-  const periods = buildPeriods(payPeriodDate)
+  const overrides     = profile?.pay_period_overrides || {}
+  const periods       = buildPeriods(payPeriodDate, overrides)
   const [periodIdx, setPeriodIdx] = useState('')
 
   // Set period ke current saat profile loaded
   useEffect(() => {
     if (profile) {
-      const idx = getCurrentPeriodIndex(profile.pay_period_date || 25)
+      const idx = getCurrentPeriodIndex(profile.pay_period_date || 25, profile.pay_period_overrides || {})
       setPeriodIdx(String(idx))
     }
   }, [profile])
@@ -76,9 +77,9 @@ export function DataProvider({ children }) {
   }, [loadData])
 
   // Filtered data berdasarkan period
-  const filteredExpenses   = periodIdx !== '' ? filterByPeriod(expenses, periodIdx, payPeriodDate)   : expenses
-  const filteredIncome     = periodIdx !== '' ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate).map(r => ({ ...r })) : income
-  const filteredCashRecords = periodIdx !== '' ? filterByPeriod(cashRecords, periodIdx, payPeriodDate) : cashRecords
+  const filteredExpenses   = periodIdx !== '' ? filterByPeriod(expenses, periodIdx, payPeriodDate, overrides)   : expenses
+  const filteredIncome     = periodIdx !== '' ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate, overrides).map(r => ({ ...r })) : income
+  const filteredCashRecords = periodIdx !== '' ? filterByPeriod(cashRecords, periodIdx, payPeriodDate, overrides) : cashRecords
 
   // Summary untuk periode aktif
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
@@ -99,7 +100,7 @@ export function DataProvider({ children }) {
       summaryPeriode, summaryAll,
       loading, error, lastRefresh,
       periodIdx, setPeriodIdx,
-      periods, payPeriodDate,
+      periods, payPeriodDate, overrides,
       loadData, getUserName,
       setExpenses, setIncome, setCashRecords, setBudgetPlans,
     }}>
