@@ -14,20 +14,31 @@ export default function SettingsPage() {
   const [showLogout, setShowLogout]     = useState(false)
   const [savingPeriod, setSavingPeriod] = useState(false)
   const [periodDate, setPeriodDate]     = useState(profile?.pay_period_date || 25)
-  const [theme, setTheme]               = useState('dark')
+  const [theme, setTheme]               = useState('auto')
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('arvifund-theme') || 'dark'
+    const saved = localStorage.getItem('arvifund-theme') || 'auto'
     setTheme(saved)
-    document.documentElement.setAttribute('data-theme', saved)
+    applyTheme(saved)
   }, [])
 
-  function toggleTheme() {
-    const next = theme === 'dark' ? 'light' : 'dark'
+  function applyTheme(val) {
+    let actual
+    if (val === 'auto') {
+      actual = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    } else {
+      actual = val
+    }
+    document.documentElement.setAttribute('data-theme', actual)
+  }
+
+  function cycleTheme() {
+    const order = ['auto', 'dark', 'light']
+    const next = order[(order.indexOf(theme) + 1) % order.length]
     setTheme(next)
     localStorage.setItem('arvifund-theme', next)
-    document.documentElement.setAttribute('data-theme', next)
+    applyTheme(next)
   }
 
   async function handleLogout() {
@@ -64,7 +75,10 @@ export default function SettingsPage() {
     }
   }
 
+  const isAuto  = theme === 'auto'
   const isLight = theme === 'light'
+  const themeLabel = isAuto ? '🌗 Ikut Sistem' : isLight ? '☀️ Mode Terang' : '🌙 Mode Gelap'
+  const themeDesc  = isAuto ? 'Otomatis menyesuaikan pengaturan ponsel' : isLight ? 'Tampilan terang cocok untuk siang hari' : 'Tampilan gelap cocok untuk malam hari'
 
   return (
     <>
@@ -99,44 +113,27 @@ export default function SettingsPage() {
           <div className="section-title" style={{ marginBottom: 12 }}>Tampilan</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>
-                {isLight ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                {isLight ? 'Tampilan terang cocok untuk siang hari' : 'Tampilan gelap cocok untuk malam hari'}
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{themeLabel}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{themeDesc}</div>
             </div>
-            {/* Toggle Switch */}
-            <div
-              onClick={toggleTheme}
+            {/* 3-state button: auto → dark → light */}
+            <button
+              onClick={cycleTheme}
               style={{
-                width: 52, height: 28,
-                borderRadius: 14,
-                background: isLight ? 'var(--accent)' : 'var(--surface3)',
-                border: '1px solid var(--border2)',
-                position: 'relative',
+                padding: '6px 14px',
+                borderRadius: 20,
+                background: isAuto ? 'rgba(56,189,248,0.12)' : isLight ? 'rgba(245,158,11,0.12)' : 'rgba(148,163,184,0.1)',
+                border: `1px solid ${isAuto ? 'var(--accent)' : isLight ? 'var(--yellow)' : 'var(--border2)'}`,
+                color: isAuto ? 'var(--accent)' : isLight ? 'var(--yellow)' : 'var(--text2)',
+                fontWeight: 700,
+                fontSize: 13,
                 cursor: 'pointer',
-                transition: 'background 0.3s',
                 flexShrink: 0,
+                transition: 'all 0.2s',
               }}
             >
-              <div style={{
-                position: 'absolute',
-                top: 3,
-                left: isLight ? 26 : 3,
-                width: 20, height: 20,
-                borderRadius: '50%',
-                background: '#fff',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-                transition: 'left 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 11,
-              }}>
-                {isLight ? '☀️' : '🌙'}
-              </div>
-            </div>
+              {isAuto ? '🌗 Auto' : isLight ? '☀️ Terang' : '🌙 Gelap'}
+            </button>
           </div>
         </div>
 
