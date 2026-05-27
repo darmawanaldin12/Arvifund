@@ -17,7 +17,13 @@ export const metadata = {
 const themeScript = `
   (function() {
     try {
-      var t = localStorage.getItem('arvifund-theme') || 'dark';
+      var saved = localStorage.getItem('arvifund-theme');
+      var t;
+      if (!saved || saved === 'auto') {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } else {
+        t = saved;
+      }
       document.documentElement.setAttribute('data-theme', t);
     } catch(e) {}
   })();
