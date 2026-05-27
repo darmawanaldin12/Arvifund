@@ -13,12 +13,19 @@ export default function SettingsPage() {
 
   const [showLogout, setShowLogout]     = useState(false)
   const [savingPeriod, setSavingPeriod] = useState(false)
-  const [periodDate, setPeriodDate]     = useState(25)
+  const [periodDate, setPeriodDate]       = useState(25)
+  const [periodStartMonth, setPeriodStartMonth] = useState('')
+  const [periodStartYear, setPeriodStartYear]   = useState('')
 
-  // Sync periodDate ketika profile selesai load
+  // Sync dari profile setelah load
   useEffect(() => {
     if (profile?.pay_period_date) setPeriodDate(profile.pay_period_date)
-  }, [profile?.pay_period_date])
+    if (profile?.pay_period_start) {
+      const d = new Date(profile.pay_period_start)
+      setPeriodStartMonth(String(d.getMonth() + 1))
+      setPeriodStartYear(String(d.getFullYear()))
+    }
+  }, [profile?.pay_period_date, profile?.pay_period_start])
   const [theme, setTheme]               = useState('auto')
 
   // Load theme from localStorage on mount
@@ -54,12 +61,19 @@ export default function SettingsPage() {
   async function handleSavePeriod() {
     setSavingPeriod(true)
     try {
+      const tgl = parseInt(periodDate)
+      let pay_period_start = null
+      if (periodStartMonth && periodStartYear) {
+        const mm = String(periodStartMonth).padStart(2, '0')
+        const dd = String(tgl).padStart(2, '0')
+        pay_period_start = `${periodStartYear}-${mm}-${dd}`
+      }
       const { error } = await supabase
         .from('profiles')
-        .update({ pay_period_date: parseInt(periodDate) })
+        .update({ pay_period_date: tgl, pay_period_start })
         .eq('id', user?.id)
       if (error) throw error
-      showToast('✅ Tanggal gajian disimpan')
+      showToast('✅ Periode gajian disimpan')
       await loadData()
     } catch (err) {
       showToast('❌ Gagal: ' + err.message, 'error')
@@ -144,30 +158,42 @@ export default function SettingsPage() {
 
         {/* Tanggal Gajian */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 12 }}>Tanggal Gajian</div>
+          <div className="section-title" style={{ marginBottom: 12 }}>Periode Gajian</div>
           <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 12 }}>
-            Digunakan sebagai batas periode (tgl {periodDate} bulan ini — tgl {periodDate - 1} bulan depan)
+            Set tanggal mulai gajian pertama kali. Periode akan digenerate otomatis dari situ sampai sekarang.
           </p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <select
-              className="form-select"
-              value={periodDate}
-              onChange={e => setPeriodDate(e.target.value)}
-              style={{ flex: 1 }}
-            >
+          {/* Baris 1: Tanggal + Bulan + Tahun */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <select className="form-select" value={periodDate} onChange={e => setPeriodDate(e.target.value)} style={{ flex: 1 }}>
               {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                <option key={d} value={d}>Tanggal {d}</option>
+                <option key={d} value={d}>Tgl {d}</option>
               ))}
             </select>
-            <button
-              className="btn btn-primary"
-              onClick={handleSavePeriod}
-              disabled={savingPeriod}
-              style={{ flexShrink: 0 }}
-            >
-              {savingPeriod ? 'Menyimpan...' : 'Simpan'}
-            </button>
+            <select className="form-select" value={periodStartMonth} onChange={e => setPeriodStartMonth(e.target.value)} style={{ flex: 1.5 }}>
+              <option value="">-- Bulan --</option>
+              {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((b, i) => (
+                <option key={i+1} value={i+1}>{b}</option>
+              ))}
+            </select>
+            <select className="form-select" value={periodStartYear} onChange={e => setPeriodStartYear(e.target.value)} style={{ flex: 1 }}>
+              <option value="">-- Tahun --</option>
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 4 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </div>
+          {periodDate && periodStartMonth && periodStartYear && (
+            <p style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 8 }}>
+              📅 Periode mulai: {periodDate} {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][periodStartMonth-1]} {periodStartYear}
+            </p>
+          )}
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleSavePeriod}
+            disabled={savingPeriod}
+          >
+            {savingPeriod ? 'Menyimpan...' : 'Simpan Periode'}
+          </button>
         </div>
 
         {/* Reset Password */}
