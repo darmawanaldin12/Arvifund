@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 const SYSTEM_PROMPT = `Kamu adalah asisten keuangan pribadi. Pengguna akan mendeskripsikan transaksi keuangan dalam bahasa natural (Indonesia atau Inggris). Ekstrak informasi dan format output PERSIS seperti berikut:
 
 TOKO: [nama toko/merchant/sumber transaksi]
@@ -32,6 +29,10 @@ Penting:
 
 export async function POST(request) {
   try {
+    // Dibaca saat runtime, bukan build time
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
     const body = await request.json();
     const { text } = body;
 
@@ -76,4 +77,3 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
