@@ -613,7 +613,6 @@ export default function InputPage() {
 
     setSaving(true);
     try {
-      const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error('Belum login');
 
