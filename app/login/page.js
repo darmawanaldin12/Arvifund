@@ -37,27 +37,26 @@ export default function LoginPage() {
       padding: '24px',
       background: 'var(--bg)',
     }}>
+
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '36px' }}>
         <div style={{
-          width: 72, height: 72,
-          background: 'linear-gradient(135deg, #1F4E79, #38bdf8)',
-          borderRadius: 20,
+          width: 96, height: 96,
+          background: 'white',
+          borderRadius: 24,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 16px',
-          boxShadow: '0 8px 32px rgba(56,189,248,0.3)',
+          boxShadow: '0 8px 32px rgba(56,189,248,0.2)',
+          padding: 8,
         }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
+          <img
+            src="/logo.png"
+            alt="Arvifund"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, background: 'linear-gradient(135deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          Arvifund
-        </h1>
         <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 4 }}>Personal Finance Tracker</p>
       </div>
 
@@ -124,13 +123,13 @@ export default function LoginPage() {
                 }}
               >
                 {showPass ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
                     <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
                     <line x1="1" y1="1" x2="23" y2="23"/>
                   </svg>
                 ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
@@ -175,9 +174,7 @@ export default function LoginPage() {
         </p>
       </form>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

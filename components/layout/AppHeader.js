@@ -1,11 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../lib/supabase'
+import Image from 'next/image'
 
 export default function AppHeader({ title, subtitle, onRefresh, loading }) {
   const [time, setTime] = useState('')
-  const router = useRouter()
 
   useEffect(() => {
     function tick() {
@@ -16,27 +15,26 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
     return () => clearInterval(t)
   }, [])
 
-  async function handleNotif() {
-    // placeholder untuk notifikasi
-  }
-
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 36, height: 36,
-          background: 'linear-gradient(135deg, #1F4E79, #38bdf8)',
           borderRadius: 10,
+          overflow: 'hidden',
+          flexShrink: 0,
+          background: 'white',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
+          <img
+            src="/logo.png"
+            alt="Arvifund"
+            width={32}
+            height={32}
+            style={{ objectFit: 'contain' }}
+          />
         </div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2 }}>
