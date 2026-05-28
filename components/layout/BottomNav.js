@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   {
-    href: '/',
+    href: '/dashboard',
     label: 'Overview',
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--accent)' : 'var(--text3)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,14 +27,13 @@ const navItems = [
     ),
   },
   {
-    href: '/input',
-    label: 'Input',
+    href: '/record',
+    label: 'Record',
     isAction: true,
     icon: () => (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="12" fill="url(#grad)" />
-        <line x1="12" y1="7" x2="12" y2="17" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="7" y1="12" x2="17" y2="12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M8 12h8M12 8v8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
         <defs>
           <linearGradient id="grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
             <stop stopColor="#38bdf8" />
@@ -49,10 +48,8 @@ const navItems = [
     label: 'Keluar',
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--accent)' : 'var(--text3)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10" />
-        <path d="M12 8v4l3 3" />
-        <path d="M18 2v6h6" />
-        <path d="M22 2l-4 4" />
+        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+        <polyline points="17 18 23 18 23 12"/>
       </svg>
     ),
   },
@@ -79,7 +76,7 @@ export default function BottomNav() {
       zIndex: 100, backdropFilter: 'blur(12px)',
     }}>
       {navItems.map((item) => {
-        const active = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+        const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
         return (
           <Link key={item.href} href={item.href} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -102,4 +99,4 @@ export default function BottomNav() {
       })}
     </nav>
   );
-}
+    }
