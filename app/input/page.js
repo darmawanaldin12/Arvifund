@@ -26,13 +26,13 @@ function parseOutput(output) {
   };
   return {
     toko: get('TOKO'),
-    total: get('TOTAL'),
+    total: get('TOTAL').replace(/[^0-9]/g, ''),
     items: get('ITEMS'),
     kategori: get('KATEGORI'),
     jenis: get('JENIS'),
     metode: get('METODE'),
     bank: get('BANK'),
-    tanggal: get('TANGGAL_STRUK'),
+    tanggal: get('TANGGAL_STRUK') || new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -55,7 +55,7 @@ function Toast({ message, type, onClose }) {
       background: type === 'success' ? 'var(--green)' : 'var(--red)',
       color: '#fff', padding: '12px 24px', borderRadius: 'var(--radius-sm)',
       fontWeight: 600, fontSize: 14, zIndex: 9999, whiteSpace: 'nowrap',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)', animation: 'fadeUp 0.3s ease',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
     }}>
       {message}
     </div>
@@ -124,7 +124,7 @@ export default function InputPage() {
       const res = await fetch('/api/ocr', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const p = parseOutput(data.output);
+      const p = parseOutput(data.result); // ← fixed: data.result
       setParsed(p); setForm(p);
     } catch (err) {
       showToast(err.message || 'Gagal memproses gambar', 'error');
@@ -142,7 +142,7 @@ export default function InputPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const p = parseOutput(data.output);
+      const p = parseOutput(data.result); // ← fixed: data.result
       setParsed(p); setForm(p);
     } catch (err) {
       showToast(err.message || 'Gagal memproses teks', 'error');
@@ -182,7 +182,7 @@ export default function InputPage() {
       const res = await fetch('/api/voice', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const p = parseOutput(data.output);
+      const p = parseOutput(data.result); // ← fixed: data.result
       setParsed(p); setForm(p);
     } catch (err) {
       showToast(err.message || 'Gagal memproses audio', 'error');
