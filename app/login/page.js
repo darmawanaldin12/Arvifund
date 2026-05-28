@@ -35,29 +35,35 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px',
-      background: 'var(--bg)',
+      background: '#0f172a',
     }}>
 
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <div style={{
-          width: 96, height: 96,
+          width: 110, height: 110,
           background: 'white',
-          borderRadius: 24,
+          borderRadius: 28,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 16px',
-          boxShadow: '0 8px 32px rgba(56,189,248,0.2)',
-          padding: 8,
+          margin: '0 auto 14px',
+          boxShadow: '0 8px 32px rgba(56,189,248,0.25)',
+          padding: 12,
+          overflow: 'hidden',
         }}>
           <img
             src="/logo.png"
             alt="Arvifund"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
           />
         </div>
-        <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 4 }}>Personal Finance Tracker</p>
+        <p style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>Personal Finance Tracker</p>
       </div>
 
       {/* Timeout banner */}
@@ -67,8 +73,8 @@ export default function LoginPage() {
           padding: '12px 16px',
           background: 'rgba(245,158,11,0.1)',
           border: '1px solid rgba(245,158,11,0.3)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--yellow)',
+          borderRadius: 8,
+          color: '#f59e0b',
           fontSize: 13,
           fontWeight: 600,
           textAlign: 'center',
@@ -81,15 +87,14 @@ export default function LoginPage() {
       {/* Form */}
       <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: 360 }}>
         <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
+          background: '#1e293b',
+          border: '1px solid rgba(148,163,184,0.12)',
+          borderRadius: 14,
           padding: 24,
         }}>
-          <div className="form-group">
-            <label className="form-label">Email</label>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Email</label>
             <input
-              className="form-input"
               type="email"
               placeholder="email@gmail.com"
               value={email}
@@ -97,31 +102,34 @@ export default function LoginPage() {
               required
               autoComplete="email"
               inputMode="email"
+              style={{
+                width: '100%', background: '#253348', border: '1px solid rgba(148,163,184,0.2)',
+                borderRadius: 8, padding: '10px 12px', color: '#f1f5f9', fontSize: 14,
+                fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+              }}
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Password</label>
+          <div style={{ marginBottom: 0 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Password</label>
             <div style={{ position: 'relative' }}>
               <input
-                className="form-input"
                 type={showPass ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                style={{ paddingRight: 44 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
                 style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text3)', padding: 4,
+                  width: '100%', background: '#253348', border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 8, padding: '10px 44px 10px 12px', color: '#f1f5f9', fontSize: 14,
+                  fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
                 }}
-              >
+              />
+              <button type="button" onClick={() => setShowPass(!showPass)} style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4,
+              }}>
                 {showPass ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
@@ -140,41 +148,38 @@ export default function LoginPage() {
 
           {error && (
             <div style={{
-              marginTop: 12,
-              padding: '10px 12px',
-              background: 'rgba(244,63,94,0.1)',
-              border: '1px solid rgba(244,63,94,0.2)',
-              borderRadius: 8,
-              color: 'var(--red)',
-              fontSize: 13,
-              fontWeight: 600,
-            }}>
-              {error}
-            </div>
+              marginTop: 12, padding: '10px 12px',
+              background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)',
+              borderRadius: 8, color: '#f43f5e', fontSize: 13, fontWeight: 600,
+            }}>{error}</div>
           )}
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={loading}
-            style={{ marginTop: 20, height: 46, fontSize: 15 }}
-          >
+          <button type="submit" disabled={loading} style={{
+            marginTop: 20, width: '100%', height: 46, fontSize: 15, fontWeight: 700,
+            background: loading ? '#1F4E79' : '#38bdf8', color: '#0f172a',
+            border: 'none', borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            fontFamily: 'inherit',
+          }}>
             {loading ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.8s linear infinite' }}>
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
+              <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.8s linear infinite' }}>
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                Memuat...
+              </>
             ) : 'Masuk'}
           </button>
         </div>
 
-        <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 12, marginTop: 16 }}>
+        <p style={{ textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 16 }}>
           Lupa password? Ketik{' '}
-          <span style={{ color: 'var(--accent)', fontWeight: 700 }}>/lupapassword</span>
+          <span style={{ color: '#38bdf8', fontWeight: 700 }}>/lupapassword</span>
           {' '}di Telegram
         </p>
       </form>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{\`@keyframes spin { to { transform: rotate(360deg); } }\`}</style>
     </div>
   )
 }

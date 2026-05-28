@@ -13,35 +13,18 @@ export const metadata = {
   },
 }
 
-// Script ini jalan sebelum render untuk cegah flash of wrong theme
-const themeScript = `
-  (function() {
-    try {
-      var saved = localStorage.getItem('arvifund-theme');
-      var t;
-      if (!saved || saved === 'auto') {
-        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      } else {
-        t = saved;
-      }
-      document.documentElement.setAttribute('data-theme', t);
-    } catch(e) {}
-  })();
-`
-
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="id" style={{ colorScheme: 'dark' }}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Arvifund" />
+        <meta name="color-scheme" content="dark" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        {/* Anti-flash theme script */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body style={{ background: '#0f172a', colorScheme: 'dark' }}>{children}</body>
     </html>
   )
 }
