@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const isTimeout = searchParams?.get('reason') === 'timeout'
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -58,6 +60,24 @@ export default function LoginPage() {
         </h1>
         <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 4 }}>Personal Finance Tracker</p>
       </div>
+
+      {/* Timeout banner */}
+      {isTimeout && (
+        <div style={{
+          width: '100%', maxWidth: 360,
+          padding: '12px 16px',
+          background: 'rgba(245,158,11,0.1)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: 'var(--radius-sm)',
+          color: 'var(--yellow)',
+          fontSize: 13,
+          fontWeight: 600,
+          textAlign: 'center',
+          marginBottom: 16,
+        }}>
+          ⏱ Sesi berakhir karena tidak aktif 1 jam
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: 360 }}>

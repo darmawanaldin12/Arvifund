@@ -1,14 +1,23 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
 import BottomNav from '../../components/layout/BottomNav'
-import AppHeader from '../../components/layout/AppHeader'
+import { useSessionTimeout } from '../../hooks/useSessionTimeout'
+
+function DashboardContent({ children }) {
+  useSessionTimeout()
+  return (
+    <>
+      <BottomNav />
+      <main>{children}</main>
+    </>
+  )
+}
 
 export default function DashboardLayout({ children }) {
   const router = useRouter()
-  const pathname = usePathname()
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
@@ -56,8 +65,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <DataProvider>
-      <BottomNav />
-      <main>{children}</main>
+      <DashboardContent>{children}</DashboardContent>
     </DataProvider>
   )
 }
