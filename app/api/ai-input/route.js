@@ -31,7 +31,12 @@ export async function POST(request) {
   try {
     // Dibaca saat runtime, bukan build time
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+    
+    if (!GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
+    }
+
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
     const body = await request.json();
     const { text } = body;
@@ -64,12 +69,30 @@ export async function POST(request) {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error('Gemini AI Input error:', err);
-      return NextResponse.json({ error: 'Gemini API error', detail: err }, { status: 500 });
+      console.error('Gemini API Error:', {
+        status: res.status,
+        statusText: res.statusText,
+        body: err,
+      });
+      return NextResponse.json(
+        { 
+          error: 'Gemini API error', 
+          detail: err,
+          status: res.status 
+        }, 
+        { status: 500 }
+      );
     }
 
     const data = await res.json();
     const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!result) {
+      return NextResponse.json(
+        { error: 'No response from Gemini API' }, 
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ result });
   } catch (error) {
