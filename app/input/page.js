@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNav from '@/components/layout/BottomNav';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
