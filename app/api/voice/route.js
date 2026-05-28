@@ -1,42 +1,60 @@
 import { NextResponse } from 'next/server';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const SYSTEM_PROMPT = `Kamu adalah asisten keuangan pribadi. Dengarkan voice note ini dan ekstrak informasi transaksi keuangan. Format output PERSIS seperti berikut:
 
-const SYSTEM_PROMPT = `Kamu adalah asisten keuangan. Dengarkan rekaman suara ini dan ekstrak informasi transaksi keuangan yang disebutkan. Kembalikan dalam format PERSIS berikut (tidak ada teks lain):
-
-TOKO: [nama toko/merchant, tulis "Tidak diketahui" jika tidak disebutkan]
-TOTAL: [angka saja tanpa Rp, titik, atau koma, contoh: 18000]
-ITEMS: [daftar barang/keterangan singkat, pisahkan dengan koma]
-KATEGORI: [pilih SATU: Makanan & Minuman/Tagihan/Transportasi/Kesehatan/Pakaian/Elektronik/Rumah Tangga/Pendidikan/Hiburan/Cicilan/Investasi/Lainnya]
-JENIS: [pilih SATU: Pengeluaran/Pemasukan/Tarik Tunai]
-METODE: [pilih SATU: Cash/Transfer/Debit/Kredit/QRIS]
-BANK: [nama bank atau Cash jika tunai]
+TOKO: [nama toko/merchant/sumber]
+TOTAL: [angka saja tanpa Rp, titik, atau koma. Contoh: 150000]
+ITEMS: [daftar barang atau keterangan transaksi]
+KATEGORI: [pilih salah satu: Makanan & Minuman/Tagihan/Transportasi/Kesehatan/Pakaian/Elektronik/Rumah Tangga/Pendidikan/Hiburan/Cicilan/Investasi/Lainnya]
+JENIS: [pilih salah satu: Pengeluaran/Pemasukan/Tarik Tunai]
+METODE: [pilih salah satu: Cash/Transfer/Debit/Kredit]
+BANK: [nama bank atau Cash]
 TANGGAL_STRUK: [format YYYY-MM-DD, gunakan hari ini jika tidak disebutkan]
 
-Penting: TOTAL harus angka murni tanpa simbol apapun.`;
+Catatan:
+- Transkripsi dulu audio, lalu ekstrak informasi
+- TOTAL hanya angka murni
+- Jika ada kata "beli", "bayar", "belanja" → JENIS: Pengeluaran
+- Jika ada kata "terima", "dapat", "gaji", "masuk" → JENIS: Pemasukan
+- Jika ada kata "tarik", "ATM", "ambil tunai" → JENIS: Tarik Tunai`;
 
 export async function POST(request) {
   try {
+    // Dibaca saat runtime, bukan build time
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
     const formData = await request.formData();
     const file = formData.get('audio');
 
     if (!file) {
-      return NextResponse.json({ error: 'Tidak ada audio yang diunggah' }, { status: 400 });
+      return NextResponse.json({ error: 'No audio provided' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString('base64');
+    const buffer = await file.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
     const mimeType = file.type || 'audio/webm';
 
     const payload = {
-      contents: [{
-        parts: [
-          { text: SYSTEM_PROMPT },
-          { inline_data: { mime_type: mimeType, data: base64 } },
-        ],
-      }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: base64,
+              },
+            },
+            {
+              text: SYSTEM_PROMPT,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 1024,
+      },
     };
 
     const res = await fetch(GEMINI_URL, {
@@ -48,16 +66,15 @@ export async function POST(request) {
     if (!res.ok) {
       const err = await res.text();
       console.error('Gemini Voice error:', err);
-      return NextResponse.json({ error: 'Gagal memproses audio dengan AI' }, { status: 500 });
+      return NextResponse.json({ error: 'Gemini API error', detail: err }, { status: 500 });
     }
 
     const data = await res.json();
-    const output = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!output) return NextResponse.json({ error: 'AI tidak menghasilkan output' }, { status: 500 });
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    return NextResponse.json({ output });
+    return NextResponse.json({ result: text });
   } catch (error) {
     console.error('Voice route error:', error);
-    return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
