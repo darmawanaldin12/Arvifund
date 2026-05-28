@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNav from '@/components/layout/BottomNav';
 import { createClient } from '@/lib/supabase';
@@ -38,6 +38,7 @@ const KATEGORI_LIST = [
 ];
 const JENIS_LIST = ['Pengeluaran', 'Pemasukan', 'Tarik Tunai'];
 const METODE_LIST = ['Cash', 'Transfer', 'Debit', 'Kredit'];
+const BANK_LIST = ['BCA', 'BRI', 'BNI', 'Mandiri', 'BSI', 'GoPay', 'OVO', 'Dana', 'ShopeePay', 'Lainnya'];
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -54,14 +55,6 @@ function Toast({ msg, type }) {
       animation: 'fadeInUp 0.3s ease',
     }}>
       {msg}
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-      <div className="spinner" />
     </div>
   );
 }
@@ -220,9 +213,23 @@ function FotoTab({ onParsed }) {
 // ─── tab: teks ───────────────────────────────────────────────────────────────
 
 function TeksTab({ onParsed }) {
+  const [mode, setMode] = useState('ai'); // 'ai' | 'manual'
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [manual, setManual] = useState({
+    toko: '',
+    total: '',
+    items: '',
+    tanggal: new Date().toISOString().slice(0, 10),
+    kategori: 'Lainnya',
+    jenis: 'Pengeluaran',
+    metode: 'Cash',
+    bank: '',
+  });
+
+  const setM = (key, val) => setManual(prev => ({ ...prev, [key]: val }));
 
   const handleAnalyze = async () => {
     if (!text.trim()) return;
@@ -244,6 +251,14 @@ function TeksTab({ onParsed }) {
     }
   };
 
+  const handleManualSubmit = () => {
+    if (!manual.total || Number(manual.total) === 0) {
+      alert('Nominal tidak boleh kosong atau 0');
+      return;
+    }
+    onParsed(manual);
+  };
+
   const examples = [
     'Beli kopi di Starbucks 65rb pakai GoPay',
     'Bayar listrik PLN 350000 transfer BCA',
@@ -253,37 +268,183 @@ function TeksTab({ onParsed }) {
 
   return (
     <div className="tab-content">
-      <div className="section-title">
-        <span className="section-icon">⌨️</span>
-        Deskripsikan Transaksi
+      {/* Toggle AI / Manual */}
+      <div style={{
+        display: 'flex', gap: '4px',
+        background: 'var(--surface2)', borderRadius: 'var(--radius-sm)',
+        padding: '4px',
+      }}>
+        <button
+          onClick={() => setMode('ai')}
+          style={{
+            flex: 1, padding: '10px', border: 'none', borderRadius: 'var(--radius-sm)',
+            background: mode === 'ai' ? 'var(--grad1)' : 'transparent',
+            color: mode === 'ai' ? '#fff' : 'var(--text2)',
+            fontFamily: 'inherit', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          🤖 Pakai AI
+        </button>
+        <button
+          onClick={() => setMode('manual')}
+          style={{
+            flex: 1, padding: '10px', border: 'none', borderRadius: 'var(--radius-sm)',
+            background: mode === 'manual' ? 'var(--grad1)' : 'transparent',
+            color: mode === 'manual' ? '#fff' : 'var(--text2)',
+            fontFamily: 'inherit', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          ✍️ Input Manual
+        </button>
       </div>
 
-      <textarea
-        className="text-input"
-        placeholder="Contoh: beli makan siang di warteg 15ribu bayar cash..."
-        value={text}
-        onChange={e => setText(e.target.value)}
-        rows={4}
-      />
-
-      <div className="examples-row">
-        <span className="examples-label">Contoh:</span>
-        {examples.map((ex, i) => (
-          <button key={i} className="example-chip" onClick={() => setText(ex)}>
-            {ex}
+      {/* ── MODE AI ── */}
+      {mode === 'ai' && (
+        <>
+          <div className="section-title">
+            <span className="section-icon">⌨️</span>
+            Deskripsikan Transaksi
+          </div>
+          <textarea
+            className="text-input"
+            placeholder="Contoh: beli makan siang di warteg 15ribu bayar cash..."
+            value={text}
+            onChange={e => setText(e.target.value)}
+            rows={4}
+          />
+          <div className="examples-row">
+            <span className="examples-label">Contoh:</span>
+            {examples.map((ex, i) => (
+              <button key={i} className="example-chip" onClick={() => setText(ex)}>{ex}</button>
+            ))}
+          </div>
+          {error && (
+            <div className="error-box">
+              {error}
+              <button
+                onClick={() => setMode('manual')}
+                style={{
+                  display: 'block', marginTop: '8px', background: 'none',
+                  border: 'none', color: 'var(--accent)', fontWeight: 700,
+                  cursor: 'pointer', fontSize: '13px', padding: 0,
+                }}
+              >
+                → Beralih ke Input Manual
+              </button>
+            </div>
+          )}
+          <button
+            className="btn-primary btn-full"
+            onClick={handleAnalyze}
+            disabled={loading || !text.trim()}
+          >
+            {loading ? <><span className="btn-spinner" /> Memproses...</> : '🤖 Parse dengan AI'}
           </button>
-        ))}
-      </div>
+        </>
+      )}
 
-      {error && <div className="error-box">{error}</div>}
+      {/* ── MODE MANUAL ── */}
+      {mode === 'manual' && (
+        <>
+          <div className="section-title">
+            <span className="section-icon">✍️</span>
+            Input Manual
+          </div>
 
-      <button
-        className="btn-primary btn-full"
-        onClick={handleAnalyze}
-        disabled={loading || !text.trim()}
-      >
-        {loading ? <><span className="btn-spinner" /> Memproses...</> : '🤖 Parse dengan AI'}
-      </button>
+          <div className="field-group">
+            <label>Jenis Transaksi</label>
+            <select value={manual.jenis} onChange={e => setM('jenis', e.target.value)}>
+              {JENIS_LIST.map(j => <option key={j} value={j}>{j}</option>)}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label>Toko / Sumber</label>
+            <input
+              type="text"
+              placeholder="Contoh: Warung Bu Siti, PT Maju..."
+              value={manual.toko}
+              onChange={e => setM('toko', e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Uraian / Keterangan</label>
+            <input
+              type="text"
+              placeholder="Contoh: Makan siang, Gaji April..."
+              value={manual.items}
+              onChange={e => setM('items', e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Nominal (Rp)</label>
+            <input
+              type="number"
+              placeholder="Contoh: 50000"
+              value={manual.total}
+              onChange={e => setM('total', e.target.value)}
+              inputMode="numeric"
+            />
+            {manual.total ? (
+              <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>
+                Rp {Number(manual.total).toLocaleString('id-ID')}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="field-group">
+            <label>Tanggal</label>
+            <input
+              type="date"
+              value={manual.tanggal}
+              onChange={e => setM('tanggal', e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Kategori</label>
+            <select value={manual.kategori} onChange={e => setM('kategori', e.target.value)}>
+              {KATEGORI_LIST.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label>Metode Pembayaran</label>
+            <select value={manual.metode} onChange={e => setM('metode', e.target.value)}>
+              {METODE_LIST.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label>Bank / Dompet Digital</label>
+            <select value={manual.bank} onChange={e => setM('bank', e.target.value)}>
+              <option value="">-- Pilih --</option>
+              {BANK_LIST.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+
+          <div className="jenis-badge-row">
+            <span className={`jenis-badge jenis-${manual.jenis.toLowerCase().replace(/\s+/g, '-')}`}>
+              {manual.jenis === 'Pengeluaran' ? '📤' : manual.jenis === 'Pemasukan' ? '📥' : '🏧'} {manual.jenis}
+            </span>
+            <span className="total-preview">
+              Rp {Number(manual.total || 0).toLocaleString('id-ID')}
+            </span>
+          </div>
+
+          <button
+            className="btn-primary btn-full"
+            onClick={handleManualSubmit}
+            disabled={!manual.total || Number(manual.total) === 0}
+          >
+            ➡️ Lanjut ke Konfirmasi
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -440,6 +601,16 @@ export default function InputPage() {
 
   const handleSave = async () => {
     if (!parsed) return;
+
+    if (!parsed.total || Number(parsed.total) === 0) {
+      showToast('⚠️ Total tidak boleh kosong atau 0', 'error');
+      return;
+    }
+    if (!parsed.jenis) {
+      showToast('⚠️ Pilih jenis transaksi', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const supabase = createClient();
@@ -455,26 +626,26 @@ export default function InputPage() {
 
       if (parsed.jenis === 'Pengeluaran') {
         ({ error } = await supabase.from('expenses').insert({
-          toko: parsed.toko,
+          toko: parsed.toko || '-',
           tanggal,
           bulan,
-          transaksi: parsed.items,
-          uraian: parsed.items,
-          kategori: parsed.kategori,
-          bank: parsed.bank,
+          transaksi: parsed.items || '-',
+          uraian: parsed.items || '-',
+          kategori: parsed.kategori || 'Lainnya',
+          bank: parsed.bank || '-',
           nilai,
           user_id: userId,
         }));
       } else if (parsed.jenis === 'Pemasukan') {
         ({ error } = await supabase.from('income').insert({
-          sumber: parsed.toko,
+          sumber: parsed.toko || '-',
           tanggal,
           bulan,
           jumlah: nilai,
-          metode: parsed.metode,
-          kategori: parsed.kategori,
-          items: parsed.items,
-          bank: parsed.bank,
+          metode: parsed.metode || 'Cash',
+          kategori: parsed.kategori || 'Lainnya',
+          items: parsed.items || '-',
+          bank: parsed.bank || '-',
           user_id: userId,
         }));
       } else if (parsed.jenis === 'Tarik Tunai') {
@@ -482,10 +653,10 @@ export default function InputPage() {
           tanggal,
           bulan,
           transaksi: parsed.items || 'Tarik Tunai',
-          kategori: parsed.kategori,
-          bank: parsed.bank,
+          kategori: parsed.kategori || 'Lainnya',
+          bank: parsed.bank || '-',
           nilai,
-          alamat: parsed.toko,
+          alamat: parsed.toko || '-',
           metode: parsed.metode || 'Cash',
           user_id: userId,
         }));
@@ -766,6 +937,7 @@ export default function InputPage() {
         }
         .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
         .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-ghost.btn-full { width: 100%; box-sizing: border-box; }
         .btn-sm { padding: 8px 14px; font-size: 13px; }
         .confirm-form {
           background: var(--surface);
@@ -839,7 +1011,6 @@ export default function InputPage() {
         <AppHeader title="Input Transaksi" />
 
         <div className="page-inner">
-          {/* Tab bar */}
           <div className="tab-bar">
             {tabs.map(t => (
               <button
@@ -853,7 +1024,6 @@ export default function InputPage() {
             ))}
           </div>
 
-          {/* Tab content */}
           {!parsed ? (
             <>
               {activeTab === 'foto' && <FotoTab onParsed={handleParsed} />}
