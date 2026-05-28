@@ -30,11 +30,7 @@ Penting:
 export async function POST(request) {
   try {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY not found in environment');
-      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
-    }
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
     const body = await request.json();
     const { text } = body;
@@ -59,51 +55,24 @@ export async function POST(request) {
       },
     };
 
-    console.log('Sending request to Gemini API...');
-    console.log('Payload size:', JSON.stringify(payload).length, 'bytes');
-
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
     const res = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    console.log('Gemini API Response Status:', res.status, res.statusText);
-
-    const responseText = await res.text();
-    console.log('Gemini API Response Body:', responseText);
-
     if (!res.ok) {
-      return NextResponse.json(
-        { 
-          error: 'Gemini API error', 
-          status: res.status,
-          statusText: res.statusText,
-          detail: responseText,
-        }, 
-        { status: 500 }
-      );
+      const err = await res.text();
+      console.error('Gemini AI Input error:', err);
+      return NextResponse.json({ error: 'Gemini API error', detail: err }, { status: 500 });
     }
 
-    const data = JSON.parse(responseText);
+    const data = await res.json();
     const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    if (!result) {
-      console.error('No text in response:', JSON.stringify(data));
-      return NextResponse.json(
-        { error: 'No response from Gemini API', response: data }, 
-        { status: 500 }
-      );
-    }
 
     return NextResponse.json({ result });
   } catch (error) {
-    console.error('AI Input route error:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('AI Input route error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
