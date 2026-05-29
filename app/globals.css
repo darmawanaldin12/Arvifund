@@ -587,3 +587,74 @@ tr:hover td { background: var(--surface2); }
   .bento-8  { grid-column: span 8; }
   .bento-12 { grid-column: span 12; }
 }
+
+/* ── FORCE LIGHT BACKGROUND (override any dark injection) ── */
+html, body {
+  background: #f9f9ff !important;
+  color: #041b3c !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+  }
+}
+
+/* ── MOBILE FIX ── */
+@media (max-width: 767px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .kpi-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  .kpi-value {
+    font-size: 17px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .scorecard-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .scorecard-item {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  .scorecard-value {
+    font-size: 14px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bento-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .bento-4, .bento-5, .bento-6,
+  .bento-7, .bento-8, .bento-12 {
+    grid-column: span 1 !important;
+  }
+  .page-container {
+    padding: 12px !important;
+    overflow-x: hidden !important;
+  }
+  .filter-bar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+  }
+  .filter-chip {
+    font-size: 11px !important;
+    padding: 5px 12px !important;
+    flex-shrink: 0 !important;
+  }
+  .card {
+    overflow: hidden !important;
+  }
+}

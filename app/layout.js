@@ -4,27 +4,24 @@ export const metadata = {
   title: 'Arvifund',
   description: 'Personal Finance Tracker',
   manifest: '/manifest.json',
-  themeColor: '#0f172a',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Arvifund',
-  },
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" style={{ colorScheme: 'dark' }}>
+    <html lang="id">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Arvifund" />
-        <meta name="color-scheme" content="dark" />
+        <meta name="theme-color" content="#f9f9ff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
-      <body style={{ background: '#0f172a', colorScheme: 'dark' }}>{children}</body>
+      <body>{children}</body>
     </html>
   )
 }
