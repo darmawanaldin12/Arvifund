@@ -4,15 +4,24 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
 import BottomNav from '../../components/layout/BottomNav'
+import Sidebar from '../../components/layout/Sidebar'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
 
-function DashboardContent({ children }) {
+function AppShell({ children }) {
   useSessionTimeout()
   return (
-    <>
+    <div className="app-shell">
+      {/* Sidebar - desktop only */}
+      <div className="app-sidebar-wrap">
+        <Sidebar />
+      </div>
+      {/* Main */}
+      <div className="app-main">
+        {children}
+      </div>
+      {/* Bottom Nav - mobile only */}
       <BottomNav />
-      <main>{children}</main>
-    </>
+    </div>
   )
 }
 
@@ -22,50 +31,34 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.replace('/login')
-      } else {
-        setChecking(false)
-      }
+      if (!session) router.replace('/login')
+      else setChecking(false)
     })
   }, [router])
 
-  if (checking) {
-    return (
-      <div style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 48, height: 48,
-            background: 'linear-gradient(135deg, #1F4E79, #38bdf8)',
-            borderRadius: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 12px',
-            animation: 'pulse 1.5s ease infinite',
-          }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <p style={{ color: 'var(--text3)', fontSize: 13 }}>Memuat...</p>
+  if (checking) return (
+    <div style={{
+      minHeight: '100dvh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: 'var(--bg)',
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: 52, height: 52, background: 'var(--accent)',
+          borderRadius: 14, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', margin: '0 auto 12px',
+          animation: 'pulse 1.5s ease infinite',
+        }}>
+          <img src="/logo.png" alt="" style={{ width: 40, height: 40, objectFit: 'contain', padding: 4 }} />
         </div>
-        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+        <p style={{ color: 'var(--text3)', fontSize: 13 }}>Memuat...</p>
       </div>
-    )
-  }
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+    </div>
+  )
 
   return (
     <DataProvider>
-      <DashboardContent>{children}</DashboardContent>
+      <AppShell>{children}</AppShell>
     </DataProvider>
   )
 }

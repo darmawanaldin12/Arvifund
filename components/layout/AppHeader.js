@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { useData } from '../DataContext'
 
 export default function AppHeader({ title, subtitle, onRefresh, loading }) {
   const [time, setTime] = useState('')
+  const { profile } = useData() || {}
 
   useEffect(() => {
     function tick() {
@@ -17,27 +17,13 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
 
   return (
     <header className="app-header">
+      {/* Mobile: logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 36, height: 36,
-          borderRadius: 10,
-          overflow: 'hidden',
-          flexShrink: 0,
-          background: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <img
-            src="/logo.png"
-            alt="Arvifund"
-            width={32}
-            height={32}
-            style={{ objectFit: 'contain' }}
-          />
+        <div style={{ display: 'none' }} className="mobile-logo">
+          <img src="/logo.png" alt="Arvifund" style={{ width: 28, height: 28, objectFit: 'contain', background: 'white', borderRadius: 8, padding: 3 }} />
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>
             {title || 'Arvifund'}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
@@ -48,37 +34,23 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {onRefresh && (
-          <button
-            onClick={onRefresh}
-            style={{
-              width: 36, height: 36,
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 10,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text2)',
-            }}
-          >
-            <svg
-              width="16" height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              style={loading ? { animation: 'spin 0.8s linear infinite' } : {}}
-            >
-              <path d="M1 4v6h6M23 20v-6h-6"/>
-              <path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/>
-            </svg>
+          <button onClick={onRefresh} style={{
+            width: 36, height: 36, background: 'var(--surface2)',
+            border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)',
+          }}>
+            <span className="material-symbols-outlined" style={{
+              fontSize: 18,
+              animation: loading ? 'spin 0.8s linear infinite' : 'none'
+            }}>refresh</span>
           </button>
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @media (max-width: 767px) { .mobile-logo { display: flex !important; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </header>
   )
 }
