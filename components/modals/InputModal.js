@@ -518,37 +518,83 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
                   {isRecording ? 'Mendengarkan...' : '🎙️ Suara'}
                 </button>
 
-                {/* Scan Struk Button */}
+                {/* Direct Camera Button */}
                 <button
                   type="button"
-                  onClick={() => document.getElementById('receipt-upload').click()}
+                  onClick={() => document.getElementById('receipt-upload-camera').click()}
                   style={{
                     flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 8,
-                    padding: '10px 12px',
+                    gap: 6,
+                    padding: '10px 8px',
                     borderRadius: 8,
                     border: imageFile ? '1px solid var(--green)' : '1px solid var(--border)',
                     background: imageFile ? 'rgba(16,185,129,0.15)' : 'var(--surface2)',
                     color: imageFile ? 'var(--green)' : 'var(--text2)',
                     fontWeight: 600,
-                    fontSize: 13,
+                    fontSize: 12,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                     photo_camera
                   </span>
-                  {imageFile ? '✓ Struk Terpilih' : '📸 Scan Struk'}
+                  {imageFile ? '✓ Kamera' : '📸 Kamera'}
                 </button>
 
-                {/* Hidden input for camera / file upload (supports camera and gallery since capture="environment" is omitted) */}
+                {/* Photo Gallery Button */}
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('receipt-upload-gallery').click()}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '10px 8px',
+                    borderRadius: 8,
+                    border: imageFile ? '1px solid var(--green)' : '1px solid var(--border)',
+                    background: imageFile ? 'rgba(16,185,129,0.15)' : 'var(--surface2)',
+                    color: imageFile ? 'var(--green)' : 'var(--text2)',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                    image
+                  </span>
+                  {imageFile ? '✓ Galeri' : '🖼️ Galeri'}
+                </button>
+
+                {/* Hidden input for DIRECT camera capture */}
                 <input
-                  id="receipt-upload"
+                  id="receipt-upload-camera"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setImageFile(file)
+                      setImagePreview(URL.createObjectURL(file))
+                      // Instantly auto-extract data
+                      handleAIExtract(file, aiTextRef.current)
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+
+                {/* Hidden input for GALLERY upload */}
+                <input
+                  id="receipt-upload-gallery"
                   type="file"
                   accept="image/*"
                   onChange={e => {
