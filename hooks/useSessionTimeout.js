@@ -43,6 +43,7 @@ export function useSessionTimeout() {
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
 
     // Cek saat tab/window kembali aktif (visibility change)
+    // Bug 3 fix: reset timer saat tab kembali aktif jika session belum expired
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
         const lastActive = localStorage.getItem(STORAGE_KEY)
@@ -50,6 +51,8 @@ export function useSessionTimeout() {
           const elapsed = Date.now() - parseInt(lastActive)
           if (elapsed >= TIMEOUT_MS) {
             logout()
+          } else {
+            resetTimer()
           }
         }
       }
