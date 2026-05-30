@@ -53,7 +53,7 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Nilai</label>
-                  <input className="form-input" type="number" value={form.nilai || ''} onChange={e => set('nilai', parseFloat(e.target.value))} required min="0" inputMode="numeric" />
+                  <input className="form-input" type="number" value={form.nilai || ''} onChange={e => set('nilai', e.target.value === '' ? '' : parseFloat(e.target.value))} required min="0" inputMode="numeric" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Kategori</label>
@@ -91,7 +91,7 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Jumlah</label>
-                  <input className="form-input" type="number" value={form.jumlah || ''} onChange={e => set('jumlah', parseFloat(e.target.value))} required min="0" inputMode="numeric" />
+                  <input className="form-input" type="number" value={form.jumlah || ''} onChange={e => set('jumlah', e.target.value === '' ? '' : parseFloat(e.target.value))} required min="0" inputMode="numeric" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Metode</label>
@@ -118,7 +118,7 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Nilai</label>
-                  <input className="form-input" type="number" value={form.nilai || ''} onChange={e => set('nilai', parseFloat(e.target.value))} required min="0" inputMode="numeric" />
+                  <input className="form-input" type="number" value={form.nilai || ''} onChange={e => set('nilai', e.target.value === '' ? '' : parseFloat(e.target.value))} required min="0" inputMode="numeric" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Lokasi / Alamat ATM</label>
@@ -143,8 +143,8 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
             {/* Edit info readonly */}
             {form.edited_at && (
               <div style={{ padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-                ✏️ Terakhir diedit: {new Date(form.edited_at).toLocaleString('id-ID')}
-                {form.edited_note ? ` — ${form.edited_note}` : ''}
+                âï¸ Terakhir diedit: {new Date(form.edited_at).toLocaleString('id-ID')}
+                {form.edited_note ? ` â ${form.edited_note}` : ''}
               </div>
             )}
 
