@@ -78,7 +78,11 @@ export function DataProvider({ children }) {
 
   // Filtered data berdasarkan period
   const filteredExpenses   = periodIdx !== '' ? filterByPeriod(expenses, periodIdx, payPeriodDate, overrides)   : expenses
-  const filteredIncome     = periodIdx !== '' ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate, overrides).map(r => ({ ...r })) : income
+  // Bug 2 fix: unwrap field nilai sementara setelah filterByPeriod, jaga field jumlah asli
+  const filteredIncome = periodIdx !== ''
+    ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate, overrides)
+      .map(({ nilai: _nilai, ...r }) => r)
+    : income
   const filteredCashRecords = periodIdx !== '' ? filterByPeriod(cashRecords, periodIdx, payPeriodDate, overrides) : cashRecords
 
   // Summary untuk periode aktif
