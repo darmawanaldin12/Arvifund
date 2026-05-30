@@ -180,8 +180,9 @@ export default function InputModal({ onClose, onSuccess }) {
     setAiLoading(true)
     setError('')
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-      if (!apiKey) throw new Error('API Key Gemini tidak ditemukan di .env.local')
+      const apiKeysRaw = process.env.NEXT_PUBLIC_GEMINI_API_KEY
+      if (!apiKeysRaw) throw new Error('API Key Gemini tidak ditemukan di .env.local')
+      const apiKeys = apiKeysRaw.split(',').map(k => k.trim()).filter(Boolean)
 
       const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural ATAU dari foto struk belanja/nota menjadi format JSON terstruktur.
 Hari ini adalah: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleDateString('id-ID', { weekday: 'long' })}).
@@ -238,41 +239,49 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
       let lastError;
       const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
+      let success = false;
       for (const model of models) {
-        try {
-          response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts }],
-              generationConfig: {
-                responseMimeType: 'application/json'
-              }
-            })
-          });
+        if (success) break;
+        for (const key of apiKeys) {
+          try {
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts }],
+                generationConfig: {
+                  responseMimeType: 'application/json'
+                }
+              })
+            });
 
-          if (response.ok) {
-            lastError = null;
-            break;
-          } else {
-            const errText = await response.text();
-            let parsedErr;
-            try { parsedErr = JSON.parse(errText); } catch (_) {}
-            const errorMsg = parsedErr?.error?.message || errText || `HTTP status ${response.status}`;
-            lastError = new Error(`Model ${model} gagal: ${errorMsg} (${response.status})`);
-            
-            if (response.status === 429) {
-              // Wait 1.5 seconds before falling back to next model
-              await new Promise(resolve => setTimeout(resolve, 1500));
+            if (response.ok) {
+              lastError = null;
+              success = true;
+              break;
+            } else {
+              const errText = await response.text();
+              let parsedErr;
+              try { parsedErr = JSON.parse(errText); } catch (_) {}
+              const errorMsg = parsedErr?.error?.message || errText || `HTTP status ${response.status}`;
+              
+              // Mask API key for secure error logging
+              const maskedKey = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : 'Key';
+              lastError = new Error(`Model ${model} (Key: ${maskedKey}) gagal: ${errorMsg} (${response.status})`);
+              
+              if (response.status === 429) {
+                // If we have other keys left for this model, give a tiny delay of 500ms
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
             }
+          } catch (err) {
+            lastError = err;
           }
-        } catch (err) {
-          lastError = err;
         }
       }
 
       if (!response || !response.ok) {
-        throw lastError || new Error('Gagal memproses dengan Gemini API setelah mencoba beberapa model.');
+        throw lastError || new Error('Gagal memproses dengan Gemini API setelah mencoba semua model dan API key.');
       }
 
       const resData = await response.json()
