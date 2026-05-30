@@ -207,7 +207,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Top 5 Kategori */}
-          <Link href="/expenses" className="bento-6" style={{ textDecoration: 'none' }}>
+          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
             <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title">Top 5 Kategori Pengeluaran</div>
@@ -237,37 +237,8 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* Budget vs Realisasi */}
-          <Link href="/budget" className="bento-6" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card">
-                <div className="section-title">Budget vs Realisasi</div>
-                {(s.budgetVsReal || []).filter(b => b.alokasi > 0).length === 0 ? (
-                  <div style={{ color: 'var(--text3)', fontSize: 13 }}>Belum ada budget plan</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', fontWeight: 600, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
-                      <span>Kategori</span><span>Pemakaian (%)</span>
-                    </div>
-                    {(s.budgetVsReal || []).filter(b => b.alokasi > 0).map(b => (
-                      <div key={b.kategori}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600 }}>{b.kategori}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: b.pct >= 100 ? 'var(--red)' : b.pct >= 80 ? 'var(--yellow)' : 'var(--green)' }}>{b.pct}%</span>
-                        </div>
-                        <div className="progress-wrap" style={{ height: 10 }}>
-                          <div className={`progress-bar ${b.pct >= 100 ? 'danger' : b.pct >= 80 ? 'warn' : 'ok'}`} style={{ width: `${Math.min(b.pct, 100)}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Link>
-
           {/* Heatmap */}
-          <Link href="/expenses" className="bento-7" style={{ textDecoration: 'none' }}>
+          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
             <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title">Heatmap Aktivitas Transaksi</div>
@@ -290,7 +261,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* Anomali */}
-          <Link href="/expenses" className="bento-5" style={{ textDecoration: 'none' }}>
+          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
             <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title" style={{ color: 'var(--red)' }}>
