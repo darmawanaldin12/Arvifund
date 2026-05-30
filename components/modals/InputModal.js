@@ -173,8 +173,8 @@ export default function InputModal({ onClose, onSuccess }) {
   }
 
   async function handleAIExtract(fileToExtract = null, textToExtract = null) {
-    const activeText = textToExtract !== null ? textToExtract : aiText
-    const activeFile = fileToExtract !== null ? fileToExtract : imageFile
+    const activeFile = (fileToExtract instanceof Blob) ? fileToExtract : imageFile
+    const activeText = (typeof textToExtract === 'string') ? textToExtract : aiText
 
     if (!activeText.trim() && !activeFile) return
     setAiLoading(true)
@@ -743,7 +743,7 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
               )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button type="button" className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Batal</button>
-                <button type="button" className="btn btn-primary" onClick={handleAIExtract} disabled={aiLoading} style={{ flex: 2 }}>
+                <button type="button" className="btn btn-primary" onClick={() => handleAIExtract()} disabled={aiLoading} style={{ flex: 2 }}>
                   {aiLoading ? 'Sedang Memproses...' : '🤖 Ekstrak Data'}
                 </button>
               </div>
