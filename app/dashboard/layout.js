@@ -30,10 +30,24 @@ export default function DashboardLayout({ children }) {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) router.replace('/login')
-      else setChecking(false)
-    })
+    // Bug fix: tambahkan timeout fallback + catch error
+    // supaya tidak stuck di loading kalau getSession() gagal/lambat
+    const timeout = setTimeout(() => {
+      router.replace('/login')
+    }, 8000) // fallback 8 detik → redirect ke login
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeout)
+        if (!session) router.replace('/login')
+        else setChecking(false)
+      })
+      .catch(() => {
+        clearTimeout(timeout)
+        router.replace('/login')
+      })
+
+    return () => clearTimeout(timeout)
   }, [router])
 
   if (checking) return (
@@ -48,7 +62,12 @@ export default function DashboardLayout({ children }) {
           justifyContent: 'center', margin: '0 auto 12px',
           animation: 'pulse 1.5s ease infinite',
         }}>
-          <img src="/logo.png" alt="" style={{ width: 40, height: 40, objectFit: 'contain', padding: 4 }} />
+          <img
+            src="/logo.png"
+            alt=""
+            style={{ width: 40, height: 40, objectFit: 'contain', padding: 4 }}
+            onError={e => { e.target.style.display = 'none' }}
+          />
         </div>
         <p style={{ color: 'var(--text3)', fontSize: 13 }}>Memuat...</p>
       </div>
