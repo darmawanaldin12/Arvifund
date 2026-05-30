@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useData } from '../DataContext'
 import { supabase } from '../../lib/supabase'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
@@ -17,11 +17,18 @@ export default function InputModal({ onClose, onSuccess }) {
   const [parsedResult, setParsedResult] = useState(null)
 
   const today = new Date().toISOString().split('T')[0]
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     tanggal: today, toko: '', uraian: '', total: '',
     kategori: '', metode: 'Cash', bank: 'Cash',
-    user_id: user?.id || '',
-  })
+    user_id: '',
+  }))
+
+  // Sync user_id when user context is loaded
+  useEffect(() => {
+    if (user?.id) {
+      setForm(f => ({ ...f, user_id: user.id }))
+    }
+  }, [user])
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -55,7 +62,6 @@ Aturan ekstraksi:
 6. "kategori": Harus persis sama dengan salah satu di Daftar Kategori jika bertipe expense (bisa dikosongkan/diabaikan jika tipe income/cash).
 7. "metode": Harus persis sama dengan salah satu di Daftar Metode (jika bertipe cash, default ke Cash).
 8. "bank": Harus persis sama dengan salah satu di Daftar Bank/Dompet.
-9. "user_id": Cari ID user yang paling cocok berdasarkan nama orang yang bertransaksi dari Daftar User. Jika tidak ada yang cocok, gunakan user yang sedang aktif.
 
 Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, atau teks tambahan:
 {
@@ -66,8 +72,7 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
   "total": number,
   "kategori": "string",
   "metode": "string",
-  "bank": "string",
-  "user_id": "string"
+  "bank": "string"
 }
 `;
 
@@ -96,6 +101,26 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
 
       const result = JSON.parse(textResult)
 
+      // Find matches in profiles based on prefix shortcuts or full username matching
+      const aiTextTrimmed = aiText.trim().toLowerCase()
+      let matchedProfile = null
+
+      if (aiTextTrimmed.startsWith('a ') || aiTextTrimmed === 'a' || aiTextTrimmed.startsWith('a:')) {
+        // Aldin shortcut
+        matchedProfile = profiles?.find(p => p.username?.toLowerCase().startsWith('ald'))
+      } else if (aiTextTrimmed.startsWith('s ') || aiTextTrimmed === 's' || aiTextTrimmed.startsWith('s:')) {
+        // Solikhatun shortcut
+        matchedProfile = profiles?.find(p => p.username?.toLowerCase().startsWith('sol'))
+      } else {
+        // Fallback to substring matching
+        matchedProfile = profiles?.find(p => {
+          const usernameLower = p.username?.toLowerCase()
+          return usernameLower && aiTextTrimmed.includes(usernameLower)
+        })
+      }
+      
+      const finalUserId = matchedProfile ? matchedProfile.id : (user?.id || '')
+
       // Set parsed result and open confirmation view
       setParsedResult({
         tipe: result.tipe || 'expense',
@@ -106,7 +131,7 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
         kategori: result.kategori || '',
         metode: result.metode || 'Cash',
         bank: result.bank || 'Cash',
-        user_id: result.user_id || user?.id || '',
+        user_id: finalUserId,
       })
       setShowConfirm(true)
     } catch (err) {
@@ -206,18 +231,132 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
     { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: '🏧' },
   ]
 
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content">
-        <div className="modal-header">
-          <span className="modal-title">Input Transaksi</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', padding: 4 }}>
+  // Confirmation pop-up overlay (shown on top of the main modal after AI parsing)
+  const confirmPopup = showConfirm && parsedResult ? (
+    <div className="confirm-popup-overlay">
+      <div className="confirm-popup-card">
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 22 }}>🤖</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Hasil Ekstraksi AI</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>Periksa dan konfirmasi data berikut</div>
+            </div>
+          </div>
+          <button onClick={() => setShowConfirm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
           </button>
         </div>
-        <div className="modal-body">
-          {/* Mode Selector (Hide during confirmation view) */}
-          {!showConfirm && (
+
+        {/* Parsed Data Card */}
+        <div style={{
+          background: 'var(--surface2)', borderRadius: 10,
+          border: '1px solid var(--border)',
+          overflow: 'hidden', marginBottom: 16,
+          fontSize: 13,
+        }}>
+          {[
+            {
+              label: 'Tipe',
+              value: parsedResult.tipe === 'expense' ? '💸 Pengeluaran' : parsedResult.tipe === 'income' ? '💰 Pemasukan' : '🏧 Tarik Tunai',
+              bold: true,
+              color: parsedResult.tipe === 'expense' ? 'var(--red)' : parsedResult.tipe === 'income' ? 'var(--green)' : 'var(--yellow)',
+            },
+            { label: 'Tanggal', value: parsedResult.tanggal },
+            {
+              label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant',
+              value: parsedResult.toko || '—',
+            },
+            { label: 'Uraian', value: parsedResult.uraian || '—' },
+            {
+              label: 'Jumlah',
+              value: `Rp ${parseFloat(parsedResult.total || 0).toLocaleString('id-ID')}`,
+              bold: true,
+              color: parsedResult.tipe === 'expense' ? 'var(--red)' : parsedResult.tipe === 'income' ? 'var(--green)' : 'var(--yellow)',
+            },
+            ...(parsedResult.tipe === 'expense' ? [{ label: 'Kategori', value: parsedResult.kategori || 'Lainnya' }] : []),
+            { label: 'Bank / Dompet', value: parsedResult.bank || 'Cash' },
+            { label: 'Metode', value: parsedResult.metode || 'Cash' },
+            { label: 'User', isUserSelect: true },
+          ].map((row, i, arr) => (
+            <div key={row.label} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '9px 14px',
+              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <span style={{ color: 'var(--text3)' }}>{row.label}</span>
+              {row.isUserSelect ? (
+                <select
+                  value={parsedResult.user_id}
+                  onChange={e => setParsedResult(prev => ({ ...prev, user_id: e.target.value }))}
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--text1)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">Pilih User</option>
+                  {(profiles || []).map(p => (
+                    <option key={p.id} value={p.id}>{p.username}</option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontWeight: row.bold ? 700 : 600, color: row.color || 'var(--text1)' }}>{row.value}</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.25)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => {
+            setTipe(parsedResult.tipe || 'expense')
+            setForm({
+              tanggal: parsedResult.tanggal || today,
+              toko: parsedResult.toko || '',
+              uraian: parsedResult.uraian || '',
+              total: parsedResult.total ? String(parsedResult.total) : '',
+              kategori: parsedResult.kategori || '',
+              metode: parsedResult.metode || 'Cash',
+              bank: parsedResult.bank || 'Cash',
+              user_id: parsedResult.user_id || user?.id || '',
+            })
+            setShowConfirm(false)
+            setMode('manual')
+          }} style={{ flex: 1 }}>✍️ Edit Manual</button>
+          <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving} style={{ flex: 2 }}>
+            {saving ? 'Menyimpan...' : '✅ Konfirmasi & Simpan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <>
+      {confirmPopup}
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal-content">
+          <div className="modal-header">
+            <span className="modal-title">Input Transaksi</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', padding: 4 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            </button>
+          </div>
+          <div className="modal-body">
+            {/* Mode Selector */}
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
               <button type="button" onClick={() => setMode('manual')} style={{
                 flex: 1, padding: '10px', background: 'none', border: 'none',
@@ -232,86 +371,8 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
                 fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
               }}>🤖 Input AI</button>
             </div>
-          )}
 
-          {showConfirm ? (
-            <div>
-              <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--text2)' }}>
-                <span>🤖</span> Hasil Ekstraksi AI
-              </h3>
-              <div style={{
-                background: 'var(--surface2)', borderRadius: 'var(--radius-sm)',
-                padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
-                fontSize: 13, marginBottom: 16, border: '1px solid var(--border)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>Tipe</span>
-                  <span style={{ fontWeight: 700 }}>
-                    {parsedResult.tipe === 'expense' ? '💸 Pengeluaran' : parsedResult.tipe === 'income' ? '💰 Pemasukan' : '🏧 Tarik Tunai'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>Tanggal</span>
-                  <span style={{ fontWeight: 600 }}>{parsedResult.tanggal}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>
-                    {parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM/Lokasi' : 'Merchant'}
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{parsedResult.toko || '—'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>Uraian</span>
-                  <span style={{ fontWeight: 600 }}>{parsedResult.uraian || '—'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>Jumlah</span>
-                  <span style={{ fontWeight: 800, color: parsedResult.tipe === 'expense' ? 'var(--red)' : parsedResult.tipe === 'income' ? 'var(--green)' : 'var(--yellow)' }}>
-                    Rp {parseFloat(parsedResult.total || 0).toLocaleString('id-ID')}
-                  </span>
-                </div>
-                {parsedResult.tipe === 'expense' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                    <span style={{ color: 'var(--text3)' }}>Kategori</span>
-                    <span style={{ fontWeight: 600 }}>{parsedResult.kategori || 'Lainnya'}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: 6 }}>
-                  <span style={{ color: 'var(--text3)' }}>Bank / Dompet</span>
-                  <span style={{ fontWeight: 600 }}>{parsedResult.bank || 'Cash'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text3)' }}>User</span>
-                  <span style={{ fontWeight: 600 }}>{profiles?.find(p => p.id === parsedResult.user_id)?.username || '—'}</span>
-                </div>
-              </div>
-
-              {error && (
-                <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', border: '1px solid var(--red)', borderColor: 'rgba(244,63,94,0.2)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>
-              )}
-
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" className="btn btn-ghost" onClick={() => {
-                  setTipe(parsedResult.tipe || 'expense')
-                  setForm({
-                    tanggal: parsedResult.tanggal || today,
-                    toko: parsedResult.toko || '',
-                    uraian: parsedResult.uraian || '',
-                    total: parsedResult.total ? String(parsedResult.total) : '',
-                    kategori: parsedResult.kategori || '',
-                    metode: parsedResult.metode || 'Cash',
-                    bank: parsedResult.bank || 'Cash',
-                    user_id: parsedResult.user_id || user?.id || '',
-                  })
-                  setShowConfirm(false)
-                  setMode('manual')
-                }} style={{ flex: 1 }}>✍️ Edit Manual</button>
-                <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving} style={{ flex: 2 }}>
-                  {saving ? 'Menyimpan...' : '✅ Konfirmasi & Simpan'}
-                </button>
-              </div>
-            </div>
-          ) : mode === 'ai' ? (
+          {mode === 'ai' ? (
             <div>
               <div className="form-group">
                 <label className="form-label">Tulis transaksi Anda dengan bahasa alami</label>
@@ -411,8 +472,9 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
               </form>
             </>
           )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
