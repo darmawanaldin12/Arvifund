@@ -148,8 +148,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Weekly Summary */}
-          <Link href="/expenses" style={{ textDecoration: 'none', gridColumn: 'span 1' }}>
-            <div className="bento-4" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card" style={{ height: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div className="section-title" style={{ marginBottom: 0 }}>Ringkasan Mingguan</div>
@@ -207,8 +207,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Top 5 Kategori */}
-          <Link href="/expenses" style={{ textDecoration: 'none', gridColumn: 'span 1' }}>
-            <div className="bento-6" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/expenses" className="bento-6" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title">Top 5 Kategori Pengeluaran</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -238,8 +238,8 @@ export default function DashboardPage() {
           </Link>
 
           {/* Budget vs Realisasi */}
-          <Link href="/budget" style={{ textDecoration: 'none', gridColumn: 'span 1' }}>
-            <div className="bento-6" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/budget" className="bento-6" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title">Budget vs Realisasi</div>
                 {(s.budgetVsReal || []).filter(b => b.alokasi > 0).length === 0 ? (
@@ -267,8 +267,8 @@ export default function DashboardPage() {
           </Link>
 
           {/* Heatmap */}
-          <Link href="/expenses" style={{ textDecoration: 'none', gridColumn: 'span 1' }}>
-            <div className="bento-7" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/expenses" className="bento-7" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title">Heatmap Aktivitas Transaksi</div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
@@ -290,8 +290,8 @@ export default function DashboardPage() {
           </Link>
 
           {/* Anomali */}
-          <Link href="/expenses" style={{ textDecoration: 'none', gridColumn: 'span 1' }}>
-            <div className="bento-5" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/expenses" className="bento-5" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card">
                 <div className="section-title" style={{ color: 'var(--red)' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>warning</span>
@@ -325,8 +325,8 @@ export default function DashboardPage() {
           </Link>
 
           {/* Recent Transactions */}
-          <Link href="/record" style={{ textDecoration: 'none', gridColumn: 'span 2' }}>
-            <div className="bento-12" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <Link href="/record" className="bento-12" style={{ textDecoration: 'none' }}>
+            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="section-title" style={{ marginBottom: 0 }}>10 Transaksi Terakhir</div>
