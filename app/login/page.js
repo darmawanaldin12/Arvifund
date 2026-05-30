@@ -30,7 +30,8 @@ export default function LoginPage() {
       await signIn(email, password)
       router.push('/dashboard')
     } catch (err) {
-      setError('Email atau password salah')
+      console.error('Login error:', err)
+      setError(err.message || 'Email atau password salah')
     } finally {
       setLoading(false)
     }
