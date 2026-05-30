@@ -234,19 +234,45 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
         })
       }
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            responseMimeType: 'application/json'
-          }
-        })
-      })
+      let response;
+      let lastError;
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      for (const model of models) {
+        try {
+          response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: {
+                responseMimeType: 'application/json'
+              }
+            })
+          });
+
+          if (response.ok) {
+            lastError = null;
+            break;
+          } else {
+            const errText = await response.text();
+            let parsedErr;
+            try { parsedErr = JSON.parse(errText); } catch (_) {}
+            const errorMsg = parsedErr?.error?.message || errText || `HTTP status ${response.status}`;
+            lastError = new Error(`Model ${model} gagal: ${errorMsg} (${response.status})`);
+            
+            if (response.status === 429) {
+              // Wait 1.5 seconds before falling back to next model
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+          }
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw lastError || new Error('Gagal memproses dengan Gemini API setelah mencoba beberapa model.');
       }
 
       const resData = await response.json()
