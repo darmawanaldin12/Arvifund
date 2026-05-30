@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useData } from '../DataContext'
 import { supabase } from '../../lib/supabase'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
@@ -22,6 +22,12 @@ export default function InputModal({ onClose, onSuccess }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recognition, setRecognition] = useState(null)
 
+  // Keep a ref of aiText to access instantly inside async SpeechRecognition callbacks
+  const aiTextRef = useRef('')
+  useEffect(() => {
+    aiTextRef.current = aiText
+  }, [aiText])
+
   // Setup Web Speech API for voice notes
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,7 +40,11 @@ export default function InputModal({ onClose, onSuccess }) {
 
         rec.onresult = (event) => {
           const transcript = event.results[event.results.length - 1][0].transcript
-          setAiText(prev => prev ? `${prev} ${transcript}` : transcript)
+          setAiText(prev => {
+            const next = prev ? `${prev} ${transcript}` : transcript
+            aiTextRef.current = next
+            return next
+          })
         }
 
         rec.onerror = (event) => {
@@ -44,6 +54,10 @@ export default function InputModal({ onClose, onSuccess }) {
 
         rec.onend = () => {
           setIsRecording(false)
+          // Auto extract once recording finishes
+          if (aiTextRef.current.trim()) {
+            handleAIExtract(null, aiTextRef.current)
+          }
         }
 
         setRecognition(rec)
@@ -104,8 +118,11 @@ export default function InputModal({ onClose, onSuccess }) {
     return BULAN_ORDER[new Date(tgl).getMonth()]
   }
 
-  async function handleAIExtract() {
-    if (!aiText.trim() && !imageFile) return
+  async function handleAIExtract(fileToExtract = null, textToExtract = null) {
+    const activeText = textToExtract !== null ? textToExtract : aiText
+    const activeFile = fileToExtract !== null ? fileToExtract : imageFile
+
+    if (!activeText.trim() && !activeFile) return
     setAiLoading(true)
     setError('')
     try {
@@ -145,21 +162,21 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
 
       let parts = []
       
-      if (imageFile) {
-        const base64Data = await fileToBase64(imageFile)
+      if (activeFile) {
+        const base64Data = await fileToBase64(activeFile)
         parts.push({
           inlineData: {
-            mimeType: imageFile.type,
+            mimeType: activeFile.type,
             data: base64Data
           }
         })
         
         parts.push({
-          text: `${systemInstruction}\n\nEkstrak data dari struk belanja/nota pada gambar terlampir. Catatan tambahan pengguna (jika ada): "${aiText}"`
+          text: `${systemInstruction}\n\nEkstrak data dari struk belanja/nota pada gambar terlampir. Catatan tambahan pengguna (jika ada): "${activeText}"`
         })
       } else {
         parts.push({
-          text: `${systemInstruction}\n\nKalimat transaksi: "${aiText}"`
+          text: `${systemInstruction}\n\nKalimat transaksi: "${activeText}"`
         })
       }
 
@@ -185,7 +202,7 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
       const result = JSON.parse(textResult)
 
       // Find matches in profiles based on prefix shortcuts or full username matching
-      const aiTextTrimmed = aiText.trim().toLowerCase()
+      const aiTextTrimmed = activeText.trim().toLowerCase()
       let matchedProfile = null
 
       if (aiTextTrimmed.startsWith('a ') || aiTextTrimmed === 'a' || aiTextTrimmed.startsWith('a:')) {
@@ -529,17 +546,18 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
                   {imageFile ? '✓ Struk Terpilih' : '📸 Scan Struk'}
                 </button>
 
-                {/* Hidden input for camera / file upload */}
+                {/* Hidden input for camera / file upload (supports camera and gallery since capture="environment" is omitted) */}
                 <input
                   id="receipt-upload"
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (file) {
                       setImageFile(file)
                       setImagePreview(URL.createObjectURL(file))
+                      // Instantly auto-extract data
+                      handleAIExtract(file, aiTextRef.current)
                     }
                   }}
                   style={{ display: 'none' }}
