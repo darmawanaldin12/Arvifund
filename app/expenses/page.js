@@ -7,6 +7,43 @@ import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, KATEGORI_COLOR, KATEGORI_ICON } from '../../lib/utils'
 import { updateExpense } from '../../lib/data'
 
+// ── CSV EXPORT ──────────────────────────────────────────────
+function exportCSV(rows, getUserName) {
+  const headers = ['Tanggal', 'Bulan', 'Toko', 'Uraian', 'Kategori', 'Metode', 'Bank', 'User', 'Nilai']
+
+  const escape = v => {
+    if (v == null) return ''
+    const s = String(v)
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"'
+    return s
+  }
+
+  const csvRows = [
+    headers.join(','),
+    ...rows.map(r => [
+      r.tanggal || '',
+      r.bulan   || '',
+      r.toko    || '',
+      r.uraian  || '',
+      r.kategori || '',
+      r.transaksi || '',
+      r.bank    || '',
+      getUserName(r.user_id) || '',
+      r.nilai   || 0,
+    ].map(escape).join(','))
+  ]
+
+  const csv     = '\uFEFF' + csvRows.join('\r\n') // BOM untuk Excel
+  const blob    = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url     = URL.createObjectURL(blob)
+  const a       = document.createElement('a')
+  const today   = new Date().toISOString().split('T')[0]
+  a.href        = url
+  a.download    = 'arvifund-expenses-' + today + '.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function ExpensesPage() {
   const { filteredExpenses, expenses, loadData, loading, periodIdx, setPeriodIdx, periods, getUserName, user, setExpenses } = useData()
   const { showToast, ToastContainer } = useToast()
@@ -18,6 +55,7 @@ export default function ExpensesPage() {
   const [saving, setSaving]         = useState(false)
   const [sortKey, setSortKey]       = useState('tanggal')
   const [sortDir, setSortDir]       = useState('desc')
+  const [exporting, setExporting]   = useState(false)
 
   const rows = useMemo(() => {
     let r = filteredExpenses.filter(r =>
@@ -38,7 +76,6 @@ export default function ExpensesPage() {
 
   const total = rows.reduce((s, r) => s + (r.nilai || 0), 0)
 
-  // Anomali threshold
   const avgNilai = filteredExpenses.length > 0
     ? filteredExpenses.reduce((s, r) => s + r.nilai, 0) / filteredExpenses.length : 0
   const anomaliThreshold = avgNilai * 3
@@ -51,7 +88,8 @@ export default function ExpensesPage() {
   async function handleSave(form) {
     setSaving(true)
     try {
-      const bulan = form.tanggal ? new Date(form.tanggal).toLocaleDateString('id-ID', { month: 'long' }) : form.bulan
+      const [, m] = (form.tanggal || '').split('-')
+      const bulan = m ? require('../../lib/utils').BULAN_ORDER[parseInt(m) - 1] : form.bulan
       await updateExpense(form.id, {
         toko: form.toko,
         tanggal: form.tanggal?.split('T')[0],
@@ -70,6 +108,19 @@ export default function ExpensesPage() {
       showToast('❌ Gagal menyimpan: ' + err.message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function handleExport() {
+    if (rows.length === 0) { showToast('Tidak ada data untuk diekspor', 'error'); return }
+    setExporting(true)
+    try {
+      exportCSV(rows, getUserName)
+      showToast('✅ CSV berhasil diunduh (' + rows.length + ' baris)')
+    } catch(e) {
+      showToast('❌ Gagal export: ' + e.message, 'error')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -112,15 +163,50 @@ export default function ExpensesPage() {
           </select>
         </div>
 
-        {/* Summary bar */}
+        {/* Summary bar + Export button */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '10px 14px', background: 'var(--surface)',
           borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
-          marginBottom: 12, fontSize: 13,
+          marginBottom: 12, fontSize: 13, gap: 8,
         }}>
-          <span style={{ color: 'var(--text2)' }}><strong style={{ color: 'var(--text1)' }}>{rows.length}</strong> transaksi</span>
-          <span>Total: <strong style={{ color: 'var(--red)' }}>{fmt(total)}</strong></span>
+          <span style={{ color: 'var(--text2)' }}>
+            <strong style={{ color: 'var(--text1)' }}>{rows.length}</strong> transaksi
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span>Total: <strong style={{ color: 'var(--red)' }}>{fmt(total)}</strong></span>
+            {/* Export CSV Button */}
+            <button
+              onClick={handleExport}
+              disabled={exporting || rows.length === 0}
+              title={'Export ' + rows.length + ' baris ke CSV'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 11px', borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: 'var(--surface2)',
+                color: rows.length === 0 ? 'var(--text3)' : 'var(--accent)',
+                fontSize: 12, fontWeight: 700, cursor: rows.length === 0 ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', transition: 'background 0.15s',
+                opacity: rows.length === 0 ? 0.5 : 1,
+              }}
+              onMouseEnter={e => { if (rows.length > 0) e.currentTarget.style.background = 'var(--accent-bg, rgba(56,189,248,0.1))' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface2)' }}
+            >
+              {exporting ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.8s linear infinite' }}>
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              )}
+              CSV
+            </button>
+          </span>
         </div>
 
         {/* Tabel */}
@@ -211,6 +297,7 @@ export default function ExpensesPage() {
       )}
 
       <ToastContainer />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
   )
 }
