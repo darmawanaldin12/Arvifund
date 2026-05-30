@@ -6,7 +6,7 @@ import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/ut
 
 export default function InputModal({ onClose, onSuccess }) {
   const { user, profiles, loadData } = useData()
-  const [mode, setMode]     = useState('manual') // 'manual' | 'ai'
+  const [mode, setMode]     = useState('ai') // 'manual' | 'ai' (AI is default)
   const [tipe, setTipe]     = useState('expense')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -15,6 +15,73 @@ export default function InputModal({ onClose, onSuccess }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [parsedResult, setParsedResult] = useState(null)
+
+  // OCR Struk and Voice Note States
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recognition, setRecognition] = useState(null)
+
+  // Setup Web Speech API for voice notes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition()
+        rec.continuous = true
+        rec.interimResults = false
+        rec.lang = 'id-ID' // Indonesian
+
+        rec.onresult = (event) => {
+          const transcript = event.results[event.results.length - 1][0].transcript
+          setAiText(prev => prev ? `${prev} ${transcript}` : transcript)
+        }
+
+        rec.onerror = (event) => {
+          console.error('Speech recognition error', event.error)
+          setIsRecording(false)
+        }
+
+        rec.onend = () => {
+          setIsRecording(false)
+        }
+
+        setRecognition(rec)
+      }
+    }
+  }, [])
+
+  function toggleRecording() {
+    if (!recognition) {
+      setError('Browser Anda tidak mendukung perekaman suara (Speech Recognition). Coba gunakan Chrome atau Safari.')
+      return
+    }
+    if (isRecording) {
+      recognition.stop()
+      setIsRecording(false)
+    } else {
+      setError('')
+      try {
+        recognition.start()
+        setIsRecording(true)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
+  // Helper to convert File to Base64
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => {
+        const base64String = reader.result.split(',')[1]
+        resolve(base64String)
+      };
+      reader.onerror = error => reject(error)
+    })
+  }
 
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(() => ({
@@ -38,14 +105,14 @@ export default function InputModal({ onClose, onSuccess }) {
   }
 
   async function handleAIExtract() {
-    if (!aiText.trim()) return
+    if (!aiText.trim() && !imageFile) return
     setAiLoading(true)
     setError('')
     try {
       const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
       if (!apiKey) throw new Error('API Key Gemini tidak ditemukan di .env.local')
 
-      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural tentang transaksi keuangan menjadi format JSON terstruktur.
+      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural ATAU dari foto struk belanja/nota menjadi format JSON terstruktur.
 Hari ini adalah: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleDateString('id-ID', { weekday: 'long' })}).
 
 Daftar Kategori yang valid: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}
@@ -54,11 +121,11 @@ Daftar Metode yang valid: ${JSON.stringify(METODE_LIST)}
 Daftar User yang tersedia (gunakan username untuk mencocokkan): ${JSON.stringify((profiles || []).map(p => ({ id: p.id, username: p.username })))}
 
 Aturan ekstraksi:
-1. "tipe": Tentukan apakah "expense" (jika pengeluaran/beli/bayar), "income" (jika pemasukan/gaji/transfer masuk), atau "cash" (jika tarik tunai/pengeluaran tunai mandiri).
-2. "tanggal": Format "YYYY-MM-DD". Sesuaikan dengan kata penunjuk waktu seperti "kemarin", "hari ini", "2 hari lalu", atau tanggal spesifik.
+1. "tipe": Tentukan apakah "expense" (jika pengeluaran/beli/bayar/struk belanja), "income" (jika pemasukan/gaji/transfer masuk), atau "cash" (jika tarik tunai/pengeluaran tunai mandiri).
+2. "tanggal": Format "YYYY-MM-DD". Sesuaikan dengan kata penunjuk waktu seperti "kemarin", "hari ini", "2 hari lalu", atau tanggal spesifik yang tertulis di struk/kalimat.
 3. "toko": Nama toko/merchant/sumber pemasukan/lokasi ATM.
 4. "uraian": Deskripsi barang atau uraian transaksi secara singkat.
-5. "total": Nominal angka murni tanpa simbol (misal 50000).
+5. "total": Nominal angka murni tanpa simbol (misal 50000). Cari nilai total akhir/grand total jika menganalisis struk.
 6. "kategori": Harus persis sama dengan salah satu di Daftar Kategori jika bertipe expense (bisa dikosongkan/diabaikan jika tipe income/cash).
 7. "metode": Harus persis sama dengan salah satu di Daftar Metode (jika bertipe cash, default ke Cash).
 8. "bank": Harus persis sama dengan salah satu di Daftar Bank/Dompet.
@@ -76,15 +143,31 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
 }
 `;
 
+      let parts = []
+      
+      if (imageFile) {
+        const base64Data = await fileToBase64(imageFile)
+        parts.push({
+          inlineData: {
+            mimeType: imageFile.type,
+            data: base64Data
+          }
+        })
+        
+        parts.push({
+          text: `${systemInstruction}\n\nEkstrak data dari struk belanja/nota pada gambar terlampir. Catatan tambahan pengguna (jika ada): "${aiText}"`
+        })
+      } else {
+        parts.push({
+          text: `${systemInstruction}\n\nKalimat transaksi: "${aiText}"`
+        })
+      }
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `${systemInstruction}\n\nKalimat transaksi: "${aiText}"`
-            }]
-          }],
+          contents: [{ parts }],
           generationConfig: {
             responseMimeType: 'application/json'
           }
@@ -135,7 +218,7 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
       })
       setShowConfirm(true)
     } catch (err) {
-      setError('AI Gagal memproses kalimat: ' + err.message)
+      setError('AI Gagal memproses data: ' + err.message)
     } finally {
       setAiLoading(false)
     }
@@ -375,16 +458,150 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
           {mode === 'ai' ? (
             <div>
               <div className="form-group">
-                <label className="form-label">Tulis transaksi Anda dengan bahasa alami</label>
+                <label className="form-label">Tulis, diktekan, atau unggah foto struk Anda</label>
                 <textarea
                   className="form-input"
                   rows={4}
-                  placeholder="Contoh: Beli bakso kemarin habis 50.000 di warung berkah pakai BCA oleh Aldin"
+                  placeholder="Contoh: Beli bensin 50rb di Pertamina pakai BCA oleh aldin"
                   value={aiText}
                   onChange={e => setAiText(e.target.value)}
-                  style={{ resize: 'vertical', width: '100%', fontFamily: 'inherit' }}
+                  style={{ resize: 'vertical', width: '100%', fontFamily: 'inherit', marginBottom: 12 }}
                 />
               </div>
+
+              {/* Media Helpers: Voice & OCR */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                {/* Voice Note Button */}
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: isRecording ? '1px solid var(--red)' : '1px solid var(--border)',
+                    background: isRecording ? 'rgba(244,63,94,0.15)' : 'var(--surface2)',
+                    color: isRecording ? 'var(--red)' : 'var(--text2)',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isRecording ? '0 0 12px rgba(244,63,94,0.3)' : 'none',
+                    animation: isRecording ? 'pulse-record 1.5s infinite' : 'none'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                    {isRecording ? 'mic' : 'mic_none'}
+                  </span>
+                  {isRecording ? 'Mendengarkan...' : '🎙️ Suara'}
+                </button>
+
+                {/* Scan Struk Button */}
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('receipt-upload').click()}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: imageFile ? '1px solid var(--green)' : '1px solid var(--border)',
+                    background: imageFile ? 'rgba(16,185,129,0.15)' : 'var(--surface2)',
+                    color: imageFile ? 'var(--green)' : 'var(--text2)',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                    photo_camera
+                  </span>
+                  {imageFile ? '✓ Struk Terpilih' : '📸 Scan Struk'}
+                </button>
+
+                {/* Hidden input for camera / file upload */}
+                <input
+                  id="receipt-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setImageFile(file)
+                      setImagePreview(URL.createObjectURL(file))
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </div>
+
+              {/* Image Preview Card */}
+              {imagePreview && (
+                <div style={{
+                  position: 'relative',
+                  background: 'var(--surface2)',
+                  borderRadius: 10,
+                  border: '1px solid var(--border)',
+                  padding: 10,
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12
+                }}>
+                  <div style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    border: '1px solid var(--border)',
+                    background: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img src={imagePreview} alt="Receipt Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {imageFile?.name || 'File Struk'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                      {imageFile ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null)
+                      setImagePreview('')
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--red)',
+                      cursor: 'pointer',
+                      padding: 4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>delete</span>
+                  </button>
+                </div>
+              )}
+
               {error && (
                 <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', border: '1px solid var(--red)', borderColor: 'rgba(244,63,94,0.2)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>
               )}
