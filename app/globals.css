@@ -588,162 +588,119 @@ tr:hover td { background: var(--surface2); }
   .bento-12 { grid-column: span 12; }
 }
 
-/* ── FORCE LIGHT BACKGROUND (override any dark injection) ── */
-html, body {
-  background: #f9f9ff !important;
-  color: #041b3c !important;
+/* ── MOBILE FIX ── */
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100dvh;
+  background: #f9f9ff;
 }
 
 @media (prefers-color-scheme: dark) {
-  html, body {
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
-  }
+  body { background: #0f172a; }
 }
 
-/* ── MOBILE FIX ── */
 @media (max-width: 767px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
-    width: 100% !important;
-  }
-  .kpi-card {
-    min-width: 0 !important;
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-  .kpi-value {
-    font-size: 17px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .scorecard-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-  .scorecard-item {
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-  .scorecard-value {
-    font-size: 14px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .bento-grid {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  .bento-4, .bento-5, .bento-6,
-  .bento-7, .bento-8, .bento-12 {
-    grid-column: span 1 !important;
-  }
   .page-container {
     padding: 12px !important;
+    width: 100% !important;
     overflow-x: hidden !important;
   }
-  .filter-bar {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-  }
-  .filter-chip {
-    font-size: 11px !important;
-    padding: 5px 12px !important;
-    flex-shrink: 0 !important;
-  }
-  .card {
-    overflow: hidden !important;
-  }
-}
 
-/* ── GLOBAL MOBILE OVERFLOW FIX ── */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
-
-@media (max-width: 767px) {
-  * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* Override bento grid jadi 1 kolom */
-  .bento-grid,
-  [class*="bento-"] {
-    grid-column: span 1 !important;
+  .app-main {
+    overflow-x: hidden !important;
     width: 100% !important;
-    min-width: 0 !important;
   }
 
+  /* Bento grid jadi flex column */
   .bento-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 12px !important;
+    width: 100% !important;
   }
 
-  /* KPI grid tetap 2 kolom tapi fit */
+  .bento-4, .bento-5, .bento-6,
+  .bento-7, .bento-8, .bento-12 {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* KPI 2 kolom fit */
   .kpi-grid {
-    display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 10px !important;
     width: 100% !important;
   }
 
-  /* Scorecard 2 kolom fit */  
+  .kpi-card {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    width: 100% !important;
+  }
+
+  .kpi-value {
+    font-size: 16px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .kpi-label { font-size: 10px !important; }
+
+  /* Scorecard 2 kolom */
   .scorecard-grid {
-    display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
     width: 100% !important;
   }
 
-  /* Card dan kontennya */
-  .card {
-    width: 100% !important;
+  .scorecard-item {
     min-width: 0 !important;
     overflow: hidden !important;
   }
 
-  /* KPI value font lebih kecil biar muat */
-  .kpi-value { font-size: 16px !important; }
-  .kpi-label { font-size: 10px !important; }
-  .scorecard-value { font-size: 13px !important; }
+  .scorecard-value {
+    font-size: 13px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
   .scorecard-label { font-size: 10px !important; }
 
-  /* Progress bar jangan overflow */
-  .progress-wrap { width: 100% !important; }
+  /* Card */
+  .card {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
 
   /* Section title */
   .section-title { font-size: 11px !important; }
 
-  /* Filter chips */
-  .filter-bar { width: 100% !important; overflow-x: auto !important; }
-  .filter-chip { flex-shrink: 0 !important; }
-
-  /* Table wrap */
-  .table-wrap { 
-    width: 100% !important; 
+  /* Table */
+  .table-wrap {
+    width: 100% !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
-  table { min-width: 500px !important; }
-
-  /* Page container */
-  .page-container {
-    padding: 12px !important;
+  /* Filter */
+  .filter-bar {
+    overflow-x: auto !important;
     width: 100% !important;
-    overflow-x: hidden !important;
   }
 
-  /* App main */
-  .app-main {
-    width: 100% !important;
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-  }
+  .filter-chip { flex-shrink: 0 !important; }
 }
