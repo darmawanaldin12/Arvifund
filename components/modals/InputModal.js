@@ -97,6 +97,60 @@ export default function InputModal({ onClose, onSuccess }) {
     })
   }
 
+  // Client-side image compression and resizing using HTML5 Canvas
+  function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.75) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target.result
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          // Calculate new dimensions to maintain aspect ratio
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width)
+              width = maxWidth
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height)
+              height = maxHeight
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                })
+                resolve(compressedFile)
+              } else {
+                reject(new Error('Canvas compression failed'))
+              }
+            },
+            'image/jpeg',
+            quality
+          )
+        }
+        img.onerror = (err) => reject(err)
+      }
+      reader.onerror = (err) => reject(err)
+    })
+  }
+
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(() => ({
     tanggal: today, toko: '', uraian: '', total: '',
@@ -583,10 +637,19 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (file) {
-                      setImageFile(file)
-                      setImagePreview(URL.createObjectURL(file))
-                      // Instantly auto-extract data
-                      handleAIExtract(file, aiTextRef.current)
+                      setAiLoading(true)
+                      compressImage(file)
+                        .then(compressed => {
+                          setImageFile(compressed)
+                          setImagePreview(URL.createObjectURL(compressed))
+                          handleAIExtract(compressed, aiTextRef.current)
+                        })
+                        .catch(err => {
+                          console.error('Compression failed', err)
+                          setImageFile(file)
+                          setImagePreview(URL.createObjectURL(file))
+                          handleAIExtract(file, aiTextRef.current)
+                        })
                     }
                   }}
                   style={{ display: 'none' }}
@@ -600,10 +663,19 @@ Kembalikan HANYA objek JSON dengan skema berikut tanpa markdown block, kutipan, 
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (file) {
-                      setImageFile(file)
-                      setImagePreview(URL.createObjectURL(file))
-                      // Instantly auto-extract data
-                      handleAIExtract(file, aiTextRef.current)
+                      setAiLoading(true)
+                      compressImage(file)
+                        .then(compressed => {
+                          setImageFile(compressed)
+                          setImagePreview(URL.createObjectURL(compressed))
+                          handleAIExtract(compressed, aiTextRef.current)
+                        })
+                        .catch(err => {
+                          console.error('Compression failed', err)
+                          setImageFile(file)
+                          setImagePreview(URL.createObjectURL(file))
+                          handleAIExtract(file, aiTextRef.current)
+                        })
                     }
                   }}
                   style={{ display: 'none' }}
