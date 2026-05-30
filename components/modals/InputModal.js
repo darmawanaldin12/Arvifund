@@ -19,9 +19,11 @@ export default function InputModal({ onClose, onSuccess }) {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
+  // Bug 1 fix: parse bulan dari string YYYY-MM-DD, hindari timezone shift WIB +7
   function getBulan(tgl) {
     if (!tgl) return ''
-    return BULAN_ORDER[new Date(tgl).getMonth()]
+    const [, m] = tgl.split('-')
+    return BULAN_ORDER[parseInt(m) - 1]
   }
 
   async function handleSubmit(e) {
@@ -67,9 +69,9 @@ export default function InputModal({ onClose, onSuccess }) {
   }
 
   const TIPE_LIST = [
-    { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    icon: '💸' },
-    { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  icon: '💰' },
-    { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: '🏧' },
+    { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    icon: 'ð¸' },
+    { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  icon: 'ð°' },
+    { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: 'ð§' },
   ]
 
   return (
@@ -151,7 +153,7 @@ export default function InputModal({ onClose, onSuccess }) {
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Batal</button>
               <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>
-                {saving ? 'Menyimpan...' : '✅ Simpan'}
+                {saving ? 'Menyimpan...' : 'â Simpan'}
               </button>
             </div>
           </form>
