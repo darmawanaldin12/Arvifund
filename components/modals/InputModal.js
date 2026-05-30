@@ -19,11 +19,9 @@ export default function InputModal({ onClose, onSuccess }) {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
-  // Bug 1 fix: parse bulan dari string YYYY-MM-DD, hindari timezone shift WIB +7
   function getBulan(tgl) {
     if (!tgl) return ''
-    const [, m] = tgl.split('-')
-    return BULAN_ORDER[parseInt(m) - 1]
+    return BULAN_ORDER[new Date(tgl).getMonth()]
   }
 
   async function handleSubmit(e) {
@@ -69,9 +67,9 @@ export default function InputModal({ onClose, onSuccess }) {
   }
 
   const TIPE_LIST = [
-    { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    icon: 'ð¸' },
-    { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  icon: 'ð°' },
-    { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: 'ð§' },
+    { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    icon: '💸' },
+    { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  icon: '💰' },
+    { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: '🏧' },
   ]
 
   return (
@@ -144,7 +142,7 @@ export default function InputModal({ onClose, onSuccess }) {
               <label className="form-label">User</label>
               <select className="form-select" value={form.user_id} onChange={e => set('user_id', e.target.value)} required>
                 <option value="">Pilih User</option>
-                {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
+                {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
               </select>
             </div>
             {error && (
@@ -153,7 +151,7 @@ export default function InputModal({ onClose, onSuccess }) {
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Batal</button>
               <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>
-                {saving ? 'Menyimpan...' : 'â Simpan'}
+                {saving ? 'Menyimpan...' : '✅ Simpan'}
               </button>
             </div>
           </form>

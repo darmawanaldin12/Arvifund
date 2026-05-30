@@ -6,55 +6,56 @@ import { supabase } from '../lib/supabase'
 const TIMEOUT_MS = 60 * 60 * 1000 // 1 jam
 const STORAGE_KEY = 'arvifund_last_active'
 
+function safeGetStorage(key) {
+  if (typeof window === 'undefined') return null
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function safeSetStorage(key, value) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, value) } catch {}
+}
+
+function safeRemoveStorage(key) {
+  if (typeof window === 'undefined') return
+  try { localStorage.removeItem(key) } catch {}
+}
+
 export function useSessionTimeout() {
-  const router = useRouter()
+  const router   = useRouter()
   const timerRef = useRef(null)
 
   const logout = useCallback(async () => {
-    localStorage.removeItem(STORAGE_KEY)
+    safeRemoveStorage(STORAGE_KEY)
     await supabase.auth.signOut()
     router.replace('/login?reason=timeout')
   }, [router])
 
   const resetTimer = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, Date.now().toString())
+    safeSetStorage(STORAGE_KEY, Date.now().toString())
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(logout, TIMEOUT_MS)
   }, [logout])
 
   useEffect(() => {
-    // Cek apakah session sudah expired saat app dibuka
-    const lastActive = localStorage.getItem(STORAGE_KEY)
+    if (typeof window === 'undefined') return
+
+    const lastActive = safeGetStorage(STORAGE_KEY)
     if (lastActive) {
       const elapsed = Date.now() - parseInt(lastActive)
-      if (elapsed >= TIMEOUT_MS) {
-        logout()
-        return
-      }
-      // Sisa waktu
-      const remaining = TIMEOUT_MS - elapsed
-      timerRef.current = setTimeout(logout, remaining)
+      if (elapsed >= TIMEOUT_MS) { logout(); return }
+      timerRef.current = setTimeout(logout, TIMEOUT_MS - elapsed)
     } else {
       resetTimer()
     }
 
-    // Event listener untuk activity
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
 
-    // Cek saat tab/window kembali aktif (visibility change)
-    // Bug 3 fix: reset timer saat tab kembali aktif jika session belum expired
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
-        const lastActive = localStorage.getItem(STORAGE_KEY)
-        if (lastActive) {
-          const elapsed = Date.now() - parseInt(lastActive)
-          if (elapsed >= TIMEOUT_MS) {
-            logout()
-          } else {
-            resetTimer()
-          }
-        }
+        const last = safeGetStorage(STORAGE_KEY)
+        if (last && Date.now() - parseInt(last) >= TIMEOUT_MS) logout()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
