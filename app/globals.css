@@ -214,6 +214,7 @@ body {
 .app-shell {
   display: flex;
   min-height: 100dvh;
+  overflow: visible;
 }
 
 .app-sidebar-wrap {
@@ -227,6 +228,9 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .page-container {
@@ -590,13 +594,14 @@ tr:hover td { background: var(--surface2); }
 
 /* ── MOBILE FIX ── */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   min-height: 100dvh;
   background: #f9f9ff;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (prefers-color-scheme: dark) {
