@@ -1,0 +1,26 @@
+--- a/components/layout/BottomNav.js
++++ b/components/layout/BottomNav.js
+@@ perubahan import:
+-import { useState } from 'react'
+-import InputModal from '../modals/InputModal'
+ (hapus kedua baris di atas)
+
+@@ perubahan state:
+-  const [showInput, setShowInput] = useState(false)
+ (hapus baris ini)
+
+@@ perubahan tombol aksi tengah di nav:
+-              <button key="action" onClick={() => setShowInput(true)} style={{
++              <Link key="action" href="/input" style={{
+                 background: 'none', border: 'none', cursor: 'pointer',
+                 display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 8px',
+-              }}>
++                textDecoration: 'none'
++              }}>
+@@ akhir tombol:
+-              </button>
++              </Link>
+
+@@ hapus modal di akhir komponen:
+-      {showInput && <InputModal onClose={() => setShowInput(false)} />}
+ (hapus baris ini)
