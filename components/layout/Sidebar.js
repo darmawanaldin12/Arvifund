@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 
 const NAV_ITEMS = [
   { href: '/dashboard',   label: 'Dashboard',    icon: 'dashboard' },
+  { href: '/input',       label: 'Input',        icon: 'add_circle' },
   { href: '/expenses',    label: 'Pengeluaran',  icon: 'trending_down' },
   { href: '/income',      label: 'Pemasukan',    icon: 'trending_up' },
   { href: '/cashrecord',  label: 'Tarik Tunai',  icon: 'local_atm' },
