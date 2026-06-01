@@ -1,0 +1,13 @@
+--- a/components/modals/EditModal.js
++++ b/components/modals/EditModal.js
+@@
+ export default function EditModal({ type, data, onSave, onClose, loading }) {
++  const PAYMENT_METHOD_OPTIONS = ['QRIS', 'Cash', 'Card', 'Transfer']
++  const BANK_OPTIONS = ['BCA', 'Mandiri', 'OVO', 'GoPay', 'BRI', 'ShopeePay']
+   const [form, setForm] = useState({})
+@@
+-                    {METODE_LIST.map(m => <option key={m}>{m}</option>)}
++                    {PAYMENT_METHOD_OPTIONS.map(m => <option key={m}>{m}</option>)}
+@@
+-                    {BANK_LIST.map(b => <option key={b}>{b}</option>)}
++                    {BANK_OPTIONS.map(b => <option key={b}>{b}</option>)}
