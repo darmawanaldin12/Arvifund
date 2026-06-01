@@ -1,0 +1,13 @@
+--- a/components/modals/InputModal.js
++++ b/components/modals/InputModal.js
+@@
+ export default function InputModal({ onClose, onSuccess }) {
+   const { user, profiles, loadData } = useData()
++  const PAYMENT_METHOD_OPTIONS = ['QRIS', 'Cash', 'Card', 'Transfer']
++  const BANK_OPTIONS = ['BCA', 'Mandiri', 'OVO', 'GoPay', 'BRI', 'ShopeePay']
+@@
+-                      {METODE_LIST.map(m => <option key={m}>{m}</option>)}
++                      {PAYMENT_METHOD_OPTIONS.map(m => <option key={m}>{m}</option>)}
+@@
+-                    {BANK_LIST.map(b => <option key={b}>{b}</option>)}
++                    {BANK_OPTIONS.map(b => <option key={b}>{b}</option>)}
