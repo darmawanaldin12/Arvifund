@@ -505,35 +505,42 @@ Kembalikan HANYA objek JSON tanpa markdown:
           {/* Image dengan scan line overlay */}
           <div style={{
             width: '100%', aspectRatio: '4/3',
-            borderRadius: 12, overflow: 'hidden',
+            borderRadius: 12,
             position: 'relative', background: '#000',
             border: '2px solid var(--accent)',
             boxShadow: '0 0 0 3px rgba(56,189,248,0.2)',
+            overflow: 'hidden',
           }}>
             <img src={imagePreview} alt="Scanning" style={{
-              width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85,
+              width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75,
+              display: 'block',
             }} />
-            {/* Corner brackets */}
+            {/* Corner brackets — di luar overflow hidden supaya tetap kelihatan */}
             {[
-              { top: 8, left: 8, borderTop: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)' },
-              { top: 8, right: 8, borderTop: '3px solid var(--accent)', borderRight: '3px solid var(--accent)' },
-              { bottom: 8, left: 8, borderBottom: '3px solid var(--accent)', borderLeft: '3px solid var(--accent)' },
-              { bottom: 8, right: 8, borderBottom: '3px solid var(--accent)', borderRight: '3px solid var(--accent)' },
+              { top: 8, left: 8, borderTop: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8' },
+              { top: 8, right: 8, borderTop: '3px solid #38bdf8', borderRight: '3px solid #38bdf8' },
+              { bottom: 8, left: 8, borderBottom: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8' },
+              { bottom: 8, right: 8, borderBottom: '3px solid #38bdf8', borderRight: '3px solid #38bdf8' },
             ].map((s, i) => (
-              <div key={i} style={{ position: 'absolute', width: 20, height: 20, ...s }} />
+              <div key={i} style={{ position: 'absolute', width: 22, height: 22, zIndex: 3, ...s }} />
             ))}
-            {/* Scan line */}
+            {/* Scan line — pakai translateY bukan top supaya smooth */}
             <div style={{
-              position: 'absolute', left: 0, right: 0, height: 2,
-              background: 'linear-gradient(90deg, transparent, var(--accent), var(--accent), transparent)',
-              boxShadow: '0 0 8px var(--accent), 0 0 16px rgba(56,189,248,0.5)',
-              animation: 'scanLine 1.8s ease-in-out infinite',
+              position: 'absolute', left: 0, right: 0, height: 3, top: 0, zIndex: 2,
+              background: 'linear-gradient(90deg, transparent 0%, #38bdf8 30%, #38bdf8 70%, transparent 100%)',
+              boxShadow: '0 0 10px 2px rgba(56,189,248,0.8), 0 0 20px 4px rgba(56,189,248,0.4)',
+              animation: 'scanLineMove 1.8s ease-in-out infinite',
             }} />
-            {/* Green scan glow overlay */}
+            {/* Scan glow trailing */}
             <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, rgba(56,189,248,0.05) 0%, rgba(56,189,248,0.12) 50%, rgba(56,189,248,0.05) 100%)',
-              animation: 'scanGlow 1.8s ease-in-out infinite',
+              position: 'absolute', left: 0, right: 0, height: 60, top: 0, zIndex: 1,
+              background: 'linear-gradient(180deg, rgba(56,189,248,0.15) 0%, transparent 100%)',
+              animation: 'scanGlowMove 1.8s ease-in-out infinite',
+            }} />
+            {/* Dark overlay tint */}
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              background: 'rgba(15,23,42,0.25)',
             }} />
           </div>
           {/* Status text */}
@@ -797,10 +804,15 @@ Kembalikan HANYA objek JSON tanpa markdown:
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes scanLine {
-          0%   { top: 8%; }
-          50%  { top: 88%; }
-          100% { top: 8%; }
+        @keyframes scanLineMove {
+          0%   { transform: translateY(0%); }
+          50%  { transform: translateY(2200%); }
+          100% { transform: translateY(0%); }
+        }
+        @keyframes scanGlowMove {
+          0%   { transform: translateY(-100%); }
+          50%  { transform: translateY(1800%); }
+          100% { transform: translateY(-100%); }
         }
         @keyframes scanGlow {
           0%   { opacity: 0.6; }
