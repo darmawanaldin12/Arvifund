@@ -1,0 +1,22 @@
+--- a/components/layout/BottomNav.js
++++ b/components/layout/BottomNav.js
+@@
+ import Link from 'next/link'
+-import { useState } from 'react'
+ import { usePathname } from 'next/navigation'
+-import InputModal from '../modals/InputModal'
+@@
+-  const [showInput, setShowInput] = useState(false)
+@@
+-              <button key="action" onClick={() => setShowInput(true)} style={{
++              <Link key="action" href="/input" style={{
+                 background: 'none', border: 'none', cursor: 'pointer',
+                 display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 8px',
+-              }}>
++                textDecoration: 'none'
++              }}>
+@@
+-              </button>
++              </Link>
+@@
+-      {showInput && <InputModal onClose={() => setShowInput(false)} />}
