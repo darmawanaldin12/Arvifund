@@ -14,7 +14,7 @@ export async function POST(request) {
     const apiKeys = apiKey.split(',').map(k => k.trim()).filter(Boolean)
     const models = model
       ? [model]
-      : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+      : ['gemini-2.5-flash', 'gemini-2.0-flash']
 
     let lastError = null
     let responseData = null
