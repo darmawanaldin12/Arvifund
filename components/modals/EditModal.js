@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
+import AppSelect from '../ui/AppSelect'
 
 const METODE_LIST_EDIT = ['Cash', 'QRIS', 'Transfer', 'Card', 'Cardless', 'Virtual Account Transfer']
 const BANK_LIST_EDIT   = ['BCA', 'BRI', 'Mandiri', 'OVO', 'GoPay', 'ShopeePay', 'Cash']
@@ -60,24 +61,30 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Kategori</label>
-                  <select className="form-select" value={form.kategori || ''} onChange={e => set('kategori', e.target.value)}>
-                    <option value="">Pilih Kategori</option>
-                    {KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.kategori || ''}
+                    onChange={e => set('kategori', e.target.value)}
+                    placeholder="Pilih Kategori"
+                    options={KATEGORI_LIST.filter(k => k !== 'Pemasukan')}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Metode Bayar</label>
-                  <select className="form-select" value={form.transaksi || ''} onChange={e => set('transaksi', e.target.value)}>
-                    <option value="">Pilih Metode</option>
-                    {METODE_LIST_EDIT.map(m => <option key={m}>{m}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.transaksi || ''}
+                    onChange={e => set('transaksi', e.target.value)}
+                    placeholder="Pilih Metode"
+                    options={METODE_LIST_EDIT}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Bank / Dompet</label>
-                  <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
-                    <option value="">Pilih Bank</option>
-                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.bank || ''}
+                    onChange={e => set('bank', e.target.value)}
+                    placeholder="Pilih Bank"
+                    options={BANK_LIST_EDIT}
+                  />
                 </div>
               </>
             )}
@@ -98,17 +105,21 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Metode</label>
-                  <select className="form-select" value={form.metode || ''} onChange={e => set('metode', e.target.value)}>
-                    <option value="">Pilih Metode</option>
-                    {METODE_LIST_EDIT.map(m => <option key={m}>{m}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.metode || ''}
+                    onChange={e => set('metode', e.target.value)}
+                    placeholder="Pilih Metode"
+                    options={METODE_LIST_EDIT}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Bank Tujuan</label>
-                  <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
-                    <option value="">Pilih Bank</option>
-                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.bank || ''}
+                    onChange={e => set('bank', e.target.value)}
+                    placeholder="Pilih Bank"
+                    options={BANK_LIST_EDIT}
+                  />
                 </div>
               </>
             )}
@@ -129,10 +140,12 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Bank</label>
-                  <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
-                    <option value="">Pilih Bank</option>
-                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
-                  </select>
+                  <AppSelect
+                    value={form.bank || ''}
+                    onChange={e => set('bank', e.target.value)}
+                    placeholder="Pilih Bank"
+                    options={BANK_LIST_EDIT}
+                  />
                 </div>
               </>
             )}
