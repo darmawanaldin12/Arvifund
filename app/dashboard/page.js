@@ -1,7 +1,9 @@
 'use client'
+import { useState } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
+import ScorecardChartModal from '../../components/ScorecardChartModal'
 import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, KATEGORI_ICON, KATEGORI_COLOR, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
 import Link from 'next/link'
 
@@ -75,6 +77,11 @@ export default function DashboardPage() {
     name: getUserName(uid), val, pct: s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
   }))
 
+  // ── Scorecard modal state ──
+  const [modalType, setModalType] = useState(null)
+  const openModal = (type) => setModalType(type)
+  const closeModal = () => setModalType(null)
+
   if (loading) return <LoadingState />
 
   return (
@@ -128,22 +135,27 @@ export default function DashboardPage() {
         {/* Bento Grid */}
         <div className="bento-grid">
 
-          {/* Scorecard 2x2 */}
+          {/* Scorecard 2x2 — diklik buka modal grafik */}
           <div className="bento-4">
             <div className="scorecard-grid">
               {[
-                { label: 'Bulan Ini', value: fmt(expBulanIni), cls: 'red', icon: 'calendar_today', href: '/expenses' },
-                { label: 'Rata-rata Harian', value: fmt(rataHarian), cls: 'yellow', icon: 'query_stats', href: '/expenses' },
-                { label: 'Proyeksi Akhir', value: fmt(proyeksi), cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', icon: 'insights', href: '/budget' },
-                { label: 'Sisa Budget', value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', icon: 'account_balance', href: '/budget' },
+                { label: 'Bulan Ini', value: fmt(expBulanIni), cls: 'red', icon: 'calendar_today', modalType: 'bulanIni' },
+                { label: 'Rata-rata Harian', value: fmt(rataHarian), cls: 'yellow', icon: 'query_stats', modalType: 'rataHarian' },
+                { label: 'Proyeksi Akhir', value: fmt(proyeksi), cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', icon: 'insights', modalType: 'proyeksi' },
+                { label: 'Sisa Budget', value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', icon: 'account_balance', modalType: 'sisaBudget' },
               ].map((item, i) => (
-                <Link key={i} href={item.href} style={{ textDecoration: 'none' }}>
-                  <div className="scorecard-item" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--surface)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)', marginBottom: 6, display: 'block' }}>{item.icon}</span>
-                    <div className="scorecard-label">{item.label}</div>
-                    <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
-                  </div>
-                </Link>
+                <div
+                  key={i}
+                  onClick={() => openModal(item.modalType)}
+                  className="scorecard-item"
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--surface)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)', marginBottom: 6, display: 'block' }}>{item.icon}</span>
+                  <div className="scorecard-label">{item.label}</div>
+                  <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
+                </div>
               ))}
             </div>
           </div>
@@ -353,6 +365,16 @@ export default function DashboardPage() {
 
         </div>
       </div>
+
+      {/* Scorecard Chart Modal */}
+      <ScorecardChartModal
+        open={modalType !== null}
+        onClose={closeModal}
+        type={modalType}
+        filteredExpenses={filteredExpenses}
+        expenses={expenses}
+        budgetPlans={budgetPlans}
+      />
     </>
   )
 }
