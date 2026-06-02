@@ -1,35 +1,49 @@
 'use client'
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
-import { cn } from '@/lib/utils'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
-const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
+const SelectTrigger = React.forwardRef(({ style, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
-    className={cn(
-      'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-      className
-    )}
+    style={{
+      display: 'flex',
+      height: 40,
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      whiteSpace: 'nowrap',
+      borderRadius: 'var(--radius-sm, 8px)',
+      border: '1px solid var(--border)',
+      background: 'var(--surface)',
+      padding: '0 12px',
+      fontSize: 14,
+      color: 'var(--text1)',
+      cursor: 'pointer',
+      outline: 'none',
+      fontFamily: 'inherit',
+      transition: 'border-color 0.15s',
+      ...style,
+    }}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, flexShrink: 0 }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0, marginLeft: 6 }}>
         <path d="M6 9l6 6 6-6"/>
       </svg>
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+SelectTrigger.displayName = 'SelectTrigger'
 
-const SelectScrollUpButton = React.forwardRef(({ className, ...props }, ref) => (
+const SelectScrollUpButton = React.forwardRef((props, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
+    style={{ display: 'flex', cursor: 'default', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}
     {...props}
   >
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -37,12 +51,12 @@ const SelectScrollUpButton = React.forwardRef(({ className, ...props }, ref) => 
     </svg>
   </SelectPrimitive.ScrollUpButton>
 ))
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+SelectScrollUpButton.displayName = 'SelectScrollUpButton'
 
-const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) => (
+const SelectScrollDownButton = React.forwardRef((props, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
+    style={{ display: 'flex', cursor: 'default', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}
     {...props}
   >
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -50,73 +64,70 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
     </svg>
   </SelectPrimitive.ScrollDownButton>
 ))
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+SelectScrollDownButton.displayName = 'SelectScrollDownButton'
 
-const SelectContent = React.forwardRef(({ className, children, position = 'popper', ...props }, ref) => (
+const SelectContent = React.forwardRef(({ style, children, position = 'popper', ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
-      className={cn(
-        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border shadow-md',
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-        'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-        className
-      )}
       position={position}
       style={{
-        background: 'var(--surface)',
+        position: 'relative',
+        zIndex: 9999,
+        maxHeight: 320,
+        minWidth: '8rem',
+        overflow: 'hidden',
+        borderRadius: 12,
         border: '1px solid var(--border)',
+        background: 'var(--surface)',
         color: 'var(--text1)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+        ...style,
       }}
       {...props}
     >
       <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
-        className={cn(
-          'p-1',
-          position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
-        )}
-      >
+      <SelectPrimitive.Viewport style={{ padding: 4 }}>
         {children}
       </SelectPrimitive.Viewport>
       <SelectScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))
-SelectContent.displayName = SelectPrimitive.Content.displayName
+SelectContent.displayName = 'SelectContent'
 
-const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
+const SelectLabel = React.forwardRef(({ style, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('px-2 py-1.5 text-xs font-semibold', className)}
-    style={{ color: 'var(--text3)' }}
+    style={{ padding: '6px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', ...style }}
     {...props}
   />
 ))
-SelectLabel.displayName = SelectPrimitive.Label.displayName
+SelectLabel.displayName = 'SelectLabel'
 
-const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => (
+const SelectItem = React.forwardRef(({ style, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
-    className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-lg py-2 pl-3 pr-8 text-sm outline-none',
-      'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
-    )}
     style={{
-      color: 'var(--text1)',
-      fontSize: 13,
-      borderRadius: 8,
+      position: 'relative',
+      display: 'flex',
+      width: '100%',
       cursor: 'pointer',
+      userSelect: 'none',
+      alignItems: 'center',
+      borderRadius: 8,
+      padding: '8px 32px 8px 10px',
+      fontSize: 13,
+      color: 'var(--text1)',
+      outline: 'none',
+      transition: 'background 0.1s',
+      ...style,
     }}
     onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface2)' }}
     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
     {...props}
   >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span style={{ position: 'absolute', right: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16 }}>
       <SelectPrimitive.ItemIndicator>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
           <polyline points="20 6 9 17 4 12"/>
@@ -126,17 +137,16 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
-SelectItem.displayName = SelectPrimitive.Item.displayName
+SelectItem.displayName = 'SelectItem'
 
-const SelectSeparator = React.forwardRef(({ className, ...props }, ref) => (
+const SelectSeparator = React.forwardRef(({ style, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
-    className={cn('-mx-1 my-1 h-px', className)}
-    style={{ background: 'var(--border)' }}
+    style={{ margin: '4px -4px', height: 1, background: 'var(--border)', ...style }}
     {...props}
   />
 ))
-SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+SelectSeparator.displayName = 'SelectSeparator'
 
 export {
   Select,
