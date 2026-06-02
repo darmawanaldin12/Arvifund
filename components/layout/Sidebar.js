@@ -6,12 +6,12 @@ import { supabase } from '../../lib/supabase'
 
 const NAV_ITEMS = [
   { href: '/dashboard',   label: 'Dashboard',    icon: 'dashboard' },
-  { href: '/input',       label: 'Input',        icon: 'add_circle' },
   { href: '/expenses',    label: 'Pengeluaran',  icon: 'trending_down' },
   { href: '/income',      label: 'Pemasukan',    icon: 'trending_up' },
   { href: '/cashrecord',  label: 'Tarik Tunai',  icon: 'local_atm' },
   { href: '/budget',      label: 'Budget Plan',  icon: 'pie_chart' },
   { href: '/record',      label: 'Wallet',       icon: 'account_balance_wallet' },
+  { href: '/arpijan',    label: 'Arpijan AI',   icon: 'smart_toy' },
   { href: '/settings',    label: 'Settings',     icon: 'settings' },
 ]
 
@@ -45,6 +45,18 @@ export default function Sidebar() {
                 {item.icon}
               </span>
               {item.label}
+              {item.href === '/arpijan' && (
+                <span style={{
+                  marginLeft: 'auto',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: 10,
+                  background: 'linear-gradient(90deg, var(--accent), #818cf8)',
+                  color: 'white',
+                  letterSpacing: '0.3px',
+                }}>AI</span>
+              )}
             </Link>
           )
         })}
