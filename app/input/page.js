@@ -332,7 +332,7 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
   // ── Confirm popup ──
   const confirmPopup = showConfirm && parsedResult ? (
     <div className="confirm-popup-overlay">
-      <div className="confirm-popup-card">
+      <div className="confirm-popup-card" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 22 }}>🤖</span>
@@ -372,7 +372,7 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
           ))}
         </div>
         {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.25)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 'env(safe-area-inset-bottom, 16px)', paddingBottom: 8 }}>
           <button type="button" className="btn btn-ghost" onClick={() => {
             setTipe(parsedResult.tipe || 'expense')
             setForm({ tanggal: parsedResult.tanggal || today, toko: parsedResult.toko || '', uraian: parsedResult.uraian || '', total: parsedResult.total ? String(parsedResult.total) : '', kategori: parsedResult.kategori || '', metode: parsedResult.metode || 'Cash', bank: parsedResult.bank || 'Cash', user_id: parsedResult.user_id || user?.id || '' })

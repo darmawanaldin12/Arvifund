@@ -1,238 +1,114 @@
-'use client';
+'use client'
+import Link from 'next/link'
+import { useState } from 'react'
+import { usePathname } from 'next/navigation'
+import InputModal from '../modals/InputModal'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
-const navItems = [
+const NAV_ITEMS = [
   {
     href: '/dashboard',
     label: 'Dashboard',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
+    icon: 'dashboard',
   },
   {
     href: '/expenses',
     label: 'Pengeluaran',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 5v14M5 12l7 7 7-7" />
-      </svg>
-    ),
+    icon: 'trending_down',
   },
-  // Slot tengah — diisi FAB input
-  null,
   {
-    href: '/income',
-    label: 'Pemasukan',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 19V5M5 12l7-7 7 7" />
-      </svg>
-    ),
+    href: null,
+    label: '',
+    isAction: true,
   },
   {
     href: '/record',
     label: 'Wallet',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2" />
-        <path d="M16 10h2" />
-        <path d="M2 10h20" />
-      </svg>
-    ),
+    icon: 'account_balance_wallet',
   },
-];
+  {
+    href: '/settings',
+    label: 'Settings',
+    icon: 'settings',
+  },
+]
 
 export default function BottomNav() {
-  const pathname = usePathname();
+  const pathname = usePathname()
+  const [showInput, setShowInput] = useState(false)
 
   return (
     <>
-      <style>{`
-        .bottom-nav {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          z-index: 50;
-          display: none;
-          padding: 0 8px;
-          padding-bottom: env(safe-area-inset-bottom, 0px);
-          background: var(--surface);
-          border-top: 1px solid var(--border);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
-
-        @media (max-width: 768px) {
-          .bottom-nav {
-            display: flex;
+      <nav style={{
+        display: 'none',
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        zIndex: 100,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        height: 'calc(64px + env(safe-area-inset-bottom))',
+      }} className="bottom-nav">
+        {NAV_ITEMS.map((item, idx) => {
+          if (item.isAction) {
+            return (
+              <button key="action" onClick={() => setShowInput(true)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: '4px 8px', WebkitTapHighlightColor: 'transparent',
+              }}>
+                <div style={{
+                  width: 50, height: 50,
+                  background: 'var(--accent)',
+                  borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginTop: -20,
+                  boxShadow: '0 4px 16px rgba(0,61,155,0.35)',
+                  border: '3px solid var(--bg)',
+                }}>
+                  <span className="material-symbols-outlined" style={{
+                    color: 'white', fontSize: 24,
+                    fontVariationSettings: "'FILL' 1"
+                  }}>add</span>
+                </div>
+              </button>
+            )
           }
-        }
+          const active = pathname === item.href ||
+            (item.href !== '/dashboard' && pathname?.startsWith(item.href))
+          return (
+            <Link key={item.href} href={item.href} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 3, textDecoration: 'none', padding: '8px 10px',
+              color: active ? 'var(--accent)' : 'var(--text3)',
+              WebkitTapHighlightColor: 'transparent',
+              minWidth: 52,
+            }}>
+              <span className="material-symbols-outlined" style={{
+                fontSize: 22,
+                fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0"
+              }}>{item.icon}</span>
+              <span style={{
+                fontSize: 10, fontWeight: 600,
+                fontFamily: 'inherit',
+              }}>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
 
-        .bottom-nav-inner {
-          display: flex;
-          align-items: stretch;
-          justify-content: space-around;
-          width: 100%;
-          height: 60px;
-        }
+      {showInput && (
+        <InputModal
+          onClose={() => setShowInput(false)}
+          onSuccess={() => setShowInput(false)}
+        />
+      )}
 
-        .bottom-nav-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          flex: 1;
-          text-decoration: none;
-          color: var(--text3);
-          position: relative;
-          padding: 6px 4px;
-          border-radius: 10px;
-          transition: color 0.18s ease;
-          -webkit-tap-highlight-color: transparent;
-          cursor: pointer;
-        }
-
-        .bottom-nav-item:hover {
-          color: var(--text1);
-        }
-
-        .bottom-nav-item.active {
-          color: var(--accent);
-        }
-
-        .bottom-nav-item.active .bottom-nav-icon-wrap {
-          background: color-mix(in srgb, var(--accent) 12%, transparent);
-        }
-
-        .bottom-nav-icon-wrap {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 28px;
-          border-radius: 8px;
-          transition: background 0.18s ease, transform 0.18s ease;
-        }
-
-        .bottom-nav-item:active .bottom-nav-icon-wrap {
-          transform: scale(0.88);
-        }
-
-        .bottom-nav-label {
-          font-size: 10px;
-          font-weight: 500;
-          line-height: 1;
-          letter-spacing: 0.01em;
-          white-space: nowrap;
-          transition: color 0.18s ease;
-        }
-
-        .bottom-nav-active-dot {
-          position: absolute;
-          top: 4px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 4px;
-          height: 4px;
-          border-radius: 50%;
-          background: var(--accent);
-          opacity: 0;
-          transition: opacity 0.18s ease;
-        }
-
-        .bottom-nav-item.active .bottom-nav-active-dot {
-          opacity: 1;
-        }
-
-        /* FAB tombol input di tengah */
-        .bottom-nav-fab-wrap {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-        }
-
-        .bottom-nav-fab {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 50px;
-          height: 50px;
-          border-radius: 16px;
-          background: var(--accent);
-          color: white;
-          border: none;
-          cursor: pointer;
-          -webkit-tap-highlight-color: transparent;
-          text-decoration: none;
-          box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 45%, transparent);
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-          margin-bottom: 10px;
-        }
-
-        .bottom-nav-fab:active {
-          transform: scale(0.9);
-          box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
-        }
-
-        .bottom-nav-fab svg {
-          transition: transform 0.2s ease;
-        }
-
-        .bottom-nav-fab.fab-active {
-          background: var(--accent);
+      <style>{`
+        @media (max-width: 767px) {
+          .bottom-nav { display: flex !important; }
         }
       `}</style>
-
-      <nav className="bottom-nav">
-        <div className="bottom-nav-inner">
-          {navItems.map((item, idx) => {
-            // Slot tengah = FAB input
-            if (item === null) {
-              const isFabActive = pathname === '/input';
-              return (
-                <div key="fab" className="bottom-nav-fab-wrap">
-                  <Link href="/input" className={`bottom-nav-fab${isFabActive ? ' fab-active' : ''}`}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  </Link>
-                </div>
-              );
-            }
-
-            const isActive =
-              item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`bottom-nav-item${isActive ? ' active' : ''}`}
-              >
-                <span className="bottom-nav-active-dot" />
-                <span className="bottom-nav-icon-wrap">
-                  {item.icon}
-                </span>
-                <span className="bottom-nav-label">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </>
-  );
+  )
 }
