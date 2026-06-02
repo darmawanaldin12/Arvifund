@@ -6,6 +6,7 @@ import EditModal from '../../components/modals/EditModal'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, KATEGORI_COLOR, KATEGORI_ICON } from '../../lib/utils'
 import { updateExpense } from '../../lib/data'
+import AppSelect from '../../components/ui/AppSelect'
 
 // ── CSV EXPORT ──────────────────────────────────────────────
 function exportCSV(rows, getUserName) {
@@ -153,14 +154,20 @@ export default function ExpensesPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <select className="form-select" value={filterKat} onChange={e => setFilterKat(e.target.value)} style={{ flex: 1 }}>
-            <option value="">Semua Kategori</option>
-            {KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}
-          </select>
-          <select className="form-select" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ flex: 1 }}>
-            <option value="">Semua User</option>
-            {userNames.map(u => <option key={u}>{u}</option>)}
-          </select>
+          <AppSelect
+            value={filterKat}
+            onChange={e => setFilterKat(e.target.value)}
+            placeholder="Semua Kategori"
+            options={KATEGORI_LIST.filter(k => k !== 'Pemasukan')}
+            style={{ flex: 1 }}
+          />
+          <AppSelect
+            value={filterUser}
+            onChange={e => setFilterUser(e.target.value)}
+            placeholder="Semua User"
+            options={userNames}
+            style={{ flex: 1 }}
+          />
         </div>
 
         {/* Summary bar + Export button */}
