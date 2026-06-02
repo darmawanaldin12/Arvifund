@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
+import { KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
+
+const METODE_LIST_EDIT = ['Cash', 'QRIS', 'Transfer', 'Card', 'Cardless', 'Virtual Account Transfer']
+const BANK_LIST_EDIT   = ['BCA', 'BRI', 'Mandiri', 'OVO', 'GoPay', 'ShopeePay', 'Cash']
 
 export default function EditModal({ type, data, onSave, onClose, loading }) {
   const [form, setForm] = useState({})
@@ -66,14 +69,14 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                   <label className="form-label">Metode Bayar</label>
                   <select className="form-select" value={form.transaksi || ''} onChange={e => set('transaksi', e.target.value)}>
                     <option value="">Pilih Metode</option>
-                    {METODE_LIST.map(m => <option key={m}>{m}</option>)}
+                    {METODE_LIST_EDIT.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Bank / Dompet</label>
                   <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
                     <option value="">Pilih Bank</option>
-                    {BANK_LIST.map(b => <option key={b}>{b}</option>)}
+                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
                   </select>
                 </div>
               </>
@@ -97,14 +100,14 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                   <label className="form-label">Metode</label>
                   <select className="form-select" value={form.metode || ''} onChange={e => set('metode', e.target.value)}>
                     <option value="">Pilih Metode</option>
-                    {METODE_LIST.map(m => <option key={m}>{m}</option>)}
+                    {METODE_LIST_EDIT.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Bank Tujuan</label>
                   <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
                     <option value="">Pilih Bank</option>
-                    {BANK_LIST.map(b => <option key={b}>{b}</option>)}
+                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
                   </select>
                 </div>
               </>
@@ -128,7 +131,7 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
                   <label className="form-label">Bank</label>
                   <select className="form-select" value={form.bank || ''} onChange={e => set('bank', e.target.value)}>
                     <option value="">Pilih Bank</option>
-                    {BANK_LIST.map(b => <option key={b}>{b}</option>)}
+                    {BANK_LIST_EDIT.map(b => <option key={b}>{b}</option>)}
                   </select>
                 </div>
               </>
@@ -143,8 +146,8 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
             {/* Edit info readonly */}
             {form.edited_at && (
               <div style={{ padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-                âï¸ Terakhir diedit: {new Date(form.edited_at).toLocaleString('id-ID')}
-                {form.edited_note ? ` â ${form.edited_note}` : ''}
+                ✏️ Terakhir diedit: {new Date(form.edited_at).toLocaleString('id-ID')}
+                {form.edited_note ? ` → ${form.edited_note}` : ''}
               </div>
             )}
 
