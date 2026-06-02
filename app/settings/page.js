@@ -6,22 +6,23 @@ import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
 import { supabase } from '../../lib/supabase'
 import { BULAN_ORDER } from '../../lib/utils'
+import AppSelect from '../../components/ui/AppSelect'
 
 export default function SettingsPage() {
   const router = useRouter()
   const { user, profile, loadData, overrides: currentOverrides } = useData()
   const { showToast, ToastContainer } = useToast()
 
-  const [savingPeriod, setSavingPeriod]   = useState(false)
+  const [savingPeriod, setSavingPeriod]     = useState(false)
   const [savingOverride, setSavingOverride] = useState(false)
-  const [showLogout, setShowLogout]       = useState(false)
-  const [periodDate, setPeriodDate]       = useState(profile?.pay_period_date || 25)
+  const [showLogout, setShowLogout]         = useState(false)
+  const [periodDate, setPeriodDate]         = useState(profile?.pay_period_date || 25)
 
   // Override state
   const now = new Date()
-  const [ovBulan, setOvBulan]   = useState(BULAN_ORDER[now.getMonth()])
-  const [ovTahun, setOvTahun]   = useState(now.getFullYear())
-  const [ovTgl, setOvTgl]       = useState('')
+  const [ovBulan, setOvBulan] = useState(BULAN_ORDER[now.getMonth()])
+  const [ovTahun, setOvTahun] = useState(now.getFullYear())
+  const [ovTgl, setOvTgl]     = useState('')
 
   const tahunList = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
@@ -106,6 +107,12 @@ export default function SettingsPage() {
 
   const overrideEntries = Object.entries(currentOverrides || {}).sort()
 
+  // Options untuk tanggal gajian (1-28)
+  const periodDateOptions = Array.from({ length: 28 }, (_, i) => ({
+    value: String(i + 1),
+    label: `Tanggal ${i + 1}`,
+  }))
+
   return (
     <>
       <AppHeader title="Settings" />
@@ -140,11 +147,12 @@ export default function SettingsPage() {
             Periode aktif: tgl <strong style={{ color: 'var(--accent)' }}>{periodDate}</strong> bulan ini — tgl <strong style={{ color: 'var(--accent)' }}>{periodDate - 1}</strong> bulan depan
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <select className="form-select" value={periodDate} onChange={e => setPeriodDate(e.target.value)} style={{ flex: 1 }}>
-              {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                <option key={d} value={d}>Tanggal {d}</option>
-              ))}
-            </select>
+            <AppSelect
+              value={String(periodDate)}
+              onChange={e => setPeriodDate(e.target.value)}
+              options={periodDateOptions}
+              style={{ flex: 1 }}
+            />
             <button className="btn btn-primary" onClick={handleSavePeriod} disabled={savingPeriod} style={{ flexShrink: 0 }}>
               {savingPeriod ? 'Menyimpan...' : 'Simpan'}
             </button>
@@ -166,12 +174,18 @@ export default function SettingsPage() {
               Tambah / Edit Override
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <select className="form-select" value={ovBulan} onChange={e => setOvBulan(e.target.value)} style={{ flex: 2 }}>
-                {BULAN_ORDER.map(b => <option key={b}>{b}</option>)}
-              </select>
-              <select className="form-select" value={ovTahun} onChange={e => setOvTahun(parseInt(e.target.value))} style={{ flex: 1 }}>
-                {tahunList.map(y => <option key={y}>{y}</option>)}
-              </select>
+              <AppSelect
+                value={ovBulan}
+                onChange={e => setOvBulan(e.target.value)}
+                options={BULAN_ORDER}
+                style={{ flex: 2 }}
+              />
+              <AppSelect
+                value={String(ovTahun)}
+                onChange={e => setOvTahun(parseInt(e.target.value))}
+                options={tahunList.map(y => ({ value: String(y), label: String(y) }))}
+                style={{ flex: 1 }}
+              />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
