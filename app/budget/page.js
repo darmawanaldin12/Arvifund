@@ -5,6 +5,7 @@ import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtFull, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
 import { upsertBudgetPlan } from '../../lib/data'
+import AppSelect from '../../components/ui/AppSelect'
 
 export default function BudgetPage() {
   const { budgetPlans, expenses, loadData, loading, user } = useData()
@@ -66,12 +67,18 @@ export default function BudgetPage() {
 
         {/* Selector Bulan & Tahun */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <select className="form-select" value={selBulan} onChange={e => setSelBulan(e.target.value)} style={{ flex: 2 }}>
-            {BULAN_ORDER.map(b => <option key={b}>{b}</option>)}
-          </select>
-          <select className="form-select" value={selTahun} onChange={e => setSelTahun(parseInt(e.target.value))} style={{ flex: 1 }}>
-            {tahunList.map(y => <option key={y}>{y}</option>)}
-          </select>
+          <AppSelect
+            value={selBulan}
+            onChange={e => setSelBulan(e.target.value)}
+            options={BULAN_ORDER}
+            style={{ flex: 2 }}
+          />
+          <AppSelect
+            value={String(selTahun)}
+            onChange={e => setSelTahun(parseInt(e.target.value))}
+            options={tahunList.map(y => ({ value: String(y), label: String(y) }))}
+            style={{ flex: 1 }}
+          />
         </div>
 
         {/* Summary */}
