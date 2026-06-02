@@ -4,6 +4,11 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { fmt, fmtTanggalShort, BULAN_ORDER } from '../../lib/utils'
 
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
+import { Progress } from '../../components/ui/progress'
+import { Separator } from '../../components/ui/separator'
+
 const METODE_COLOR = {
   'Cash': 'var(--yellow)', 'Transfer': 'var(--accent)',
   'QRIS': 'var(--green)', 'Card': '#a855f7', 'Cardless': 'var(--orange)',
@@ -99,201 +104,226 @@ export default function RecordPage() {
 
         {/* ── KPI Summary ── */}
         <div className="kpi-grid" style={{ marginBottom: 16 }}>
-          <div className="kpi-card income">
-            <div className="kpi-label">Total Masuk</div>
-            <div className="kpi-value" style={{ color: 'var(--green)' }}>{fmt(totalMasuk)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredIncome.length} transaksi</div>
-          </div>
-          <div className="kpi-card expense">
-            <div className="kpi-label">Total Keluar</div>
-            <div className="kpi-value" style={{ color: 'var(--red)' }}>{fmt(totalKeluar)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredExpenses.length} transaksi</div>
-          </div>
-          <div className="kpi-card cash" style={{ gridColumn: 'span 2' }}>
-            <div className="kpi-label">Tarik Tunai</div>
-            <div className="kpi-value" style={{ color: 'var(--yellow)' }}>{fmt(totalCashRec)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredCashRecords.length} transaksi</div>
-          </div>
+          <Card className="kpi-card income" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <CardContent style={{ padding: '14px 16px' }}>
+              <div className="kpi-label">Total Masuk</div>
+              <div className="kpi-value" style={{ color: 'var(--green)' }}>{fmt(totalMasuk)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredIncome.length} transaksi</div>
+            </CardContent>
+          </Card>
+          <Card className="kpi-card expense" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <CardContent style={{ padding: '14px 16px' }}>
+              <div className="kpi-label">Total Keluar</div>
+              <div className="kpi-value" style={{ color: 'var(--red)' }}>{fmt(totalKeluar)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredExpenses.length} transaksi</div>
+            </CardContent>
+          </Card>
+          <Card className="kpi-card cash" style={{ gridColumn: 'span 2', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <CardContent style={{ padding: '14px 16px' }}>
+              <div className="kpi-label">Tarik Tunai</div>
+              <div className="kpi-value" style={{ color: 'var(--yellow)' }}>{fmt(totalCashRec)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{filteredCashRecords.length} transaksi</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* ── Rekap per Metode Bayar ── */}
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title">Rekap per Metode Bayar</div>
-          {Object.keys(byMetode).length === 0 ? (
-            <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 16 }}>Belum ada data</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {Object.entries(byMetode)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([metode, data]) => {
-                  const pct   = totalKeluar > 0 ? Math.round(data.total / totalKeluar * 100) : 0
-                  const color = METODE_COLOR[metode] || 'var(--text2)'
-                  const isOpen = activeMetode === metode
-                  return (
-                    <div key={metode}>
-                      {/* Row clickable */}
-                      <div
-                        onClick={() => setActiveMetode(isOpen ? null : metode)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          background: isOpen ? `${color}15` : 'transparent',
-                          border: `1px solid ${isOpen ? color : 'transparent'}`,
-                          transition: 'background 0.15s, border-color 0.15s',
-                          marginBottom: 2,
-                        }}
-                        onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--surface2)' }}
-                        onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent' }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, fontWeight: 700, color: isOpen ? color : 'var(--text1)' }}>{metode}</span>
+        <Card style={{ marginBottom: 16, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <CardHeader style={{ padding: '14px 16px 8px' }}>
+            <CardTitle style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Rekap per Metode Bayar</CardTitle>
+          </CardHeader>
+          <CardContent style={{ padding: '0 16px 14px' }}>
+            {Object.keys(byMetode).length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 16 }}>Belum ada data</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {Object.entries(byMetode)
+                  .sort((a, b) => b[1].total - a[1].total)
+                  .map(([metode, data]) => {
+                    const pct   = totalKeluar > 0 ? Math.round(data.total / totalKeluar * 100) : 0
+                    const color = METODE_COLOR[metode] || 'var(--text2)'
+                    const isOpen = activeMetode === metode
+                    return (
+                      <div key={metode}>
+                        {/* Row clickable */}
+                        <div
+                          onClick={() => setActiveMetode(isOpen ? null : metode)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            background: isOpen ? `${color}15` : 'transparent',
+                            border: `1px solid ${isOpen ? color : 'transparent'}`,
+                            transition: 'background 0.15s, border-color 0.15s',
+                            marginBottom: 2,
+                          }}
+                          onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--surface2)' }}
+                          onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent' }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 13, fontWeight: 700, color: isOpen ? color : 'var(--text1)' }}>{metode}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 13, fontWeight: 700 }}>
+                                {fmt(data.total)} <span style={{ color: 'var(--text3)', fontSize: 11 }}>({pct}%)</span>
+                              </span>
+                              <span style={{ fontSize: 12, color: isOpen ? color : 'var(--text3)', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>
-                              {fmt(data.total)} <span style={{ color: 'var(--text3)', fontSize: 11 }}>({pct}%)</span>
-                            </span>
-                            <span style={{ fontSize: 12, color: isOpen ? color : 'var(--text3)', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
-                          </div>
+                          <Progress
+                            value={pct}
+                            className="h-1.5"
+                            style={{ '--progress-color': color }}
+                          />
+                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{data.count} transaksi · tap untuk rincian</div>
                         </div>
-                        <div className="progress-wrap" style={{ height: 6 }}>
-                          <div className="progress-bar" style={{ width: `${pct}%`, background: color }} />
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{data.count} transaksi · tap untuk rincian</div>
-                      </div>
 
-                      {/* Rincian inline (accordion) */}
-                      {isOpen && (
-                        <div style={{
-                          marginBottom: 8, borderRadius: 8,
-                          border: `1px solid ${color}33`,
-                          background: 'var(--surface)',
-                          overflow: 'hidden',
-                          animation: 'fadeIn 0.2s ease',
-                        }}>
-                          {/* Header rincian */}
-                          <div style={{
-                            padding: '10px 14px', borderBottom: `1px solid ${color}22`,
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            background: `${color}0d`,
+                        {/* Rincian inline (accordion) */}
+                        {isOpen && (
+                          <Card style={{
+                            marginBottom: 8,
+                            border: `1px solid ${color}33`,
+                            background: 'var(--surface)',
+                            overflow: 'hidden',
+                            animation: 'fadeIn 0.2s ease',
                           }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color }}>
-                              {metode} · {data.count} transaksi
-                            </span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color }}>
-                              Total: {fmt(data.total)}
-                            </span>
-                          </div>
+                            {/* Header rincian */}
+                            <div style={{
+                              padding: '10px 14px',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              background: `${color}0d`,
+                            }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color }}>
+                                {metode} · {data.count} transaksi
+                              </span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color }}>
+                                Total: {fmt(data.total)}
+                              </span>
+                            </div>
+                            <Separator style={{ background: `${color}22` }} />
 
-                          {/* List transaksi */}
-                          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                            {data.rows.map((r, idx) => (
-                              <div key={r.id || idx} style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                padding: '10px 14px',
-                                borderBottom: idx < data.rows.length - 1 ? '1px solid var(--border)' : 'none',
-                              }}>
-                                {/* Tanggal */}
-                                <div style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0, minWidth: 52, fontVariantNumeric: 'tabular-nums' }}>
-                                  {fmtTanggalShort(r.tanggal)}
-                                </div>
-                                {/* Deskripsi */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {r.toko || '—'}
-                                  </div>
-                                  {r.uraian && (
-                                    <div style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {r.uraian}
+                            {/* List transaksi */}
+                            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                              {data.rows.map((r, idx) => (
+                                <div key={r.id || idx}>
+                                  <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    padding: '10px 14px',
+                                  }}>
+                                    {/* Tanggal */}
+                                    <div style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0, minWidth: 52, fontVariantNumeric: 'tabular-nums' }}>
+                                      {fmtTanggalShort(r.tanggal)}
                                     </div>
-                                  )}
+                                    {/* Deskripsi */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {r.toko || '—'}
+                                      </div>
+                                      {r.uraian && (
+                                        <div style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {r.uraian}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {/* Bank */}
+                                    <Badge variant="secondary" style={{ fontSize: 10, padding: '2px 6px', background: 'var(--surface2)', color: 'var(--text3)', border: 'none', flexShrink: 0 }}>
+                                      {r.bank || '—'}
+                                    </Badge>
+                                    {/* Nilai */}
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                                      {fmt(r.nilai)}
+                                    </div>
+                                  </div>
+                                  {idx < data.rows.length - 1 && <Separator />}
                                 </div>
-                                {/* Bank */}
-                                <span style={{
-                                  fontSize: 10, padding: '2px 6px', borderRadius: 4,
-                                  background: 'var(--surface2)', color: 'var(--text3)',
-                                  flexShrink: 0,
-                                }}>{r.bank || '—'}</span>
-                                {/* Nilai */}
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                                  {fmt(r.nilai)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-            </div>
-          )}
-        </div>
+                              ))}
+                            </div>
+                          </Card>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* ── Rekap per Bank / Dompet ── */}
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title">Rekap per Bank / Dompet</div>
-          {Object.keys(byBank).length === 0 ? (
-            <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 16 }}>Belum ada data</div>
-          ) : (
+        <Card style={{ marginBottom: 16, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <CardHeader style={{ padding: '14px 16px 8px' }}>
+            <CardTitle style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Rekap per Bank / Dompet</CardTitle>
+          </CardHeader>
+          <CardContent style={{ padding: '0 16px 14px' }}>
+            {Object.keys(byBank).length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 16 }}>Belum ada data</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Bank</th>
+                      <th style={{ textAlign: 'right', color: 'var(--green)' }}>Masuk</th>
+                      <th style={{ textAlign: 'right', color: 'var(--red)' }}>Keluar</th>
+                      <th style={{ textAlign: 'right' }}>Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(byBank)
+                      .sort((a, b) => b[1].keluar - a[1].keluar)
+                      .map(([bank, data]) => {
+                        const net = (data.masuk || 0) - (data.keluar || 0)
+                        return (
+                          <tr key={bank}>
+                            <td>
+                              <Badge variant="outline" className="badge badge-blue" style={{ fontSize: 11 }}>
+                                {bank}
+                              </Badge>
+                            </td>
+                            <td className="amount" style={{ color: 'var(--green)' }}>{fmt(data.masuk || 0)}</td>
+                            <td className="amount" style={{ color: 'var(--red)' }}>{fmt(data.keluar || 0)}</td>
+                            <td className="amount" style={{ color: net >= 0 ? 'var(--accent)' : 'var(--red)' }}>{fmt(net)}</td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Rekap per User ── */}
+        <Card style={{ marginBottom: 16, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <CardHeader style={{ padding: '14px 16px 8px' }}>
+            <CardTitle style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Rekap per User</CardTitle>
+          </CardHeader>
+          <CardContent style={{ padding: '0 16px 14px' }}>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Bank</th>
+                    <th>User</th>
                     <th style={{ textAlign: 'right', color: 'var(--green)' }}>Masuk</th>
                     <th style={{ textAlign: 'right', color: 'var(--red)' }}>Keluar</th>
-                    <th style={{ textAlign: 'right' }}>Net</th>
+                    <th style={{ textAlign: 'right', color: 'var(--yellow)' }}>Tarik</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(byBank)
-                    .sort((a, b) => b[1].keluar - a[1].keluar)
-                    .map(([bank, data]) => {
-                      const net = (data.masuk || 0) - (data.keluar || 0)
-                      return (
-                        <tr key={bank}>
-                          <td><span className="badge badge-blue">{bank}</span></td>
-                          <td className="amount" style={{ color: 'var(--green)' }}>{fmt(data.masuk || 0)}</td>
-                          <td className="amount" style={{ color: 'var(--red)' }}>{fmt(data.keluar || 0)}</td>
-                          <td className="amount" style={{ color: net >= 0 ? 'var(--accent)' : 'var(--red)' }}>{fmt(net)}</td>
-                        </tr>
-                      )
-                    })}
+                  {Object.entries(byUser).map(([name, data]) => (
+                    <tr key={name}>
+                      <td><span className={`user-chip ${name.toLowerCase()}`}>{name}</span></td>
+                      <td className="amount" style={{ color: 'var(--green)' }}>{fmt(data.masuk || 0)}</td>
+                      <td className="amount" style={{ color: 'var(--red)' }}>{fmt(data.keluar || 0)}</td>
+                      <td className="amount" style={{ color: 'var(--yellow)' }}>{fmt(data.cash || 0)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-
-        {/* ── Rekap per User ── */}
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title">Rekap per User</div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th style={{ textAlign: 'right', color: 'var(--green)' }}>Masuk</th>
-                  <th style={{ textAlign: 'right', color: 'var(--red)' }}>Keluar</th>
-                  <th style={{ textAlign: 'right', color: 'var(--yellow)' }}>Tarik</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(byUser).map(([name, data]) => (
-                  <tr key={name}>
-                    <td><span className={`user-chip ${name.toLowerCase()}`}>{name}</span></td>
-                    <td className="amount" style={{ color: 'var(--green)' }}>{fmt(data.masuk || 0)}</td>
-                    <td className="amount" style={{ color: 'var(--red)' }}>{fmt(data.keluar || 0)}</td>
-                    <td className="amount" style={{ color: 'var(--yellow)' }}>{fmt(data.cash || 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
       </div>
 
