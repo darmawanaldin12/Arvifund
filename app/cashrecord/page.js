@@ -6,6 +6,7 @@ import EditModal from '../../components/modals/EditModal'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort } from '../../lib/utils'
 import { updateCashRecord } from '../../lib/data'
+import AppSelect from '../../components/ui/AppSelect'
 
 export default function CashRecordPage() {
   const { filteredCashRecords, loadData, loading, periodIdx, setPeriodIdx, periods, getUserName, user, summaryPeriode } = useData()
@@ -91,11 +92,13 @@ export default function CashRecordPage() {
 
         {/* Filter */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <select className="form-select" value={filterKat} onChange={e => setFilterKat(e.target.value)}>
-            <option value="">Semua Kategori</option>
-            <option>Pengeluaran</option>
-            <option>Pemasukan</option>
-          </select>
+          <AppSelect
+            value={filterKat}
+            onChange={e => setFilterKat(e.target.value)}
+            placeholder="Semua Kategori"
+            options={['Pengeluaran', 'Pemasukan']}
+            style={{ flex: 1 }}
+          />
         </div>
 
         {/* Summary */}
