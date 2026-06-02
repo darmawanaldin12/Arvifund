@@ -1,18 +1,75 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
 import {
-  Chart as ChartJS,
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, ArcElement, Filler, Tooltip, Legend
-} from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
-
-ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, ArcElement, Filler, Tooltip, Legend
-)
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, ReferenceLine, Area, AreaChart
+} from 'recharts'
 
 const BULAN_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des']
+
+const C = {
+  green:  '#22c55e',
+  red:    '#f43f5e',
+  blue:   '#38bdf8',
+  accent: '#3b82f6',
+  orange: '#f97316',
+  pink:   '#ec4899',
+  purple: '#a855f7',
+  teal:   '#06b6d4',
+  yellow: '#f59e0b',
+  gray:   '#94a3b8',
+}
+
+const DONUT_COLORS = [C.accent, C.orange, C.pink, C.green, C.purple, C.teal, C.yellow]
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmtTick = (v) => {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`
+  if (v >= 1_000)     return `${Math.round(v / 1_000)}rb`
+  return String(v)
+}
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 8, padding: '8px 12px', fontSize: 11,
+      boxShadow: '0 4px 16px rgba(0,0,0,0.14)', maxWidth: 180,
+    }}>
+      {label && <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text1)' }}>{label}</div>}
+      {payload.map((p, i) => (
+        <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', color: 'var(--text3)', marginBottom: 2 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: p.color || p.fill, flexShrink: 0 }} />
+          <span>{p.name}:</span>
+          <span style={{ fontWeight: 600, color: 'var(--text1)' }}>{fmtTick(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PieTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const p = payload[0]
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 8, padding: '8px 12px', fontSize: 11,
+      boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
+    }}>
+      <div style={{ fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>{p.name}</div>
+      <div style={{ color: 'var(--text3)' }}>
+        {fmtTick(p.value)} <span style={{ color: p.payload.fill }}>{p.payload.percent ? `(${(p.payload.percent * 100).toFixed(1)}%)` : ''}</span>
+      </div>
+    </div>
+  )
+}
+
+const axisStyle = { fontSize: 9, fill: 'var(--text3)' }
+const gridStyle = { strokeDasharray: '3 3', stroke: 'var(--border)', vertical: false }
 
 function useSwipe(onLeft, onRight) {
   const startX = useRef(null)
@@ -26,236 +83,321 @@ function useSwipe(onLeft, onRight) {
   return { onTouchStart, onTouchEnd }
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function ChartCarousel({ expenses, income, budgetPlans, summaryPeriode }) {
   const [idx, setIdx] = useState(0)
-  const [animDir, setAnimDir] = useState(null) // 'left' | 'right'
+  const [animDir, setAnimDir] = useState(null)
 
   const go = useCallback((dir) => {
     setAnimDir(dir)
     setTimeout(() => {
       setIdx(i => {
         const next = i + (dir === 'left' ? 1 : -1)
-        return Math.max(0, Math.min(charts.length - 1, next))
+        return Math.max(0, Math.min(5, next))
       })
       setAnimDir(null)
     }, 180)
-  }, []) // eslint-disable-line
+  }, [])
 
   const swipe = useSwipe(() => go('left'), () => go('right'))
 
-  // ── Data preparation ──────────────────────────────────────
+  // ── 1. Income vs Expense 12 bulan ─────────────────────────────────────────
 
-  // 1. Income vs Expense 12 bulan
   const last12 = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
     d.setMonth(d.getMonth() - (11 - i))
     return { label: BULAN_SHORT[d.getMonth()], year: d.getFullYear(), month: d.getMonth() }
   })
-  const incomeByMonth = {}
-  const expByMonth = {}
+
+  const incMap = {}, expMap = {}
   income.forEach(r => {
     if (!r.tanggal) return
     const d = new Date(r.tanggal)
     const k = `${d.getFullYear()}-${d.getMonth()}`
-    incomeByMonth[k] = (incomeByMonth[k] || 0) + (r.jumlah || 0)
+    incMap[k] = (incMap[k] || 0) + (r.jumlah || 0)
   })
   expenses.forEach(r => {
     if (!r.tanggal) return
     const d = new Date(r.tanggal)
     const k = `${d.getFullYear()}-${d.getMonth()}`
-    expByMonth[k] = (expByMonth[k] || 0) + (r.nilai || 0)
+    expMap[k] = (expMap[k] || 0) + (r.nilai || 0)
   })
-  const incomeData12 = last12.map(m => (incomeByMonth[`${m.year}-${m.month}`] || 0) / 1000)
-  const expData12    = last12.map(m => (expByMonth[`${m.year}-${m.month}`] || 0) / 1000)
-  const labels12     = last12.map(m => m.label)
 
-  // 2. Saldo kumulatif (running total)
+  const data12 = last12.map(m => ({
+    label: m.label,
+    Income: incMap[`${m.year}-${m.month}`] || 0,
+    Pengeluaran: expMap[`${m.year}-${m.month}`] || 0,
+  }))
+
+  // ── 2. Saldo kumulatif ────────────────────────────────────────────────────
+
   let running = 0
-  const saldoData = last12.map(m => {
-    const inc = incomeByMonth[`${m.year}-${m.month}`] || 0
-    const exp = expByMonth[`${m.year}-${m.month}`] || 0
+  const dataSaldo = last12.map(m => {
+    const inc = incMap[`${m.year}-${m.month}`] || 0
+    const exp = expMap[`${m.year}-${m.month}`] || 0
     running += inc - exp
-    return Math.round(running / 1000)
+    return { label: m.label, Saldo: running }
   })
+  const lastSaldo = dataSaldo[dataSaldo.length - 1]?.Saldo || 0
 
-  // 3. Donut kategori
+  // ── 3. Donut kategori ─────────────────────────────────────────────────────
+
   const byKat = summaryPeriode.byKategori || {}
   const katEntries = Object.entries(byKat).sort((a, b) => b[1] - a[1]).slice(0, 7)
-  const DONUT_COLORS = ['#3b82f6','#f97316','#ec4899','#22c55e','#a855f7','#06b6d4','#f59e0b']
+  const totalKat = katEntries.reduce((s, [, v]) => s + v, 0)
+  const pieData = katEntries.map(([name, value], i) => ({
+    name: name.length > 10 ? name.slice(0, 9) + '…' : name,
+    fullName: name,
+    value,
+    fill: DONUT_COLORS[i],
+    percent: totalKat > 0 ? value / totalKat : 0,
+  }))
 
-  // 4. Budget vs Realisasi
+  // ── 4. Budget vs Realisasi ────────────────────────────────────────────────
+
   const now = new Date()
-  const bulanNow = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][now.getMonth()]
-  const budgetBulanIni = budgetPlans.filter(p => p.bulan === bulanNow && p.tahun === now.getFullYear())
+  const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
+  const bulanNow = BULAN_ID[now.getMonth()]
+  const budgetBulanIni = (budgetPlans || []).filter(p => p.bulan === bulanNow && p.tahun === now.getFullYear())
+
   const realisasiMap = {}
   expenses.filter(r => {
     const d = new Date(r.tanggal)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   }).forEach(r => { realisasiMap[r.kategori] = (realisasiMap[r.kategori] || 0) + r.nilai })
-  const budgetKat    = budgetBulanIni.map(p => p.kategori.split(' ')[0])
-  const budgetAlokasi = budgetBulanIni.map(p => Math.round(p.alokasi / 1000))
-  const budgetReal   = budgetBulanIni.map(p => Math.round((realisasiMap[p.kategori] || 0) / 1000))
 
-  // 5. Pengeluaran per hari dalam seminggu (avg)
+  const dataBudget = budgetBulanIni.map(p => ({
+    label: p.kategori?.length > 7 ? p.kategori.slice(0, 6) + '…' : (p.kategori || '?'),
+    fullLabel: p.kategori,
+    Alokasi: p.alokasi || 0,
+    Realisasi: realisasiMap[p.kategori] || 0,
+  }))
+
+  // ── 5. Hari paling boros ──────────────────────────────────────────────────
+
   const byDow = [0,0,0,0,0,0,0]
-  const countDow = [0,0,0,0,0,0,0]
+  const cntDow = [0,0,0,0,0,0,0]
   expenses.forEach(r => {
     if (!r.tanggal) return
     const dow = new Date(r.tanggal).getDay()
     byDow[dow] += r.nilai || 0
-    countDow[dow]++
+    cntDow[dow]++
   })
-  const avgDow = byDow.map((v, i) => countDow[i] > 0 ? Math.round(v / countDow[i] / 1000) : 0)
-  const dowLabels = ['Min','Sen','Sel','Rab','Kam','Jum','Sab']
-
-  // 6. Stacked metode per 6 bulan
-  const last6 = last12.slice(6)
-  const metodeKeys = ['Cash','Transfer','QRIS']
-  const metodeColors = ['#f59e0b','#3b82f6','#22c55e']
-  const metodeData = metodeKeys.map(m => ({
-    label: m,
-    data: last6.map(mo => {
-      return expenses.filter(r => {
-        if (!r.tanggal) return false
-        const d = new Date(r.tanggal)
-        return d.getMonth() === mo.month && d.getFullYear() === mo.year && r.transaksi === m
-      }).reduce((s, r) => s + r.nilai, 0) / 1000
-    })
+  const maxDow = Math.max(...byDow.map((v, i) => cntDow[i] > 0 ? v / cntDow[i] : 0))
+  const dataDow = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map((label, i) => ({
+    label,
+    value: cntDow[i] > 0 ? Math.round(byDow[i] / cntDow[i]) : 0,
+    isPeak: cntDow[i] > 0 && (byDow[i] / cntDow[i]) === maxDow,
   }))
 
-  // ── Chart configs ──────────────────────────────────────────
+  // ── 6. Metode bayar stacked 6 bulan ──────────────────────────────────────
 
-  const baseOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#737685' } },
-      y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: '#737685', callback: v => `${v}rb` } }
-    }
-  }
+  const last6 = last12.slice(6)
+  const metodeKeys = ['Cash', 'Transfer', 'QRIS']
+  const metodeColors = [C.yellow, C.accent, C.green]
+
+  const dataMetode = last6.map(m => {
+    const row = { label: m.label }
+    metodeKeys.forEach(met => {
+      row[met] = expenses.filter(r => {
+        if (!r.tanggal) return false
+        const d = new Date(r.tanggal)
+        return d.getMonth() === m.month && d.getFullYear() === m.year && r.transaksi === met
+      }).reduce((s, r) => s + r.nilai, 0)
+    })
+    return row
+  })
+
+  // ── Chart definitions ─────────────────────────────────────────────────────
 
   const charts = [
+    // 1. Income vs Expense
     {
       title: 'Income vs Pengeluaran',
-      subtitle: '12 bulan terakhir (ribu)',
+      subtitle: '12 bulan terakhir',
       icon: 'trending_up',
       render: () => (
-        <Line
-          data={{
-            labels: labels12,
-            datasets: [
-              { label: 'Income', data: incomeData12, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#22c55e' },
-              { label: 'Pengeluaran', data: expData12, borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#f43f5e' },
-            ]
-          }}
-          options={{ ...baseOpts, plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } } } }}
-        />
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data12} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={C.green} stopOpacity={0.18} />
+                <stop offset="95%" stopColor={C.green} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="gExp" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={C.red} stopOpacity={0.18} />
+                <stop offset="95%" stopColor={C.red} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...gridStyle} />
+            <XAxis dataKey="label" tick={axisStyle} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtTick} tick={axisStyle} tickLine={false} axisLine={false} width={34} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
+            <Area type="monotone" dataKey="Income" stroke={C.green} strokeWidth={2} fill="url(#gIncome)" dot={{ r: 2.5, fill: C.green, strokeWidth: 0 }} activeDot={{ r: 4 }} />
+            <Area type="monotone" dataKey="Pengeluaran" stroke={C.red} strokeWidth={2} fill="url(#gExp)" dot={{ r: 2.5, fill: C.red, strokeWidth: 0 }} activeDot={{ r: 4 }} />
+          </AreaChart>
+        </ResponsiveContainer>
       )
     },
+
+    // 2. Saldo kumulatif
     {
       title: 'Saldo Kumulatif',
-      subtitle: '12 bulan terakhir (ribu)',
+      subtitle: '12 bulan terakhir',
       icon: 'account_balance',
-      render: () => (
-        <Line
-          data={{
-            labels: labels12,
-            datasets: [{
-              label: 'Saldo', data: saldoData,
-              borderColor: saldoData[saldoData.length-1] >= 0 ? '#38bdf8' : '#f43f5e',
-              backgroundColor: saldoData[saldoData.length-1] >= 0 ? 'rgba(56,189,248,0.12)' : 'rgba(244,63,94,0.12)',
-              fill: true, tension: 0.4, pointRadius: 3,
-              pointBackgroundColor: saldoData[saldoData.length-1] >= 0 ? '#38bdf8' : '#f43f5e',
-            }]
-          }}
-          options={{ ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => `${v}rb` } } } }}
-        />
-      )
+      render: () => {
+        const color = lastSaldo >= 0 ? C.blue : C.red
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={dataSaldo} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gSaldo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...gridStyle} />
+              <XAxis dataKey="label" tick={axisStyle} tickLine={false} axisLine={false} />
+              <YAxis tickFormatter={fmtTick} tick={axisStyle} tickLine={false} axisLine={false} width={34} />
+              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine y={0} stroke={C.gray} strokeDasharray="4 3" />
+              <Area type="monotone" dataKey="Saldo" stroke={color} strokeWidth={2.5} fill="url(#gSaldo)"
+                dot={{ r: 2.5, fill: color, strokeWidth: 0 }} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        )
+      }
     },
+
+    // 3. Donut kategori
     {
       title: 'Top Kategori',
       subtitle: 'Periode aktif',
       icon: 'donut_large',
-      render: () => (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <Doughnut
-              data={{
-                labels: katEntries.map(([k]) => k.split(' ')[0]),
-                datasets: [{ data: katEntries.map(([,v]) => v), backgroundColor: DONUT_COLORS, borderWidth: 2, borderColor: 'var(--surface)' }]
-              }}
-              options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } },
-                cutout: '62%',
-              }}
-            />
-          </div>
+      render: () => pieData.length === 0 ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text3)', fontSize: 13 }}>
+          Belum ada data
         </div>
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={pieData}
+              cx="42%" cy="50%"
+              innerRadius="52%" outerRadius="78%"
+              dataKey="value"
+              paddingAngle={2}
+              startAngle={90} endAngle={-270}
+            >
+              {pieData.map((d, i) => <Cell key={i} fill={d.fill} stroke="var(--surface)" strokeWidth={2} />)}
+            </Pie>
+            <Tooltip content={<PieTooltip />} />
+            <Legend
+              layout="vertical" align="right" verticalAlign="middle"
+              iconType="circle" iconSize={8}
+              wrapperStyle={{ fontSize: 10, lineHeight: '18px' }}
+              formatter={(value) => <span style={{ color: 'var(--text3)' }}>{value}</span>}
+            />
+          </PieChart>
+        </ResponsiveContainer>
       )
     },
+
+    // 4. Budget vs Realisasi
     {
       title: 'Budget vs Realisasi',
       subtitle: `Bulan ${bulanNow}`,
       icon: 'pie_chart',
-      render: () => budgetBulanIni.length === 0 ? (
+      render: () => dataBudget.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text3)', gap: 8 }}>
           <span className="material-symbols-outlined" style={{ fontSize: 36 }}>pie_chart</span>
           <p style={{ fontSize: 13 }}>Belum ada budget plan</p>
         </div>
       ) : (
-        <Bar
-          data={{
-            labels: budgetKat,
-            datasets: [
-              { label: 'Alokasi', data: budgetAlokasi, backgroundColor: 'rgba(56,189,248,0.5)', borderColor: '#38bdf8', borderWidth: 1, borderRadius: 4 },
-              { label: 'Realisasi', data: budgetReal, backgroundColor: budgetReal.map((v, i) => v > budgetAlokasi[i] ? 'rgba(244,63,94,0.7)' : 'rgba(34,197,94,0.7)'), borderWidth: 0, borderRadius: 4 },
-            ]
-          }}
-          options={{ ...baseOpts, plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } } } }}
-        />
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dataBudget} margin={{ top: 4, right: 4, left: -8, bottom: 0 }} barCategoryGap="28%">
+            <CartesianGrid {...gridStyle} />
+            <XAxis dataKey="label" tick={axisStyle} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtTick} tick={axisStyle} tickLine={false} axisLine={false} width={34} />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                const item = dataBudget.find(d => d.label === label)
+                const over = (item?.Realisasi || 0) > (item?.Alokasi || 0)
+                return (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.14)' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text1)', marginBottom: 4 }}>
+                      {item?.fullLabel || label}
+                      {over && <span style={{ marginLeft: 6, color: C.red, fontSize: 10 }}>⚠ Over</span>}
+                    </div>
+                    {payload.map((p, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', color: 'var(--text3)', marginBottom: 2 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: p.fill, flexShrink: 0 }} />
+                        <span>{p.name}:</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text1)' }}>{fmtTick(p.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }}
+              cursor={{ fill: 'var(--border)', opacity: 0.4 }}
+            />
+            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
+            <Bar dataKey="Alokasi" fill={C.gray} opacity={0.6} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="Realisasi" radius={[3, 3, 0, 0]}>
+              {dataBudget.map((d, i) => (
+                <Cell key={i} fill={d.Realisasi > d.Alokasi ? C.red : C.green} opacity={0.85} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       )
     },
+
+    // 5. Hari paling boros
     {
       title: 'Hari Paling Boros',
-      subtitle: 'Rata-rata pengeluaran (ribu)',
+      subtitle: 'Rata-rata pengeluaran per hari',
       icon: 'calendar_today',
       render: () => (
-        <Bar
-          data={{
-            labels: dowLabels,
-            datasets: [{
-              data: avgDow,
-              backgroundColor: avgDow.map(v => v === Math.max(...avgDow) ? '#f43f5e' : 'rgba(56,189,248,0.6)'),
-              borderRadius: 6, borderWidth: 0,
-            }]
-          }}
-          options={baseOpts}
-        />
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dataDow} margin={{ top: 4, right: 4, left: -8, bottom: 0 }} barCategoryGap="30%">
+            <CartesianGrid {...gridStyle} />
+            <XAxis dataKey="label" tick={axisStyle} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtTick} tick={axisStyle} tickLine={false} axisLine={false} width={34} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--border)', opacity: 0.4 }} />
+            <Bar dataKey="value" name="Rata-rata" radius={[4, 4, 0, 0]}>
+              {dataDow.map((d, i) => (
+                <Cell key={i} fill={d.isPeak ? C.red : C.blue} opacity={d.isPeak ? 1 : 0.65} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       )
     },
+
+    // 6. Metode bayar stacked
     {
-      title: 'Metode Bayar',
-      subtitle: '6 bulan terakhir (ribu)',
+      title: 'Metode Pembayaran',
+      subtitle: '6 bulan terakhir',
       icon: 'payments',
       render: () => (
-        <Bar
-          data={{
-            labels: last6.map(m => m.label),
-            datasets: metodeData.map((m, i) => ({
-              label: m.label, data: m.data,
-              backgroundColor: metodeColors[i],
-              borderRadius: i === metodeKeys.length - 1 ? 4 : 0,
-              borderWidth: 0,
-            }))
-          }}
-          options={{
-            ...baseOpts,
-            scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true }, y: { ...baseOpts.scales.y, stacked: true } },
-            plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } } }
-          }}
-        />
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dataMetode} margin={{ top: 4, right: 4, left: -8, bottom: 0 }} barCategoryGap="30%">
+            <CartesianGrid {...gridStyle} />
+            <XAxis dataKey="label" tick={axisStyle} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtTick} tick={axisStyle} tickLine={false} axisLine={false} width={34} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--border)', opacity: 0.4 }} />
+            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
+            {metodeKeys.map((key, i) => (
+              <Bar key={key} dataKey={key} stackId="a" fill={metodeColors[i]}
+                radius={i === metodeKeys.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
       )
     },
   ]
@@ -276,17 +418,19 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         {/* Dot indicators */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
           {charts.map((_, i) => (
-            <div key={i} onClick={() => { setAnimDir(i > idx ? 'left' : 'right'); setTimeout(() => { setIdx(i); setAnimDir(null) }, 180) }}
-              style={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 3, background: i === idx ? 'var(--accent)' : 'var(--border)', transition: 'all 0.3s', cursor: 'pointer' }} />
+            <div key={i}
+              onClick={() => { setAnimDir(i > idx ? 'left' : 'right'); setTimeout(() => { setIdx(i); setAnimDir(null) }, 180) }}
+              style={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 3, background: i === idx ? 'var(--accent)' : 'var(--border)', transition: 'all 0.3s', cursor: 'pointer' }}
+            />
           ))}
         </div>
       </div>
 
-      {/* Chart area with swipe */}
+      {/* Chart area */}
       <div
         {...swipe}
         style={{
-          padding: '16px 16px 8px',
+          padding: '12px 12px 4px',
           height: 240,
           overflow: 'hidden',
           transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)',
@@ -298,7 +442,7 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         {current.render()}
       </div>
 
-      {/* Arrow navigation */}
+      {/* Arrow nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px 12px' }}>
         <button onClick={() => go('right')} disabled={idx === 0}
           style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: idx === 0 ? 'var(--surface2)' : 'var(--surface)', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: idx === 0 ? 'var(--border)' : 'var(--accent)', transition: 'all 0.15s', touchAction: 'manipulation' }}>
