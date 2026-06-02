@@ -6,6 +6,7 @@ import EditModal from '../../components/modals/EditModal'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
 import { updateIncome } from '../../lib/data'
+import AppSelect from '../../components/ui/AppSelect'
 
 export default function IncomePage() {
   const { income, filteredIncome, loadData, loading, periodIdx, setPeriodIdx, periods, getUserName, user } = useData()
@@ -117,10 +118,13 @@ export default function IncomePage() {
             onChange={e => setSearch(e.target.value)}
             style={{ flex: 1 }}
           />
-          <select className="form-select" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ flex: 1 }}>
-            <option value="">Semua User</option>
-            {userNames.map(u => <option key={u}>{u}</option>)}
-          </select>
+          <AppSelect
+            value={filterUser}
+            onChange={e => setFilterUser(e.target.value)}
+            placeholder="Semua User"
+            options={userNames}
+            style={{ flex: 1 }}
+          />
         </div>
 
         {/* Summary */}
