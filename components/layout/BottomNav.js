@@ -17,7 +17,7 @@ const navItems = [
     ),
   },
   {
-    href: '/dashboard/expenses',
+    href: '/expenses',
     label: 'Pengeluaran',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,8 +25,10 @@ const navItems = [
       </svg>
     ),
   },
+  // Slot tengah — diisi FAB input
+  null,
   {
-    href: '/dashboard/income',
+    href: '/income',
     label: 'Pemasukan',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -35,17 +37,7 @@ const navItems = [
     ),
   },
   {
-    href: '/dashboard/budget',
-    label: 'Budget',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 8v4l3 3" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/record',
+    href: '/record',
     label: 'Wallet',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -160,11 +152,66 @@ export default function BottomNav() {
         .bottom-nav-item.active .bottom-nav-active-dot {
           opacity: 1;
         }
+
+        /* FAB tombol input di tengah */
+        .bottom-nav-fab-wrap {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+        }
+
+        .bottom-nav-fab {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 50px;
+          height: 50px;
+          border-radius: 16px;
+          background: var(--accent);
+          color: white;
+          border: none;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          text-decoration: none;
+          box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 45%, transparent);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          margin-bottom: 10px;
+        }
+
+        .bottom-nav-fab:active {
+          transform: scale(0.9);
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+        }
+
+        .bottom-nav-fab svg {
+          transition: transform 0.2s ease;
+        }
+
+        .bottom-nav-fab.fab-active {
+          background: var(--accent);
+        }
       `}</style>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {navItems.map((item) => {
+          {navItems.map((item, idx) => {
+            // Slot tengah = FAB input
+            if (item === null) {
+              const isFabActive = pathname === '/input';
+              return (
+                <div key="fab" className="bottom-nav-fab-wrap">
+                  <Link href="/input" className={`bottom-nav-fab${isFabActive ? ' fab-active' : ''}`}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </Link>
+                </div>
+              );
+            }
+
             const isActive =
               item.href === '/dashboard'
                 ? pathname === '/dashboard'
