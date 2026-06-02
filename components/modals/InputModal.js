@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useData } from '../DataContext'
 import { supabase } from '../../lib/supabase'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
+import AppSelect from '../ui/AppSelect'
 
 function isIOS() {
   if (typeof window === 'undefined') return false
@@ -47,26 +48,7 @@ export default function InputModal({ onClose, onSuccess }) {
     setAiLoading(true)
     setError('')
     try {
-      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural ATAU dari foto struk belanja/nota menjadi format JSON terstruktur.
-Hari ini adalah: ${today} (${new Date().toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' })}).
-
-Daftar Kategori yang valid: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}
-Daftar Bank/Dompet yang valid: ${JSON.stringify(BANK_LIST)}
-Daftar Metode yang valid: ${JSON.stringify(METODE_LIST)}
-Daftar User yang tersedia: ${JSON.stringify((profiles || []).map(p => ({ id: p.id, username: p.username })))}
-
-Aturan ekstraksi:
-1. "tipe": "expense" / "income" / "cash"
-2. "tanggal": Format "YYYY-MM-DD"
-3. "toko": Nama toko/merchant/sumber
-4. "uraian": Deskripsi singkat
-5. "total": Angka murni tanpa simbol
-6. "kategori": Harus persis dari Daftar Kategori (expense only)
-7. "metode": Harus persis dari Daftar Metode
-8. "bank": Harus persis dari Daftar Bank/Dompet
-
-Kembalikan HANYA objek JSON tanpa markdown:
-{"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string"}`
+      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural ATAU dari foto struk belanja/nota menjadi format JSON terstruktur.\nHari ini adalah: ${today} (${new Date().toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' })}).\n\nDaftar Kategori yang valid: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}\nDaftar Bank/Dompet yang valid: ${JSON.stringify(BANK_LIST)}\nDaftar Metode yang valid: ${JSON.stringify(METODE_LIST)}\nDaftar User yang tersedia: ${JSON.stringify((profiles || []).map(p => ({ id: p.id, username: p.username })))}\n\nAturan ekstraksi:\n1. \"tipe\": \"expense\" / \"income\" / \"cash\"\n2. \"tanggal\": Format \"YYYY-MM-DD\"\n3. \"toko\": Nama toko/merchant/sumber\n4. \"uraian\": Deskripsi singkat\n5. \"total\": Angka murni tanpa simbol\n6. \"kategori\": Harus persis dari Daftar Kategori (expense only)\n7. \"metode\": Harus persis dari Daftar Metode\n8. \"bank\": Harus persis dari Daftar Bank/Dompet\n\nKembalikan HANYA objek JSON tanpa markdown:\n{\"tipe\":\"expense\",\"tanggal\":\"YYYY-MM-DD\",\"toko\":\"string\",\"uraian\":\"string\",\"total\":number,\"kategori\":\"string\",\"metode\":\"string\",\"bank\":\"string\"}`
 
       const parts = []
       if (activeFile) {
@@ -458,11 +440,13 @@ Kembalikan HANYA objek JSON tanpa markdown:
             <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <span style={{ color: 'var(--text3)' }}>{row.label}</span>
               {row.isUserSelect ? (
-                <select value={parsedResult.user_id} onChange={e => setParsedResult(prev => ({ ...prev, user_id: e.target.value }))}
-                  style={{ background: 'var(--surface)', color: 'var(--text1)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}>
-                  <option value="">Pilih User</option>
-                  {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-                </select>
+                <AppSelect
+                  value={parsedResult.user_id}
+                  onChange={e => setParsedResult(prev => ({ ...prev, user_id: e.target.value }))}
+                  placeholder="Pilih User"
+                  options={(profiles || []).map(p => ({ value: p.id, label: p.username }))}
+                  style={{ width: 140, height: 34, fontSize: 13 }}
+                />
               ) : (
                 <span style={{ fontWeight: row.bold ? 700 : 600, color: row.color || 'var(--text1)' }}>{row.value}</span>
               )}
@@ -761,32 +745,40 @@ Kembalikan HANYA objek JSON tanpa markdown:
                   {tipe === 'expense' && (
                     <div className="form-group">
                       <label className="form-label">Kategori</label>
-                      <select className="form-select" value={form.kategori} onChange={e => set('kategori', e.target.value)}>
-                        <option value="">Pilih Kategori</option>
-                        {KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}
-                      </select>
+                      <AppSelect
+                        value={form.kategori}
+                        onChange={e => set('kategori', e.target.value)}
+                        placeholder="Pilih Kategori"
+                        options={KATEGORI_LIST.filter(k => k !== 'Pemasukan')}
+                      />
                     </div>
                   )}
                   {tipe !== 'cash' && (
                     <div className="form-group">
                       <label className="form-label">Metode</label>
-                      <select className="form-select" value={form.metode} onChange={e => set('metode', e.target.value)}>
-                        {METODE_LIST.map(m => <option key={m}>{m}</option>)}
-                      </select>
+                      <AppSelect
+                        value={form.metode}
+                        onChange={e => set('metode', e.target.value)}
+                        options={METODE_LIST}
+                      />
                     </div>
                   )}
                   <div className="form-group">
                     <label className="form-label">Bank / Dompet</label>
-                    <select className="form-select" value={form.bank} onChange={e => set('bank', e.target.value)}>
-                      {BANK_LIST.map(b => <option key={b}>{b}</option>)}
-                    </select>
+                    <AppSelect
+                      value={form.bank}
+                      onChange={e => set('bank', e.target.value)}
+                      options={BANK_LIST}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">User</label>
-                    <select className="form-select" value={form.user_id} onChange={e => set('user_id', e.target.value)} required>
-                      <option value="">Pilih User</option>
-                      {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-                    </select>
+                    <AppSelect
+                      value={form.user_id}
+                      onChange={e => set('user_id', e.target.value)}
+                      placeholder="Pilih User"
+                      options={(profiles || []).map(p => ({ value: p.id, label: p.username }))}
+                    />
                   </div>
                   {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
                   <div style={{ display: 'flex', gap: 10 }}>
