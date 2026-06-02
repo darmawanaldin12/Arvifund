@@ -134,26 +134,27 @@ export default function ArpijanPage() {
         summaryPeriode, summaryAll, profiles, getUserName,
       })
 
-      const history = [...messages, userMsg].map(m => ({
-        role: m.role,
-        content: m.content,
-      }))
+      // Bangun history percakapan untuk Gemini multi-turn
+      // Pesan pertama user selalu disisipi systemPrompt
+      const history = [...messages, userMsg]
+      const contents = history.map((m, i) => {
+        const role = m.role === 'assistant' ? 'model' : 'user'
+        let text = m.content
+        // Inject systemPrompt hanya di pesan user pertama
+        if (m.role === 'user' && i === 0) {
+          text = `${systemPrompt}\n\nPertanyaan pengguna: ${m.content}`
+        }
+        return { role, parts: [{ text }] }
+      })
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: history.map(m => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.role === 'user' && m === history[0]
-              ? `${systemPrompt}\n\nPertanyaan pengguna: ${m.content}`
-              : m.content
-            }],
-          })),
-          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
           },
         }),
       })
