@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useData } from '../DataContext'
+import { cn } from '../../lib/utils-cn'
+import { Button } from '../ui/button'
 
 export default function AppHeader({ title, subtitle, onRefresh, loading }) {
   const [time, setTime] = useState('')
@@ -8,7 +10,9 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
 
   useEffect(() => {
     function tick() {
-      setTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+      setTime(new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      }))
     }
     tick()
     const t = setInterval(tick, 1000)
@@ -17,40 +21,58 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
 
   return (
     <header className="app-header">
-      {/* Mobile: logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ display: 'none' }} className="mobile-logo">
-          <img src="/logo.png" alt="Arvifund" style={{ width: 28, height: 28, objectFit: 'contain', background: 'white', borderRadius: 8, padding: 3 }} />
+      {/* Left: logo (mobile) + title */}
+      <div className="flex items-center gap-2.5">
+        {/* Logo — mobile only */}
+        <div className="hidden max-[767px]:flex items-center shrink-0">
+          <img
+            src="/logo.png"
+            alt="Arvifund"
+            className="w-7 h-7 rounded-lg object-contain bg-white p-0.5"
+            onError={e => { e.target.style.display = 'none' }}
+          />
         </div>
+
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>
+          <div className="text-[16px] font-bold text-[var(--text1)] leading-tight">
             {title || 'Arvifund'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
+          <div className="text-[11px] text-[var(--text3)] tabular-nums">
             {subtitle || time}
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Right: refresh button */}
+      <div className="flex items-center gap-2">
         {onRefresh && (
-          <button onClick={onRefresh} style={{
-            width: 36, height: 36, background: 'var(--surface2)',
-            border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)',
-          }}>
-            <span className="material-symbols-outlined" style={{
-              fontSize: 18,
-              animation: loading ? 'spin 0.8s linear infinite' : 'none'
-            }}>refresh</span>
-          </button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRefresh}
+            className={cn(
+              'w-9 h-9 rounded-lg shrink-0',
+              'bg-[var(--surface2)] border-[var(--border)]',
+              'text-[var(--text2)] hover:text-[var(--text1)]',
+              'hover:bg-[var(--surface3)]',
+              'transition-all duration-150',
+            )}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 18,
+                animation: loading ? 'spin 0.8s linear infinite' : 'none',
+                display: 'block',
+              }}
+            >
+              refresh
+            </span>
+          </Button>
         )}
       </div>
 
-      <style>{`
-        @media (max-width: 767px) { .mobile-logo { display: flex !important; } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </header>
   )
 }
