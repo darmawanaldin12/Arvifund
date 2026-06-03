@@ -5,7 +5,14 @@ import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
 import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, KATEGORI_ICON, KATEGORI_COLOR, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
+import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
+import { Skeleton } from '../../components/ui/skeleton'
+import { Progress } from '../../components/ui/progress'
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { Separator } from '../../components/ui/separator'
 
 export default function DashboardPage() {
   const { summaryPeriode, summaryAll, loading, loadData, periodIdx, setPeriodIdx,
@@ -18,18 +25,15 @@ export default function DashboardPage() {
   const bulanNama = BULAN_ORDER[now.getMonth()]
 
   const expBulanIni  = s.byBulan[bulanNama] || 0
-  const incBulanIni  = s.incomeByBulan[bulanNama] || 0
   const hariIni      = now.getDate()
   const totalHari    = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const rataHarian   = hariIni > 0 ? Math.round(expBulanIni / hariIni) : 0
   const proyeksi     = rataHarian * totalHari
-  const sisaHari     = totalHari - hariIni
 
   const budgetBulan  = (budgetPlans || [])
     .filter(p => p.bulan === bulanNama && p.tahun === now.getFullYear())
     .reduce((sum, p) => sum + (p.alokasi || 0), 0)
   const sisaBudget   = budgetBulan - expBulanIni
-  const pctBudget    = budgetBulan > 0 ? Math.min(Math.round(expBulanIni / budgetBulan * 100), 100) : 0
 
   const bulanAda     = BULAN_ORDER.filter(b => s.byBulan[b] || s.incomeByBulan[b])
   const bulanIniMom  = bulanAda[bulanAda.length - 1]
@@ -46,8 +50,9 @@ export default function DashboardPage() {
   // Weekly
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay())
   const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
-  const weeklyExp = filteredExpenses.filter(r => { const dt = parseTanggal(r.tanggal); return dt && dt >= weekStart && dt <= weekEnd })
-  const weeklyTotal = weeklyExp.reduce((s, r) => s + r.nilai, 0)
+  const weeklyTotal = filteredExpenses
+    .filter(r => { const dt = parseTanggal(r.tanggal); return dt && dt >= weekStart && dt <= weekEnd })
+    .reduce((s, r) => s + r.nilai, 0)
 
   // Heatmap
   function buildHeatmap() {
@@ -72,15 +77,11 @@ export default function DashboardPage() {
   }
   const heatmap = buildHeatmap()
 
-  // User split
   const userSplit = Object.entries(s.byUser).map(([uid, val]) => ({
     name: getUserName(uid), val, pct: s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
   }))
 
-  // ── Scorecard modal state ──
   const [modalType, setModalType] = useState(null)
-  const openModal = (type) => setModalType(type)
-  const closeModal = () => setModalType(null)
 
   if (loading) return <LoadingState />
 
@@ -89,225 +90,335 @@ export default function DashboardPage() {
       <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
       <div className="page-container">
 
-        {/* Period Filter */}
-        <div className="filter-bar" style={{ marginBottom: 20 }}>
-          <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
-          {periods.map((p, i) => (
-            <div key={i} className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`} onClick={() => setPeriodIdx(String(i))}>
-              {p.label}
-            </div>
+        {/* ── Period Filter — shadcn Tabs ── */}
+        <div className="mb-5 overflow-x-auto pb-1 hide-scrollbar">
+          <div className="flex gap-2 min-w-max">
+            <button
+              onClick={() => setPeriodIdx('')}
+              className={cn(
+                'filter-chip',
+                periodIdx === '' && 'active',
+              )}
+            >
+              Semua
+            </button>
+            {periods.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setPeriodIdx(String(i))}
+                className={cn(
+                  'filter-chip',
+                  periodIdx === String(i) && 'active',
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── KPI Grid — shadcn Card ── */}
+        <div className="kpi-grid mb-5">
+          {[
+            {
+              href: '/income',
+              cls: 'income',
+              label: 'Total Pemasukan',
+              value: fmt(s.totalIncome),
+              valueColor: 'text-[var(--green)]',
+              mom: momIncome,
+            },
+            {
+              href: '/expenses',
+              cls: 'expense',
+              label: 'Total Pengeluaran',
+              value: fmt(s.totalExpenses),
+              valueColor: 'text-[var(--red)]',
+              sub: `${s.expensesCount} transaksi`,
+              mom: momExpense,
+            },
+            {
+              href: '/record',
+              cls: 'saldo',
+              label: 'Saldo Periode',
+              value: fmt(s.saldo),
+              valueColor: s.saldo >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]',
+              sub: 'income − pengeluaran',
+            },
+            {
+              href: '/record',
+              cls: 'saldo-tahun',
+              label: 'Saldo Tahun Ini',
+              value: fmt(saldoTahun),
+              valueColor: saldoTahun >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]',
+              sub: 'total semua data',
+            },
+          ].map(item => (
+            <Link key={item.href + item.label} href={item.href} className="no-underline block">
+              <div className={cn(
+                'kpi-card', item.cls,
+                'transition-all duration-200 hover:-translate-y-0.5',
+                'hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)]',
+                'cursor-pointer',
+              )}>
+                <div className="kpi-label">{item.label}</div>
+                <div className={cn('kpi-value', item.valueColor)}>{item.value}</div>
+                {item.sub && <div className="text-[11px] text-[var(--text3)] mb-1">{item.sub}</div>}
+                {item.mom && (
+                  <Badge variant="outline" className={cn(
+                    'text-[10px] font-semibold border-0 px-2 py-0.5',
+                    item.mom.cls === 'good' || item.mom.cls === 'mom-good'
+                      ? 'bg-[var(--green-bg)] text-[var(--green)]'
+                      : 'bg-[var(--red-bg)] text-[var(--red)]',
+                  )}>
+                    {item.mom.label} vs {bulanLaluMom}
+                  </Badge>
+                )}
+              </div>
+            </Link>
           ))}
         </div>
 
-        {/* KPI Grid */}
-        <div className="kpi-grid">
-          <Link href="/income" style={{ textDecoration: 'none' }}>
-            <div className="kpi-card income" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="kpi-label">Total Pemasukan</div>
-              <div className="kpi-value" style={{ color: 'var(--green)' }}>{fmt(s.totalIncome)}</div>
-              {momIncome && <span className={`kpi-mom ${momIncome.cls}`}>{momIncome.label} vs {bulanLaluMom}</span>}
-            </div>
-          </Link>
-          <Link href="/expenses" style={{ textDecoration: 'none' }}>
-            <div className="kpi-card expense" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="kpi-label">Total Pengeluaran</div>
-              <div className="kpi-value" style={{ color: 'var(--red)' }}>{fmt(s.totalExpenses)}</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>{s.expensesCount} transaksi</div>
-              {momExpense && <span className={`kpi-mom ${momExpense.cls}`}>{momExpense.label} vs {bulanLaluMom}</span>}
-            </div>
-          </Link>
-          <Link href="/record" style={{ textDecoration: 'none' }}>
-            <div className="kpi-card saldo" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="kpi-label">Saldo Periode</div>
-              <div className="kpi-value" style={{ color: s.saldo >= 0 ? 'var(--accent)' : 'var(--red)' }}>{fmt(s.saldo)}</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>income − pengeluaran</div>
-            </div>
-          </Link>
-          <Link href="/wallet" style={{ textDecoration: 'none' }}>
-            <div className="kpi-card saldo-tahun" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="kpi-label">Saldo Tahun Ini</div>
-              <div className="kpi-value" style={{ color: saldoTahun >= 0 ? 'var(--accent)' : 'var(--red)' }}>{fmt(saldoTahun)}</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>total semua data</div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Bento Grid */}
+        {/* ── Bento Grid ── */}
         <div className="bento-grid">
 
-          {/* Scorecard 2x2 — diklik buka modal grafik */}
+          {/* Scorecard 2x2 */}
           <div className="bento-4">
             <div className="scorecard-grid">
               {[
-                { label: 'Bulan Ini', value: fmt(expBulanIni), cls: 'red', icon: 'calendar_today', modalType: 'bulanIni' },
-                { label: 'Rata-rata Harian', value: fmt(rataHarian), cls: 'yellow', icon: 'query_stats', modalType: 'rataHarian' },
-                { label: 'Proyeksi Akhir', value: fmt(proyeksi), cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', icon: 'insights', modalType: 'proyeksi' },
-                { label: 'Sisa Budget', value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', icon: 'account_balance', modalType: 'sisaBudget' },
+                { label: 'Bulan Ini',        value: fmt(expBulanIni), cls: 'red',    icon: 'calendar_today',  modalType: 'bulanIni' },
+                { label: 'Rata-rata Harian', value: fmt(rataHarian),  cls: 'yellow', icon: 'query_stats',     modalType: 'rataHarian' },
+                { label: 'Proyeksi Akhir',   value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', icon: 'insights',         modalType: 'proyeksi' },
+                { label: 'Sisa Budget',      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', icon: 'account_balance', modalType: 'sisaBudget' },
               ].map((item, i) => (
                 <div
                   key={i}
-                  onClick={() => openModal(item.modalType)}
-                  className="scorecard-item"
-                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--surface)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  onClick={() => setModalType(item.modalType)}
+                  className={cn(
+                    'scorecard-item cursor-pointer',
+                    'transition-all duration-150',
+                    'hover:-translate-y-0.5 hover:shadow-md',
+                    'active:scale-[0.97]',
+                  )}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)', marginBottom: 6, display: 'block' }}>{item.icon}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)', marginBottom: 6, display: 'block' }}>
+                    {item.icon}
+                  </span>
                   <div className="scorecard-label">{item.label}</div>
                   <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
+                  <div className="text-[9px] text-[var(--text3)] mt-1 opacity-60">tap untuk grafik</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Weekly Summary */}
-          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card" style={{ height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div className="section-title" style={{ marginBottom: 0 }}>Ringkasan Mingguan</div>
-                  <span className="badge badge-blue" style={{ fontSize: 10 }}>LIVE</span>
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)' }}>{fmt(weeklyTotal)}</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
-                  {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                </div>
-                <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 48 }}>
-                  {[0,1,2,3,4,5,6].map(d => {
-                    const day = new Date(weekStart); day.setDate(weekStart.getDate() + d)
-                    const key = getLocalDateStr(day)
-                    const val = filteredExpenses.filter(r => r.tanggal?.startsWith(key)).reduce((s, r) => s + r.nilai, 0)
-                    const maxDay = Math.max(...[0,1,2,3,4,5,6].map(x => {
-                      const dx = new Date(weekStart); dx.setDate(weekStart.getDate() + x)
-                      return filteredExpenses.filter(r => r.tanggal?.startsWith(getLocalDateStr(dx))).reduce((s,r) => s+r.nilai, 0)
-                    }), 1)
-                    const pct = (val / maxDay) * 100
-                    return (
-                      <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <div style={{ width: '100%', height: `${Math.max(pct, 4)}%`, background: pct > 70 ? 'var(--red)' : 'var(--accent)', borderRadius: '3px 3px 0 0', transition: 'height 0.6s' }} />
-                        <div style={{ fontSize: 9, color: 'var(--text3)' }}>{['Min','Sen','Sel','Rab','Kam','Jum','Sab'][new Date(weekStart).getDay() + d === 7 ? 0 : new Date(weekStart).getDay() + d]}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* User Spending */}
-          <div className="bento-4" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-            <div className="card" style={{ height: '100%' }}>
-              <div className="section-title">Pengeluaran per User</div>
-              {userSplit.length === 0 ? (
-                <div style={{ color: 'var(--text3)', fontSize: 13 }}>Belum ada data</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {userSplit.map(u => (
-                    <div key={u.name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text3)' }}>{u.pct}%</span>
-                      </div>
-                      <div className="progress-wrap" style={{ height: 8 }}>
-                        <div className="progress-bar" style={{ width: `${u.pct}%`, background: u.name === 'Aldin' ? 'var(--accent)' : '#db2777' }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="bento-4">
+            <Link href="/expenses" className="no-underline block h-full">
+              <Card className={cn(
+                'h-full border-[var(--border)] bg-[var(--surface)]',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="section-title mb-0">Ringkasan Mingguan</div>
+                    <Badge className="text-[10px] bg-[var(--accent)] text-white border-0">LIVE</Badge>
+                  </div>
+                  <div className="text-[22px] font-extrabold text-[var(--text1)]">{fmt(weeklyTotal)}</div>
+                  <div className="text-[12px] text-[var(--text3)] mb-4">
+                    {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                  </div>
+                  {/* Mini bar */}
+                  <div className="flex gap-[3px] items-end h-12">
+                    {[0,1,2,3,4,5,6].map(d => {
+                      const day = new Date(weekStart); day.setDate(weekStart.getDate() + d)
+                      const key = getLocalDateStr(day)
+                      const val = filteredExpenses.filter(r => r.tanggal?.startsWith(key)).reduce((s, r) => s + r.nilai, 0)
+                      const maxDay = Math.max(...[0,1,2,3,4,5,6].map(x => {
+                        const dx = new Date(weekStart); dx.setDate(weekStart.getDate() + x)
+                        return filteredExpenses.filter(r => r.tanggal?.startsWith(getLocalDateStr(dx))).reduce((s,r) => s+r.nilai, 0)
+                      }), 1)
+                      const pct = (val / maxDay) * 100
+                      return (
+                        <div key={d} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div style={{ width: '100%', height: `${Math.max(pct, 4)}%`, background: pct > 70 ? 'var(--red)' : 'var(--accent)', borderRadius: '3px 3px 0 0', transition: 'height 0.6s' }} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
-          {/* Top 5 Kategori */}
-          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card">
-                <div className="section-title">Top 5 Kategori Pengeluaran</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {top5.length === 0 ? (
-                    <div style={{ color: 'var(--text3)', fontSize: 13 }}>Belum ada data</div>
-                  ) : top5.map(([kat, val]) => {
-                    const pct = s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
-                    const color = KATEGORI_COLOR[kat] || 'var(--accent)'
-                    return (
-                      <div key={kat} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 20, flexShrink: 0 }}>{KATEGORI_ICON[kat] || '📦'}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600 }}>{kat}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt(val)} <span style={{ color: 'var(--text3)', fontSize: 11 }}>({pct}%)</span></span>
-                          </div>
-                          <div className="progress-wrap" style={{ height: 6 }}>
-                            <div className="progress-bar" style={{ width: `${pct}%`, background: color }} />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Heatmap */}
-          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card">
-                <div className="section-title">Heatmap Aktivitas Transaksi</div>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                  {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
-                    <div key={d} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: 'var(--text3)', fontWeight: 600 }}>{d}</div>
-                  ))}
-                </div>
-                <div className="heatmap-grid">
-                  {heatmap.map((cell, i) => (
-                    <div key={i} className={`heatmap-cell${cell.lv ? ' ' + cell.lv : ''}`}
-                      title={cell.val > 0 ? `${cell.key}: ${fmtFull(cell.val)}` : cell.key} />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10, color: 'var(--text3)' }}>
-                  <span>Lebih sedikit</span><span>Lebih banyak</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Anomali */}
-          <Link href="/expenses" className="bento-4" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card">
-                <div className="section-title" style={{ color: 'var(--red)' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>warning</span>
-                  Transaksi Anomali
-                </div>
-                {anomali.length === 0 ? (
-                  <div className="empty-state" style={{ padding: '24px 0' }}>
-                    <div className="emoji">✅</div>
-                    <p>Tidak ada anomali</p>
-                  </div>
+          {/* User Spending */}
+          <div className="bento-4">
+            <Card className="h-full border-[var(--border)] bg-[var(--surface)]">
+              <CardContent className="p-4">
+                <div className="section-title">Pengeluaran per User</div>
+                {userSplit.length === 0 ? (
+                  <p className="text-[var(--text3)] text-[13px]">Belum ada data</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {anomali.map(r => (
-                      <div key={r.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 12px', background: 'var(--red-bg)',
-                        border: '1px solid var(--red)', borderRadius: 'var(--radius-sm)', borderColor: 'rgba(244,63,94,0.2)',
-                      }}>
-                        <span className="material-symbols-outlined" style={{ color: 'var(--red)', fontSize: 20, fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>warning</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text1)' }}>{r.toko || '-'}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{r.uraian || fmtTanggalShort(r.tanggal)}</div>
+                  <div className="flex flex-col gap-3.5">
+                    {userSplit.map(u => (
+                      <div key={u.name}>
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-[13px] font-semibold">{u.name}</span>
+                          <span className="text-[12px] text-[var(--text3)]">{u.pct}%</span>
                         </div>
-                        <span style={{ fontWeight: 700, color: 'var(--red)', fontSize: 13, flexShrink: 0 }}>{fmt(r.nilai)}</span>
+                        <Progress
+                          value={u.pct}
+                          className="h-2 bg-[var(--surface2)]"
+                          indicatorClassName={u.name === 'Aldin' ? 'bg-[var(--accent)]' : 'bg-[#db2777]'}
+                        />
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-          </Link>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* ── CHART CAROUSEL ── */}
+          {/* Top 5 Kategori */}
+          <div className="bento-4">
+            <Link href="/expenses" className="no-underline block">
+              <Card className={cn(
+                'border-[var(--border)] bg-[var(--surface)]',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardContent className="p-4">
+                  <div className="section-title">Top 5 Kategori</div>
+                  <div className="flex flex-col gap-3.5">
+                    {top5.length === 0 ? (
+                      <p className="text-[var(--text3)] text-[13px]">Belum ada data</p>
+                    ) : top5.map(([kat, val]) => {
+                      const pct   = s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
+                      const color = KATEGORI_COLOR[kat] || 'var(--accent)'
+                      return (
+                        <div key={kat} className="flex items-center gap-3">
+                          <span className="text-[20px] shrink-0">{KATEGORI_ICON[kat] || '📦'}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between mb-1.5">
+                              <span className="text-[13px] font-semibold truncate">{kat}</span>
+                              <span className="text-[13px] font-bold shrink-0 ml-2">
+                                {fmt(val)} <span className="text-[var(--text3)] text-[11px]">({pct}%)</span>
+                              </span>
+                            </div>
+                            <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color } as any} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {/* Budget vs Realisasi */}
+          <div className="bento-4">
+            <Link href="/budget" className="no-underline block">
+              <Card className={cn(
+                'border-[var(--border)] bg-[var(--surface)]',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardContent className="p-4">
+                  <div className="section-title">Budget vs Realisasi</div>
+                  {(s.budgetVsReal || []).filter(b => b.alokasi > 0).length === 0 ? (
+                    <p className="text-[var(--text3)] text-[13px]">Belum ada budget plan</p>
+                  ) : (
+                    <div className="flex flex-col gap-3.5">
+                      {(s.budgetVsReal || []).filter(b => b.alokasi > 0).slice(0, 5).map(b => (
+                        <div key={b.kategori}>
+                          <div className="flex justify-between mb-1.5">
+                            <span className="text-[13px] font-semibold">{b.kategori}</span>
+                            <span className={cn(
+                              'text-[13px] font-bold',
+                              b.pct >= 100 ? 'text-[var(--red)]' : b.pct >= 80 ? 'text-[var(--yellow)]' : 'text-[var(--green)]'
+                            )}>{b.pct}%</span>
+                          </div>
+                          <Progress
+                            value={Math.min(b.pct, 100)}
+                            className="h-2.5 bg-[var(--surface2)]"
+                            indicatorClassName={b.pct >= 100 ? 'bg-[var(--red)]' : b.pct >= 80 ? 'bg-[var(--yellow)]' : 'bg-[var(--green)]'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {/* Heatmap */}
+          <div className="bento-4">
+            <Link href="/expenses" className="no-underline block">
+              <Card className={cn(
+                'border-[var(--border)] bg-[var(--surface)]',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardContent className="p-4">
+                  <div className="section-title">Heatmap Aktivitas</div>
+                  <div className="flex gap-1 mb-2">
+                    {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
+                      <div key={d} className="flex-1 text-center text-[9px] text-[var(--text3)] font-semibold">{d}</div>
+                    ))}
+                  </div>
+                  <div className="heatmap-grid">
+                    {heatmap.map((cell, i) => (
+                      <div key={i} className={`heatmap-cell${cell.lv ? ' ' + cell.lv : ''}`}
+                        title={cell.val > 0 ? `${cell.key}: ${fmtFull(cell.val)}` : cell.key} />
+                    ))}
+                  </div>
+                  <div className="flex justify-between mt-2 text-[10px] text-[var(--text3)]">
+                    <span>Sedikit</span><span>Banyak</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {/* Anomali */}
+          <div className="bento-4">
+            <Link href="/expenses" className="no-underline block">
+              <Card className={cn(
+                'border-[var(--border)] bg-[var(--surface)]',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardContent className="p-4">
+                  <div className="section-title text-[var(--red)]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                    Transaksi Anomali
+                  </div>
+                  {anomali.length === 0 ? (
+                    <div className="empty-state py-6">
+                      <div className="emoji">✅</div>
+                      <p>Tidak ada anomali</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      {anomali.map(r => (
+                        <div key={r.id} className={cn(
+                          'flex items-center gap-2.5 p-2.5 rounded-lg',
+                          'bg-[var(--red-bg)] border border-[rgba(244,63,94,0.2)]',
+                        )}>
+                          <span className="material-symbols-outlined shrink-0" style={{ color: 'var(--red)', fontSize: 20, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-[13px] text-[var(--text1)] truncate">{r.toko || '-'}</div>
+                            <div className="text-[11px] text-[var(--text3)] truncate">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
+                          </div>
+                          <span className="font-bold text-[var(--red)] text-[13px] shrink-0">{fmt(r.nilai)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {/* Chart Carousel */}
           <div className="bento-12">
             <ChartCarousel
               expenses={expenses}
@@ -318,12 +429,16 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Transactions */}
-          <Link href="/record" className="bento-12" style={{ textDecoration: 'none' }}>
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="section-title" style={{ marginBottom: 0 }}>10 Transaksi Terakhir</div>
-                </div>
+          <div className="bento-12">
+            <Link href="/expenses" className="no-underline block">
+              <Card className={cn(
+                'border-[var(--border)] bg-[var(--surface)] overflow-hidden p-0',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+              )}>
+                <CardHeader className="px-5 py-4 border-b border-[var(--border)] flex-row items-center justify-between space-y-0">
+                  <CardTitle className="section-title mb-0 text-[13px]">10 Transaksi Terakhir</CardTitle>
+                  <span className="text-[12px] text-[var(--accent)] font-semibold">Lihat semua ↗</span>
+                </CardHeader>
                 <div className="table-wrap">
                   <table>
                     <thead>
@@ -337,39 +452,40 @@ export default function DashboardPage() {
                     </thead>
                     <tbody>
                       {recent.length === 0 ? (
-                        <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>Belum ada transaksi</td></tr>
+                        <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
                       ) : recent.map(r => (
                         <tr key={r.id}>
-                          <td style={{ whiteSpace: 'nowrap', color: 'var(--text3)', fontSize: 12 }}>{fmtTanggalShort(r.tanggal)}</td>
+                          <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
                           <td>
-                            <div style={{ fontWeight: 600, fontSize: 13 }}>{r.toko || '—'}</div>
-                            {r.uraian && <div style={{ fontSize: 11, color: 'var(--text3)' }}>{r.uraian}</div>}
+                            <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
+                            {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
                           </td>
                           <td>
-                            <span className="badge badge-gray">{KATEGORI_ICON[r.kategori] || ''} {r.kategori}</span>
+                            <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0">
+                              {KATEGORI_ICON[r.kategori] || ''} {r.kategori}
+                            </Badge>
                           </td>
                           <td>
                             <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
                               {getUserName(r.user_id)}
                             </span>
                           </td>
-                          <td className="amount" style={{ color: 'var(--red)' }}>{fmt(r.nilai)}</td>
+                          <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          </Link>
+              </Card>
+            </Link>
+          </div>
 
         </div>
       </div>
 
-      {/* Scorecard Chart Modal */}
       <ScorecardChartModal
         open={modalType !== null}
-        onClose={closeModal}
+        onClose={() => setModalType(null)}
         type={modalType}
         filteredExpenses={filteredExpenses}
         expenses={expenses}
@@ -382,13 +498,13 @@ export default function DashboardPage() {
 function LoadingState() {
   return (
     <>
-      <div style={{ height: 56, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }} />
+      <div className="h-14 bg-[var(--surface)] border-b border-[var(--border)]" />
       <div className="page-container">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
-          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 100, borderRadius: 12 }} />)}
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl bg-[var(--surface2)]" />)}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton" style={{ height: 160, borderRadius: 12 }} />)}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-40 rounded-xl bg-[var(--surface2)]" />)}
         </div>
       </div>
     </>
