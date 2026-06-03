@@ -331,8 +331,26 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
 
   // ── Confirm popup ──
   const confirmPopup = showConfirm && parsedResult ? (
-    <div className="confirm-popup-overlay">
-      <div className="confirm-popup-card" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1100,
+      background: 'rgba(0,0,0,0.6)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    }} onClick={e => e.target === e.currentTarget && setShowConfirm(false)}>
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: '20px 20px 0 0',
+        width: '100%',
+        maxWidth: 560,
+        maxHeight: '92dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        padding: '20px 20px',
+        paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)',
+      }}>
+      <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 22 }}>🤖</span>
