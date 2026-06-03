@@ -304,7 +304,7 @@ export default function DashboardPage() {
                                 {fmt(val)} <span className="text-[var(--text3)] text-[11px]">({pct}%)</span>
                               </span>
                             </div>
-                            <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color } as any} />
+                            <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color }} />
                           </div>
                         </div>
                       )
