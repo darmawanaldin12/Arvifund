@@ -155,11 +155,46 @@ export default function InputPage() {
     try {
       const systemInstruction = `Kamu adalah asisten keuangan pintar untuk aplikasi Arvifund. Tugasmu adalah mengekstrak data dari kalimat bahasa natural ATAU dari foto struk belanja/nota menjadi format JSON terstruktur.
 Hari ini adalah: ${today} (${new Date().toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' })}).
-Daftar Kategori yang valid: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}
+
+=== ATURAN UTAMA: MENENTUKAN TIPE TRANSAKSI ===
+Tipe WAJIB diisi salah satu dari: "expense", "income", atau "cash".
+
+1. "cash" → KHUSUS untuk TARIK TUNAI / ambil uang di ATM / penarikan tunai dari rekening.
+   Kata kunci: "tarik tunai", "tarik uang", "ambil uang", "ATM", "withdrawal", "ambil cash", "ke ATM", "tarik di ATM".
+   PENTING: "tarik tunai" BUKAN pengeluaran biasa — HARUS "cash", bukan "expense".
+
+2. "income" → untuk PEMASUKAN / penerimaan uang / gaji / transfer masuk / dapat uang.
+   Kata kunci: "gaji", "terima", "masuk", "dapat uang", "pemasukan", "income", "transfer masuk", "bayaran".
+
+3. "expense" → untuk semua PENGELUARAN / belanja / bayar sesuatu (bukan tarik tunai).
+   Kata kunci: "beli", "bayar", "makan", "belanja", "beli bensin", "bayar listrik", "jajan", "pengeluaran".
+
+CONTOH KLASIFIKASI:
+- "tarik tunai 500rb BCA" → tipe: "cash"
+- "ambil uang ATM 300rb" → tipe: "cash"
+- "tarik 200 di ATM mandiri" → tipe: "cash"
+- "beli bensin 50rb" → tipe: "expense"
+- "makan siang 30rb" → tipe: "expense"
+- "gaji bulan ini 5jt" → tipe: "income"
+- "terima transfer 1jt" → tipe: "income"
+
+=== DATA LAIN ===
+Daftar Kategori (hanya untuk tipe "expense"): ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}
 Daftar Bank/Dompet yang valid: ${JSON.stringify(BANK_LIST)}
 Daftar Metode yang valid: ${JSON.stringify(METODE_LIST)}
 Daftar User: ${JSON.stringify((profiles || []).map(p => ({ id: p.id, username: p.username })))}
-Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string"}`
+
+Aturan tambahan:
+- "tanggal": format "YYYY-MM-DD", gunakan hari ini jika tidak disebutkan
+- "toko": nama toko/merchant/sumber/lokasi ATM
+- "uraian": deskripsi singkat transaksi
+- "total": angka murni tanpa simbol (contoh: 50000 bukan "50rb")
+- "kategori": hanya isi jika tipe "expense", kosongkan jika "income" atau "cash"
+- "metode": metode pembayaran, default "Cash"
+- "bank": nama bank/dompet, default "Cash"
+
+Kembalikan HANYA objek JSON tanpa markdown:
+{"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string"}`
 
       const parts = activeFile
         ? [{ inlineData: { mimeType: activeFile.type, data: await fileToBase64(activeFile) } }, { text: `${systemInstruction}\n\nEkstrak dari struk. Catatan: "${activeText}"` }]
