@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
@@ -17,29 +16,106 @@ const TIPE_LIST = [
   { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: '🏧' },
 ]
 
+// ── Toast Notification Component ──────────────────────────────────────────────
+function SavedToast({ show, tipe, amount }) {
+  if (!show) return null
+  const tipeLabel = tipe === 'income' ? 'Pemasukan' : tipe === 'cash' ? 'Tarik Tunai' : 'Pengeluaran'
+  const tipeColor = tipe === 'income' ? '#10b981' : tipe === 'cash' ? '#f59e0b' : '#f43f5e'
+  const tipeIcon  = tipe === 'income' ? '💰' : tipe === 'cash' ? '🏧' : '💸'
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 20,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 2000,
+      animation: 'toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
+      pointerEvents: 'none',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        padding: '12px 18px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+        minWidth: 260,
+        maxWidth: 'calc(100vw - 32px)',
+      }}>
+        {/* Checkmark circle */}
+        <div style={{
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          background: `${tipeColor}18`,
+          border: `2px solid ${tipeColor}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          animation: 'checkPop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.15s both',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tipeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>
+            {tipeIcon} {tipeLabel} tersimpan
+          </div>
+          {amount && (
+            <div style={{ fontSize: 12, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
+              Rp {Number(amount).toLocaleString('id-ID')}
+            </div>
+          )}
+        </div>
+
+        {/* Subtle progress bar */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0, left: 0,
+          height: 3,
+          borderRadius: '0 0 16px 16px',
+          background: tipeColor,
+          opacity: 0.5,
+          animation: 'toastProgress 2.5s linear 0.1s forwards',
+          width: '100%',
+        }} />
+      </div>
+    </div>
+  )
+}
+
 export default function InputPage() {
-  const router = useRouter()
   const { user, profiles, loadData } = useData()
   const [mode, setMode]     = useState('ai')
   const [tipe, setTipe]     = useState('expense')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
-  const [success, setSuccess] = useState(false)
+
+  // Toast state
+  const [toast, setToast]       = useState({ show: false, tipe: 'expense', amount: null })
+  const toastTimer              = useRef(null)
 
   // AI mode state
-  const [aiText, setAiText]       = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  const [aiText, setAiText]           = useState('')
+  const [aiLoading, setAiLoading]     = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [parsedResult, setParsedResult] = useState(null)
-  const [imageFile, setImageFile]   = useState(null)
+  const [imageFile, setImageFile]     = useState(null)
   const [imagePreview, setImagePreview] = useState('')
-  const [isRecording, setIsRecording]   = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(true)
-  const [iosDevice, setIosDevice]   = useState(false)
+  const [iosDevice, setIosDevice]     = useState(false)
 
-  const aiTextRef      = useRef('')
-  const imageFileRef   = useRef(null)
-  const recognitionRef = useRef(null)
+  const aiTextRef        = useRef('')
+  const imageFileRef     = useRef(null)
+  const recognitionRef   = useRef(null)
   const autoExtractTimer = useRef(null)
 
   useEffect(() => { aiTextRef.current = aiText }, [aiText])
@@ -61,6 +137,12 @@ export default function InputPage() {
   function getBulan(tgl) {
     if (!tgl) return ''
     return BULAN_ORDER[new Date(tgl + 'T00:00:00').getMonth()]
+  }
+
+  function showToast(tipeVal, amount) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ show: true, tipe: tipeVal, amount })
+    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2800)
   }
 
   // ── AI Extract ──
@@ -131,6 +213,7 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
     setVoiceSupported(true)
     return () => {
       if (autoExtractTimer.current) clearTimeout(autoExtractTimer.current)
+      if (toastTimer.current) clearTimeout(toastTimer.current)
       try { recognitionRef.current?.abort() } catch (_) {}
     }
   }, [])
@@ -242,11 +325,10 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
         if (err) throw err
       }
       await loadData()
-      setSuccess(true)
       setShowConfirm(false)
       setAiText(''); setImageFile(null); setImagePreview('')
       aiTextRef.current = ''; imageFileRef.current = null
-      setTimeout(() => setSuccess(false), 2500)
+      showToast(t, nilai)
     } catch (err) {
       setError('Gagal simpan: ' + err.message)
     } finally {
@@ -274,9 +356,8 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
         if (err) throw err
       }
       await loadData()
-      setSuccess(true)
       setForm({ tanggal: today, toko: '', uraian: '', total: '', kategori: '', metode: 'Cash', bank: 'Cash', user_id: user?.id || '' })
-      setTimeout(() => setSuccess(false), 2500)
+      showToast(tipe, nilai)
     } catch (err) {
       setError('Gagal simpan: ' + err.message)
     } finally {
@@ -284,7 +365,7 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
     }
   }
 
-  // ── Loading overlay (scan / AI thinking) ──
+  // ── Loading overlay ──
   const loadingOverlay = aiLoading && !showConfirm ? (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
       {imagePreview ? (
@@ -350,7 +431,6 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
         padding: '20px 20px',
         paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)',
       }}>
-      <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 22 }}>🤖</span>
@@ -390,7 +470,7 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
           ))}
         </div>
         {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.25)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 'env(safe-area-inset-bottom, 16px)', paddingBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
           <button type="button" className="btn btn-ghost" onClick={() => {
             setTipe(parsedResult.tipe || 'expense')
             setForm({ tanggal: parsedResult.tanggal || today, toko: parsedResult.toko || '', uraian: parsedResult.uraian || '', total: parsedResult.total ? String(parsedResult.total) : '', kategori: parsedResult.kategori || '', metode: parsedResult.metode || 'Cash', bank: parsedResult.bank || 'Cash', user_id: parsedResult.user_id || user?.id || '' })
@@ -409,16 +489,11 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
       {loadingOverlay}
       {confirmPopup}
 
+      {/* ── Toast Notification ── */}
+      <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} />
+
       <AppHeader title="Input Transaksi" />
       <div className="page-container" style={{ maxWidth: 560 }}>
-
-        {/* Success banner */}
-        {success && (
-          <div style={{ padding: '14px 16px', marginBottom: 16, background: 'var(--green-bg)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, color: 'var(--green)', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, animation: 'fadeIn 0.3s ease' }}>
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            Transaksi berhasil disimpan!
-          </div>
-        )}
 
         {/* Mode Tabs */}
         <div style={{ display: 'flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>
@@ -520,7 +595,6 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
         {/* ── MANUAL MODE ── */}
         {mode === 'manual' && (
           <div className="card">
-            {/* Tipe selector */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
               {TIPE_LIST.map(t => (
                 <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{
@@ -595,13 +669,24 @@ Kembalikan HANYA objek JSON: {"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"st
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes scanLineMove { 0% { top: 0%; } 50% { top: calc(100% - 3px); } 100% { top: 0%; } }
         @keyframes scanGlowMove { 0% { top: -60px; } 50% { top: calc(100% - 60px); } 100% { top: -60px; } }
         @keyframes dotPulse { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1.2); opacity: 1; } }
         @keyframes centerPulse { 0%,100% { transform: scale(0.8); opacity: 0.7; } 50% { transform: scale(1.2); opacity: 1; } }
         @keyframes progressSlide { 0% { transform: translateX(-150%); } 50% { transform: translateX(150%); } 100% { transform: translateX(400%); } }
         @keyframes pulse-record { 0% { box-shadow: 0 0 0 0 rgba(244,63,94,0.4); } 70% { box-shadow: 0 0 0 10px rgba(244,63,94,0); } 100% { box-shadow: 0 0 0 0 rgba(244,63,94,0); } }
+        @keyframes toastIn {
+          from { opacity: 0; transform: translate(-50%, -16px) scale(0.92); }
+          to   { opacity: 1; transform: translate(-50%, 0)     scale(1); }
+        }
+        @keyframes checkPop {
+          from { transform: scale(0); opacity: 0; }
+          to   { transform: scale(1); opacity: 1; }
+        }
+        @keyframes toastProgress {
+          from { width: 100%; }
+          to   { width: 0%; }
+        }
       `}</style>
     </>
   )
