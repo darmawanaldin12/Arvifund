@@ -9,8 +9,23 @@ import {
   authenticateWithBiometric,
   registerBiometric,
   removeBiometricCred,
-  getBiometricCred,
 } from '../../lib/biometric'
+import {
+  Fingerprint,
+  ScanFace,
+  Lock,
+  Eye,
+  EyeOff,
+  Mail,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ArrowLeft,
+  Loader2,
+  ShieldCheck,
+  KeyRound,
+  Send,
+} from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -135,7 +150,7 @@ export default function LoginPage() {
   }
 
   const isIos = typeof navigator !== 'undefined' && /iPhone|iPad|Mac/.test(navigator.userAgent)
-  const bioIcon = isIos ? '🔒' : '🫆'
+  const BioIcon = isIos ? ScanFace : Fingerprint
   const bioLabel = isIos ? 'Face ID / Touch ID' : 'Sidik Jari / Biometrik'
 
   // ── Register biometrik screen ─────────────────────────────
@@ -145,17 +160,20 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: 380 }}>
           <div style={S.card}>
             <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-              <div style={S.bioIconCircle}>{bioIcon}</div>
+              <div style={S.bioIconCircle}>
+                <BioIcon size={34} strokeWidth={1.5} color="var(--accent)" />
+              </div>
               <div style={S.cardTitle}>Aktifkan {bioLabel}?</div>
               <div style={S.cardDesc}>
                 Login lebih cepat lain kali — tanpa ketik password — bahkan setelah sesi habis.
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
-              <button onClick={handleRegisterBio} disabled={bioLoading} style={{ ...S.btnPrimary, ...(bioLoading ? S.btnDisabled : {}) }}>
+              <button onClick={handleRegisterBio} disabled={bioLoading}
+                style={{ ...S.btnPrimary, ...(bioLoading ? S.btnDisabled : {}) }}>
                 {bioLoading
-                  ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Memproses...</>
-                  : '✅  Ya, Aktifkan'}
+                  ? <><Loader2 size={16} style={S.spinIcon} /> Memproses...</>
+                  : <><ShieldCheck size={16} /> Ya, Aktifkan</>}
               </button>
               <button onClick={handleSkipBio} style={S.btnSecondary}>Nanti Saja</button>
             </div>
@@ -169,7 +187,7 @@ export default function LoginPage() {
   return (
     <div style={S.page}>
 
-      {/* Logo */}
+      {/* Logo — tetap /logo.png */}
       <div style={S.logoWrap}>
         <div style={S.logoBox}>
           <img src="/logo.png" alt="Arvifund" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -182,7 +200,7 @@ export default function LoginPage() {
       {isTimeout && (
         <div style={{ width: '100%', maxWidth: 380 }}>
           <div style={S.timeoutBanner}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, flexShrink: 0 }}>schedule</span>
+            <Clock size={15} style={{ flexShrink: 0 }} />
             Sesi berakhir karena tidak aktif 1 jam
           </div>
         </div>
@@ -194,8 +212,8 @@ export default function LoginPage() {
           <button onClick={handleBiometricLogin} disabled={bioLoading}
             style={{ ...S.biometricBtn, ...(bioLoading ? S.btnDisabled : {}) }}>
             {bioLoading
-              ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Verifikasi...</>
-              : <><span style={{ fontSize: 22 }}>{bioIcon}</span> Masuk dengan {bioLabel}</>}
+              ? <><Loader2 size={18} style={S.spinIcon} /> Verifikasi...</>
+              : <><BioIcon size={20} strokeWidth={1.75} /> Masuk dengan {bioLabel}</>}
           </button>
           <div style={S.divider}>
             <div style={S.dividerLine} />
@@ -211,32 +229,37 @@ export default function LoginPage() {
           <div style={S.card}>
             <div style={S.fieldGroup}>
               <label style={S.label}>Email</label>
-              <input style={S.input} type="email" placeholder="email@gmail.com"
-                value={email} onChange={e => setEmail(e.target.value)}
-                required autoComplete="email" inputMode="email"
-                className="lp-input" />
+              <div style={{ position: 'relative' }}>
+                <Mail size={15} style={S.inputIcon} />
+                <input style={{ ...S.input, paddingLeft: 36 }}
+                  type="email" placeholder="email@gmail.com"
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  required autoComplete="email" inputMode="email"
+                  className="lp-input" />
+              </div>
             </div>
             <div style={{ ...S.fieldGroup, marginBottom: 0 }}>
               <label style={S.label}>Password</label>
               <div style={{ position: 'relative' }}>
+                <KeyRound size={15} style={S.inputIcon} />
                 <input
-                  style={{ ...S.input, paddingRight: 44 }}
+                  style={{ ...S.input, paddingLeft: 36, paddingRight: 44 }}
                   type={showPass ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password} onChange={e => setPassword(e.target.value)}
                   required autoComplete="current-password"
                   className="lp-input" />
                 <button type="button" onClick={() => setShowPass(!showPass)} style={S.eyeBtn}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                    {showPass ? 'visibility_off' : 'visibility'}
-                  </span>
+                  {showPass
+                    ? <EyeOff size={16} />
+                    : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
             {error && (
               <div style={S.errorBox}>
-                <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>error</span>
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
                 {error}
               </div>
             )}
@@ -244,7 +267,7 @@ export default function LoginPage() {
             <button type="submit" disabled={loading}
               style={{ ...S.btnPrimary, marginTop: 20, ...(loading ? S.btnDisabled : {}) }}>
               {loading
-                ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Memuat...</>
+                ? <><Loader2 size={16} style={S.spinIcon} /> Memuat...</>
                 : 'Masuk'}
             </button>
           </div>
@@ -269,27 +292,33 @@ export default function LoginPage() {
 
             {forgotMsg ? (
               <div style={S.successBox}>
-                <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>check_circle</span>
+                <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: 1 }} />
                 {forgotMsg}
               </div>
             ) : (
               <form onSubmit={handleForgot}>
                 <div style={S.fieldGroup}>
                   <label style={S.label}>Email</label>
-                  <input style={S.input} type="email" placeholder="email@gmail.com"
-                    value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                    required autoComplete="email" inputMode="email"
-                    className="lp-input" />
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={15} style={S.inputIcon} />
+                    <input style={{ ...S.input, paddingLeft: 36 }}
+                      type="email" placeholder="email@gmail.com"
+                      value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                      required autoComplete="email" inputMode="email"
+                      className="lp-input" />
+                  </div>
                 </div>
                 {forgotError && (
                   <div style={{ ...S.errorBox, marginBottom: 12 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>error</span>
+                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
                     {forgotError}
                   </div>
                 )}
                 <button type="submit" disabled={forgotLoading}
                   style={{ ...S.btnPrimary, ...(forgotLoading ? S.btnDisabled : {}) }}>
-                  {forgotLoading ? 'Mengirim...' : 'Kirim Link Reset'}
+                  {forgotLoading
+                    ? <><Loader2 size={16} style={S.spinIcon} /> Mengirim...</>
+                    : <><Send size={15} /> Kirim Link Reset</>}
                 </button>
               </form>
             )}
@@ -298,8 +327,8 @@ export default function LoginPage() {
           <div style={{ textAlign: 'center', marginTop: 14 }}>
             <button type="button"
               onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotError('') }}
-              style={{ ...S.textBtn, color: 'var(--text3)' }}>
-              ← Kembali ke Login
+              style={{ ...S.textBtn, color: 'var(--text3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <ArrowLeft size={13} /> Kembali ke Login
             </button>
           </div>
         </div>
@@ -310,7 +339,7 @@ export default function LoginPage() {
   )
 }
 
-// ── Styles ───────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────
 const S = {
   page: {
     minHeight: '100dvh',
@@ -385,6 +414,15 @@ const S = {
     boxSizing: 'border-box',
     transition: 'border-color 0.15s, box-shadow 0.15s',
   },
+  inputIcon: {
+    position: 'absolute',
+    left: 11,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text3)',
+    pointerEvents: 'none',
+    flexShrink: 0,
+  },
   eyeBtn: {
     position: 'absolute',
     right: 10,
@@ -402,7 +440,7 @@ const S = {
   btnPrimary: {
     width: '100%',
     height: 42,
-    background: 'var(--text1, #0f172a)',
+    background: 'var(--accent)',
     color: 'white',
     border: 'none',
     borderRadius: 8,
@@ -414,7 +452,7 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.1)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.12), 0 4px 8px rgba(0,61,155,0.2)',
     touchAction: 'manipulation',
     transition: 'all 0.15s',
   },
@@ -447,7 +485,7 @@ const S = {
   biometricBtn: {
     width: '100%',
     height: 54,
-    background: 'var(--text1, #0f172a)',
+    background: 'var(--accent)',
     color: 'white',
     border: 'none',
     borderRadius: 12,
@@ -459,7 +497,7 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.14)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1), 0 6px 16px rgba(0,61,155,0.25)',
     touchAction: 'manipulation',
     transition: 'all 0.15s',
   },
@@ -524,14 +562,13 @@ const S = {
   bioIconCircle: {
     width: 72,
     height: 72,
-    background: 'var(--surface2)',
+    background: 'var(--accent-light)',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 36,
     margin: '0 auto 16px',
-    border: '1px solid var(--border)',
+    border: '1px solid var(--accent-dim)',
   },
   cardTitle: {
     fontSize: 17,
@@ -546,8 +583,8 @@ const S = {
     lineHeight: 1.65,
   },
   spinIcon: {
-    fontSize: 18,
     animation: 'spin 0.8s linear infinite',
+    flexShrink: 0,
   },
 }
 
