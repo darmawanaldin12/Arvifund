@@ -1,1 +1,1 @@
-test push from Claude
+Gut connector test - push OK via Claude MCP
