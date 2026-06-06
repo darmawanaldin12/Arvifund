@@ -5,9 +5,11 @@ import AppHeader from '../../components/layout/AppHeader'
 import EditModal from '../../components/modals/EditModal'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, KATEGORI_COLOR, BULAN_ORDER } from '../../lib/utils'
-import { updateExpense } from '../../lib/data'
+import { updateExpense, deleteExpense } from '../../lib/data'
+import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
+import { supabase } from '../../lib/supabase'
 import KategoriIcon from '../../components/ui/KategoriIcon'
-import { Pencil, Download, AlertTriangle, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Download, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react'
 
 function exportCSV(rows, getUserName) {
   const headers = ['Tanggal','Bulan','Toko','Uraian','Kategori','Metode','Bank','User','Nilai']
@@ -47,6 +49,7 @@ export default function ExpensesPage() {
   const [sortKey, setSortKey]       = useState('tanggal')
   const [sortDir, setSortDir]       = useState('desc')
   const [exporting, setExporting]   = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const rows = useMemo(() => {
     let r = filteredExpenses.filter(r =>
@@ -99,6 +102,34 @@ export default function ExpensesPage() {
       showToast('❌ Gagal menyimpan: ' + err.message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete(id) {
+    setDeletingId(id)
+    try {
+      const supported  = await isBiometricSupported()
+      const registered = isBiometricRegistered()
+      if (supported && registered) {
+        await authenticateWithBiometric(supabase)
+      } else {
+        // fallback jika biometrik tidak tersedia
+        if (!window.confirm('Hapus transaksi ini? Tindakan tidak bisa dibatalkan.')) {
+          setDeletingId(null)
+          return
+        }
+      }
+      await deleteExpense(id)
+      showToast('🗑️ Transaksi dihapus')
+      await loadData()
+    } catch (e) {
+      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) {
+        showToast('Autentikasi dibatalkan', 'error')
+      } else {
+        showToast('❌ Gagal hapus: ' + e.message, 'error')
+      }
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -248,9 +279,22 @@ export default function ExpensesPage() {
                         {fmt(r.nilai)}
                       </td>
                       <td>
-                        <button className="edit-btn" onClick={() => setEditData(r)}>
-                          <Pencil size={13} />
-                        </button>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <button className="edit-btn" onClick={() => setEditData(r)} title="Edit">
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            className="edit-btn"
+                            onClick={() => handleDelete(r.id)}
+                            disabled={deletingId === r.id}
+                            title="Hapus (perlu biometrik)"
+                            style={{ color: deletingId === r.id ? 'var(--text3)' : 'var(--red)', opacity: deletingId === r.id ? 0.5 : 1 }}
+                          >
+                            {deletingId === r.id
+                              ? <ShieldCheck size={13} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
+                              : <Trash2 size={13} />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -273,7 +317,10 @@ export default function ExpensesPage() {
       )}
 
       <ToastContainer />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+      `}</style>
     </>
   )
 }

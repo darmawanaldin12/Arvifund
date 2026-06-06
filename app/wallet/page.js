@@ -3,11 +3,12 @@ import { useState, useMemo } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
-import { insertTransfer, deleteTransfer } from '../../lib/data'
+import { insertTransfer, updateTransfer, deleteTransfer } from '../../lib/data'
+import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 import { fmt, fmtTanggalShort, BULAN_ORDER } from '../../lib/utils'
 import {
   ArrowLeftRight, Plus, Trash2, X, ChevronRight,
-  TrendingDown, TrendingUp, Landmark, Wallet,
+  Pencil, TrendingDown, TrendingUp, Landmark, Wallet, ShieldCheck,
 } from 'lucide-react'
 
 // Bank list per user
@@ -17,10 +18,22 @@ const BANK_BY_USER = {
 }
 const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
 
-// ── Transfer Modal ─────────────────────────────────────────────────────────
-function TransferModal({ profiles, user, onClose, onSaved }) {
+// ── Shared biometric helper ─────────────────────────────────────────────────
+async function requireBiometric() {
+  const supported  = await isBiometricSupported()
+  const registered = isBiometricRegistered()
+  if (!supported || !registered) {
+    // fallback: confirm biasa jika biometrik tidak tersedia / belum daftar
+    return true
+  }
+  await authenticateWithBiometric(supabase)
+  return true
+}
+
+// ── Transfer Form (shared oleh Add & Edit modal) ────────────────────────────
+function TransferForm({ profiles, user, initial, onClose, onSaved, title, submitLabel }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(initial || {
     tanggal: today, from_user: user?.id || '', to_user: '',
     from_bank: '', to_bank: '', jumlah: '', catatan: '',
   })
@@ -46,8 +59,8 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
     if (!form.jumlah || isNaN(parseFloat(form.jumlah)) || parseFloat(form.jumlah) <= 0) return setError('Jumlah harus lebih dari 0')
     setSaving(true)
     try {
-      await insertTransfer({ tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null }, user?.id)
-      onSaved(); onClose()
+      await onSaved(form)
+      onClose()
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -60,7 +73,7 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <ArrowLeftRight size={20} color="var(--accent)" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Catat Transfer</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>{title}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isInternal ? 'Pindah rekening sendiri' : 'Transfer antar pengguna'}</div>
             </div>
           </div>
@@ -128,7 +141,7 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
         <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-full"
           style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <ArrowLeftRight size={18} />
-          {saving ? 'Menyimpan...' : 'Simpan Transfer'}
+          {saving ? 'Menyimpan...' : submitLabel}
         </button>
       </div>
     </div>
@@ -141,12 +154,10 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
   const isAldin   = userName?.toLowerCase().includes('ald')
   const color     = isAldin ? 'var(--accent)' : '#db2777'
 
-  // Saldo rekening (bank only, no Cash/QRIS/Cardless)
   const userBanks = Object.entries(bankBalances[userId] || {})
     .filter(([bank]) => !['Cash', 'QRIS', 'Cardless'].includes(bank))
     .sort((a, b) => a[0].localeCompare(b[0]))
 
-  // Ringkasan keuangan (all time, bisa difilter nanti)
   const myExpenses = expenses.filter(r => r.user_id === userId)
   const myIncome   = income.filter(r => r.user_id === userId)
   const myTarik    = cashRecords.filter(r => r.user_id === userId)
@@ -159,7 +170,6 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-      {/* Header user */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border)', background: `color-mix(in srgb, ${color} 5%, var(--surface))` }}>
         <div style={{ width: 38, height: 38, borderRadius: 12, background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color, flexShrink: 0 }}>
           {initial}
@@ -168,18 +178,16 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>{userName}</div>
           <div style={{ fontSize: 11, color: 'var(--text3)' }}>Ringkasan keuangan</div>
         </div>
-        {/* Saldo net badge */}
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>Saldo bersih</div>
           <div style={{ fontSize: 14, fontWeight: 800, color: net >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(net)}</div>
         </div>
       </div>
 
-      {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid var(--border)' }}>
         {[
-          { label: 'Masuk', val: totalIn,    color: 'var(--green)' },
-          { label: 'Keluar', val: totalOut,   color: 'var(--red)'   },
+          { label: 'Masuk',    val: totalIn,   color: 'var(--green)' },
+          { label: 'Keluar',   val: totalOut,  color: 'var(--red)'   },
           { label: 'Sisa Cash', val: sisaCash, color: sisaCash >= 0 ? 'var(--yellow)' : 'var(--red)' },
         ].map((item, i) => (
           <div key={item.label} style={{ padding: '12px 10px', textAlign: 'center', borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}>
@@ -189,7 +197,6 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
         ))}
       </div>
 
-      {/* Saldo rekening */}
       {userBanks.length > 0 && (
         <div style={{ padding: '12px 16px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Saldo Rekening</div>
@@ -223,11 +230,12 @@ export default function WalletPage() {
     loadData, loading, getUserName, profiles, user,
   } = useData()
 
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [deletingId, setDeletingId] = useState(null)
-  const [tab, setTab] = useState('summary') // 'summary' | 'transfer'
+  const [showAddModal, setShowAddModal]   = useState(false)
+  const [editTransfer, setEditTransfer]   = useState(null)  // transfer object to edit
+  const [deletingId, setDeletingId]       = useState(null)
+  const [tab, setTab]                     = useState('summary')
+  const [bioError, setBioError]           = useState('')
 
-  // Transfer difilter sesuai periode aktif
   const filteredTransfers = useMemo(() => {
     if (periodIdx === '' || periodIdx === null) return transfers
     const idx = parseInt(periodIdx)
@@ -241,21 +249,71 @@ export default function WalletPage() {
   }, [transfers, periodIdx, periods])
 
   async function handleDeleteTransfer(id) {
-    if (!confirm('Hapus transfer ini?')) return
+    setBioError('')
     setDeletingId(id)
-    try { await deleteTransfer(id); await loadData() }
-    catch (e) { alert('Gagal hapus: ' + e.message) }
-    finally { setDeletingId(null) }
+    try {
+      await requireBiometric()
+      await deleteTransfer(id)
+      await loadData()
+    } catch (e) {
+      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) {
+        setBioError('Autentikasi dibatalkan')
+      } else {
+        setBioError('Gagal hapus: ' + e.message)
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  async function handleSaveAdd(form) {
+    await insertTransfer({
+      tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user,
+      from_bank: form.from_bank, to_bank: form.to_bank,
+      jumlah: parseFloat(form.jumlah), catatan: form.catatan || null,
+    }, user?.id)
+    await loadData()
+  }
+
+  async function handleSaveEdit(form) {
+    await updateTransfer(editTransfer.id, {
+      tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user,
+      from_bank: form.from_bank, to_bank: form.to_bank,
+      jumlah: parseFloat(form.jumlah), catatan: form.catatan || null,
+    }, user?.id)
+    await loadData()
   }
 
   const users = profiles.filter(p => p.username)
 
   return (
     <>
-      {showTransferModal && (
-        <TransferModal profiles={profiles} user={user}
-          onClose={() => setShowTransferModal(false)}
-          onSaved={loadData} />
+      {showAddModal && (
+        <TransferForm
+          profiles={profiles} user={user}
+          onClose={() => setShowAddModal(false)}
+          onSaved={handleSaveAdd}
+          title="Catat Transfer"
+          submitLabel="Simpan Transfer"
+        />
+      )}
+      {editTransfer && (
+        <TransferForm
+          profiles={profiles} user={user}
+          initial={{
+            tanggal:   editTransfer.tanggal,
+            from_user: editTransfer.from_user,
+            to_user:   editTransfer.to_user,
+            from_bank: editTransfer.from_bank,
+            to_bank:   editTransfer.to_bank,
+            jumlah:    String(editTransfer.jumlah),
+            catatan:   editTransfer.catatan || '',
+          }}
+          onClose={() => setEditTransfer(null)}
+          onSaved={handleSaveEdit}
+          title="Edit Transfer"
+          submitLabel="Simpan Perubahan"
+        />
       )}
 
       <AppHeader title="Wallet" onRefresh={loadData} loading={loading} />
@@ -269,7 +327,7 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {/* Tab: Ringkasan / Transfer */}
+        {/* Tab */}
         <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 }}>
           {[
             { id: 'summary',  label: 'Ringkasan' },
@@ -307,11 +365,16 @@ export default function WalletPage() {
         {/* ── Tab: Transfer ── */}
         {tab === 'transfer' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Tombol catat transfer */}
-            <button onClick={() => setShowTransferModal(true)}
+            <button onClick={() => setShowAddModal(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 12, border: '2px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               <Plus size={18} /> Catat Transfer Baru
             </button>
+
+            {bioError && (
+              <div style={{ padding: '10px 14px', background: 'var(--red-bg)', borderRadius: 10, color: 'var(--red)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ShieldCheck size={15} /> {bioError}
+              </div>
+            )}
 
             {filteredTransfers.length === 0 ? (
               <div className="empty-state"><div className="emoji">↔️</div><p>Belum ada transfer di periode ini</p></div>
@@ -335,9 +398,24 @@ export default function WalletPage() {
                     </div>
                   </div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--accent)', flexShrink: 0 }}>{fmt(t.jumlah)}</div>
-                  <button onClick={() => handleDeleteTransfer(t.id)} disabled={deletingId === t.id}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, flexShrink: 0 }}>
-                    <Trash2 size={15} />
+                  {/* Edit button — no biometric */}
+                  <button
+                    onClick={() => { setBioError(''); setEditTransfer(t) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, flexShrink: 0 }}
+                    title="Edit transfer"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  {/* Delete button — requires biometric */}
+                  <button
+                    onClick={() => handleDeleteTransfer(t.id)}
+                    disabled={deletingId === t.id}
+                    style={{ background: 'none', border: 'none', cursor: deletingId === t.id ? 'not-allowed' : 'pointer', color: deletingId === t.id ? 'var(--text3)' : 'var(--red)', padding: 4, flexShrink: 0, opacity: deletingId === t.id ? 0.5 : 1 }}
+                    title="Hapus (perlu biometrik)"
+                  >
+                    {deletingId === t.id
+                      ? <ShieldCheck size={14} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
+                      : <Trash2 size={14} />}
                   </button>
                 </div>
               )
@@ -353,6 +431,7 @@ export default function WalletPage() {
         )}
 
       </div>
+      <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }`}</style>
     </>
   )
 }
