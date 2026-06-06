@@ -5,15 +5,19 @@ import { useData } from '../DataContext'
 import { supabase } from '../../lib/supabase'
 import { cn } from '../../lib/utils-cn'
 import { Separator } from '../ui/separator'
+import {
+  LayoutDashboard, TrendingDown, TrendingUp,
+  Landmark, PieChart, Wallet, Settings, LogOut,
+} from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'Dashboard',   icon: 'dashboard' },
-  { href: '/expenses',   label: 'Pengeluaran', icon: 'trending_down', color: 'var(--red)' },
-  { href: '/income',     label: 'Pemasukan',   icon: 'trending_up',   color: 'var(--green)' },
-  { href: '/cashrecord', label: 'Tarik Tunai', icon: 'local_atm',     color: 'var(--yellow)' },
-  { href: '/budget',     label: 'Budget Plan', icon: 'pie_chart' },
-  { href: '/record',     label: 'Wallet',      icon: 'account_balance_wallet' },
-  { href: '/settings',   label: 'Settings',    icon: 'settings' },
+  { href: '/dashboard',  label: 'Dashboard',   Icon: LayoutDashboard },
+  { href: '/expenses',   label: 'Pengeluaran', Icon: TrendingDown,   color: 'var(--red)' },
+  { href: '/income',     label: 'Pemasukan',   Icon: TrendingUp,     color: 'var(--green)' },
+  { href: '/cashrecord', label: 'Tarik Tunai', Icon: Landmark,       color: 'var(--yellow)' },
+  { href: '/budget',     label: 'Budget Plan', Icon: PieChart },
+  { href: '/record',     label: 'Wallet',      Icon: Wallet },
+  { href: '/settings',   label: 'Settings',    Icon: Settings },
 ]
 
 export default function Sidebar() {
@@ -57,16 +61,10 @@ export default function Sidebar() {
               className={cn('sidebar-item', active && 'active')}
               style={active && item.color ? { color: item.color, background: `${item.color}15`, borderRightColor: item.color } : {}}
             >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
-                  color: active && item.color ? item.color : undefined,
-                  fontSize: 20,
-                }}
-              >
-                {item.icon}
-              </span>
+              <item.Icon
+                size={18}
+                style={{ color: active && item.color ? item.color : undefined }}
+              />
               {item.label}
             </Link>
           )
@@ -112,7 +110,7 @@ export default function Sidebar() {
               'border-none bg-transparent cursor-pointer',
             )}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>logout</span>
+            <LogOut size={16} />
           </button>
         </div>
       </div>

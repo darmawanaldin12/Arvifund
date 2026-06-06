@@ -13,6 +13,10 @@ import {
   removeBiometricCred,
   getBiometricCred,
 } from '../../lib/biometric'
+import {
+  ShieldCheck, Fingerprint, CalendarDays, Zap, KeyRound,
+  Info, Smartphone, LogOut, Trash2, CheckCircle2, X,
+} from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -24,14 +28,12 @@ export default function SettingsPage() {
   const [showLogout, setShowLogout]         = useState(false)
   const [periodDate, setPeriodDate]         = useState(profile?.pay_period_date || 25)
 
-  // Override state
   const now = new Date()
   const [ovBulan, setOvBulan] = useState(BULAN_ORDER[now.getMonth()])
   const [ovTahun, setOvTahun] = useState(now.getFullYear())
   const [ovTgl, setOvTgl]     = useState('')
   const tahunList = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
-  // Biometric state
   const [bioSupported, setBioSupported]   = useState(false)
   const [bioRegistered, setBioRegistered] = useState(false)
   const [bioLoading, setBioLoading]       = useState(false)
@@ -49,7 +51,6 @@ export default function SettingsPage() {
     checkBio()
   }, [])
 
-  // ── Simpan default tanggal gajian ──
   async function handleSavePeriod() {
     setSavingPeriod(true)
     try {
@@ -64,7 +65,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Simpan override per bulan ──
   async function handleSaveOverride() {
     const tgl = parseInt(ovTgl)
     if (!tgl || tgl < 1 || tgl > 28) { showToast('❌ Tanggal harus 1–28', 'error'); return }
@@ -84,7 +84,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Hapus override ──
   async function handleDeleteOverride(key) {
     try {
       const newOverrides = { ...currentOverrides }
@@ -98,7 +97,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Reset Password ──
   async function handleResetPassword() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user?.email, { redirectTo: `${window.location.origin}/settings` })
@@ -109,7 +107,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Register biometrik ──
   async function handleRegisterBio() {
     setBioLoading(true)
     try {
@@ -128,7 +125,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Hapus biometrik ──
   function handleRemoveBio() {
     removeBiometricCred()
     setBioRegistered(false)
@@ -160,19 +156,18 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ── BIOMETRIC ── */}
+        {/* Biometric */}
         {bioSupported && (
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="section-title" style={{ marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>{/iPhone|iPad|Mac/.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') ? '🔒' : '🫆'}</span>
+              <Fingerprint size={16} color="var(--accent)" />
               Login Biometrik
             </div>
 
             {bioRegistered && bioCred ? (
               <>
-                {/* Status aktif */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--green-bg)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.25)', marginBottom: 14 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--green)', fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>verified</span>
+                  <CheckCircle2 size={22} color="var(--green)" style={{ flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>Biometrik Aktif</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>
@@ -183,8 +178,8 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 12, lineHeight: 1.6 }}>
                   Login berikutnya cukup tap tombol biometrik di halaman login. Data hanya tersimpan di device ini.
                 </p>
-                <button className="btn btn-danger btn-full" onClick={handleRemoveBio}>
-                  🗑️ Hapus Data Biometrik dari Device Ini
+                <button className="btn btn-danger btn-full" onClick={handleRemoveBio} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Trash2 size={14} /> Hapus Data Biometrik dari Device Ini
                 </button>
               </>
             ) : (
@@ -192,13 +187,9 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.6 }}>
                   Aktifkan login dengan Face ID, Touch ID, atau sidik jari untuk masuk lebih cepat tanpa ketik password.
                 </p>
-                <button
-                  className="btn btn-primary btn-full"
-                  onClick={handleRegisterBio}
-                  disabled={bioLoading}
-                  style={{ height: 46 }}
-                >
-                  {bioLoading ? 'Memproses...' : '🔐 Aktifkan Login Biometrik'}
+                <button className="btn btn-primary btn-full" onClick={handleRegisterBio} disabled={bioLoading} style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <ShieldCheck size={16} />
+                  {bioLoading ? 'Memproses...' : 'Aktifkan Login Biometrik'}
                 </button>
               </>
             )}
@@ -207,7 +198,10 @@ export default function SettingsPage() {
 
         {/* Tanggal Gajian Default */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 8 }}>📅 Tanggal Gajian Default</div>
+          <div className="section-title" style={{ marginBottom: 8 }}>
+            <CalendarDays size={16} color="var(--accent)" />
+            Tanggal Gajian Default
+          </div>
           <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 12 }}>
             Periode aktif: tgl <strong style={{ color: 'var(--accent)' }}>{periodDate}</strong> bulan ini — tgl <strong style={{ color: 'var(--accent)' }}>{periodDate - 1}</strong> bulan depan
           </p>
@@ -223,7 +217,10 @@ export default function SettingsPage() {
 
         {/* Override Per Bulan */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 4 }}>⚡ Override Tanggal Gajian per Bulan</div>
+          <div className="section-title" style={{ marginBottom: 4 }}>
+            <Zap size={16} color="var(--yellow)" />
+            Override Tanggal Gajian per Bulan
+          </div>
           <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.6 }}>
             Gunakan ini kalau tgl {profile?.pay_period_date || 25} jatuh di hari libur/akhir pekan dan gajian dimajukan.
           </p>
@@ -267,7 +264,9 @@ export default function SettingsPage() {
                       <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Tgl {tgl}</span>
                       <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 6 }}>(default: tgl {profile?.pay_period_date || 25})</span>
                     </div>
-                    <button onClick={() => handleDeleteOverride(key)} className="btn btn-danger btn-sm">✕ Hapus</button>
+                    <button onClick={() => handleDeleteOverride(key)} className="btn btn-danger btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <X size={12} /> Hapus
+                    </button>
                   </div>
                 ))}
               </div>
@@ -275,16 +274,22 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Reset Password */}
+        {/* Keamanan */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 8 }}>🔐 Keamanan</div>
+          <div className="section-title" style={{ marginBottom: 8 }}>
+            <KeyRound size={16} color="var(--accent)" />
+            Keamanan
+          </div>
           <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 12 }}>Link reset password akan dikirim ke {user?.email}</p>
           <button className="btn btn-ghost btn-full" onClick={handleResetPassword}>Kirim Link Reset Password</button>
         </div>
 
         {/* Tentang */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 8 }}>ℹ️ Tentang Arvifund</div>
+          <div className="section-title" style={{ marginBottom: 8 }}>
+            <Info size={16} color="var(--accent)" />
+            Tentang Arvifund
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text3)' }}>
             {[['Versi', '2.0.0'], ['Platform', 'Next.js + Supabase'], ['Database', 'PostgreSQL'], ['Input', 'Telegram Bot + n8n']].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -298,11 +303,11 @@ export default function SettingsPage() {
         {/* Install PWA */}
         <div className="card" style={{ marginBottom: 16, background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.2)' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <div style={{ fontSize: 24 }}>📱</div>
+            <Smartphone size={24} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Install ke Homescreen</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
-                <strong>Android:</strong> Menu (⋮) → Add to Home Screen<br/>
+                <strong>Android:</strong> Menu (⋮) → Add to Home Screen<br />
                 <strong>iPhone:</strong> Share (⬆) → Add to Home Screen
               </div>
             </div>
@@ -310,11 +315,15 @@ export default function SettingsPage() {
         </div>
 
         {/* Logout */}
-        <button className="btn btn-danger btn-full" onClick={() => setShowLogout(true)} style={{ height: 48, fontSize: 15 }}>
-          🚪 Keluar
+        <button
+          className="btn btn-danger btn-full"
+          onClick={() => setShowLogout(true)}
+          style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          <LogOut size={18} /> Keluar
         </button>
 
-        {/* Logout Confirm */}
+        {/* Logout Modal */}
         {showLogout && (
           <div className="modal-overlay" onClick={() => setShowLogout(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -325,7 +334,9 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 20 }}>Yakin mau keluar dari Arvifund?</p>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="btn btn-ghost" onClick={() => setShowLogout(false)} style={{ flex: 1 }}>Batal</button>
-                  <button className="btn btn-danger" onClick={handleLogout} style={{ flex: 1 }}>Ya, Keluar</button>
+                  <button className="btn btn-danger" onClick={handleLogout} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <LogOut size={14} /> Ya, Keluar
+                  </button>
                 </div>
               </div>
             </div>

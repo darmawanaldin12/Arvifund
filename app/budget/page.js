@@ -3,9 +3,10 @@ import { useState, useMemo } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
-import { fmt, fmtFull, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
+import { fmt, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
 import { upsertBudgetPlan } from '../../lib/data'
 import AppSelect from '../../components/ui/AppSelect'
+import KategoriIcon from '../../components/ui/KategoriIcon'
 
 export default function BudgetPage() {
   const { budgetPlans, expenses, loadData, loading, user } = useData()
@@ -20,7 +21,6 @@ export default function BudgetPage() {
 
   const tahunList = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
-  // Ambil budget bulan ini
   const budgetMap = useMemo(() => {
     const m = {}
     budgetPlans.filter(p => p.bulan === selBulan && p.tahun === selTahun)
@@ -28,7 +28,6 @@ export default function BudgetPage() {
     return m
   }, [budgetPlans, selBulan, selTahun])
 
-  // Realisasi bulan ini
   const realisasiMap = useMemo(() => {
     const m = {}
     expenses.filter(r => r.bulan === selBulan && new Date(r.tanggal).getFullYear() === selTahun)
@@ -36,7 +35,7 @@ export default function BudgetPage() {
     return m
   }, [expenses, selBulan, selTahun])
 
-  const totalAlokasi = Object.values(budgetMap).reduce((s, p) => s + (p.alokasi || 0), 0)
+  const totalAlokasi   = Object.values(budgetMap).reduce((s, p) => s + (p.alokasi || 0), 0)
   const totalRealisasi = Object.values(realisasiMap).reduce((s, v) => s + v, 0)
 
   async function handleSave(kategori) {
@@ -44,10 +43,7 @@ export default function BudgetPage() {
     if (isNaN(alokasi) || alokasi < 0) { showToast('❌ Nilai tidak valid', 'error'); return }
     setSaving(true)
     try {
-      await upsertBudgetPlan({
-        kategori, bulan: selBulan, tahun: selTahun, alokasi,
-        user_id: user?.id,
-      }, user?.id)
+      await upsertBudgetPlan({ kategori, bulan: selBulan, tahun: selTahun, alokasi, user_id: user?.id }, user?.id)
       showToast('✅ Budget disimpan')
       setEditKat(null)
       await loadData()
@@ -117,17 +113,21 @@ export default function BudgetPage() {
         {/* Tabel per Kategori */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {katList.map(kat => {
-            const budget   = budgetMap[kat]
-            const alokasi  = budget?.alokasi || 0
+            const budget    = budgetMap[kat]
+            const alokasi   = budget?.alokasi || 0
             const realisasi = realisasiMap[kat] || 0
-            const pct      = alokasi > 0 ? Math.min(Math.round(realisasi / alokasi * 100), 100) : 0
-            const sisa     = alokasi - realisasi
-            const isEdit   = editKat === kat
+            const pct       = alokasi > 0 ? Math.min(Math.round(realisasi / alokasi * 100), 100) : 0
+            const sisa      = alokasi - realisasi
+            const isEdit    = editKat === kat
 
             return (
               <div key={kat} className="card">
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{kat}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  {/* Kategori label dengan Lucide icon */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <KategoriIcon kategori={kat} size={18} />
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{kat}</span>
+                  </div>
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => { setEditKat(isEdit ? null : kat); setEditVal(alokasi || '') }}
@@ -136,7 +136,7 @@ export default function BudgetPage() {
                   </button>
                 </div>
 
-                {isEdit ? (
+                {isEdit && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
                       className="form-input"
@@ -148,16 +148,11 @@ export default function BudgetPage() {
                       style={{ flex: 1 }}
                       autoFocus
                     />
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleSave(kat)}
-                      disabled={saving}
-                      style={{ flexShrink: 0 }}
-                    >
+                    <button className="btn btn-primary" onClick={() => handleSave(kat)} disabled={saving} style={{ flexShrink: 0 }}>
                       {saving ? '...' : 'Simpan'}
                     </button>
                   </div>
-                ) : null}
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div>
@@ -175,8 +170,7 @@ export default function BudgetPage() {
                 {alokasi > 0 && (
                   <>
                     <div className="progress-wrap">
-                      <div className={`progress-bar ${pct >= 100 ? 'danger' : pct >= 80 ? 'warn' : 'ok'}`}
-                        style={{ width: `${pct}%` }} />
+                      <div className={`progress-bar ${pct >= 100 ? 'danger' : pct >= 80 ? 'warn' : 'ok'}`} style={{ width: `${pct}%` }} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                       <span style={{ fontSize: 11, color: pct >= 100 ? 'var(--red)' : 'var(--text3)' }}>

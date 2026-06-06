@@ -4,15 +4,15 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
-import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, KATEGORI_ICON, KATEGORI_COLOR, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
+import KategoriIcon from '../../components/ui/KategoriIcon'
+import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, KATEGORI_COLOR, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
 import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Progress } from '../../components/ui/progress'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { Separator } from '../../components/ui/separator'
+import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark } from 'lucide-react'
 
 export default function DashboardPage() {
   const { summaryPeriode, summaryAll, loading, loadData, periodIdx, setPeriodIdx,
@@ -85,20 +85,24 @@ export default function DashboardPage() {
 
   if (loading) return <LoadingState />
 
+  const SCORECARD_ITEMS = [
+    { label: 'Bulan Ini',        value: fmt(expBulanIni), cls: 'red',    Icon: CalendarDays, modalType: 'bulanIni' },
+    { label: 'Rata-rata Harian', value: fmt(rataHarian),  cls: 'yellow', Icon: BarChart2,    modalType: 'rataHarian' },
+    { label: 'Proyeksi Akhir',   value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
+    { label: 'Sisa Budget',      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', Icon: Landmark, modalType: 'sisaBudget' },
+  ]
+
   return (
     <>
       <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
       <div className="page-container">
 
-        {/* ── Period Filter — shadcn Tabs ── */}
+        {/* ── Period Filter ── */}
         <div className="mb-5 overflow-x-auto pb-1 hide-scrollbar">
           <div className="flex gap-2 min-w-max">
             <button
               onClick={() => setPeriodIdx('')}
-              className={cn(
-                'filter-chip',
-                periodIdx === '' && 'active',
-              )}
+              className={cn('filter-chip', periodIdx === '' && 'active')}
             >
               Semua
             </button>
@@ -106,10 +110,7 @@ export default function DashboardPage() {
               <button
                 key={i}
                 onClick={() => setPeriodIdx(String(i))}
-                className={cn(
-                  'filter-chip',
-                  periodIdx === String(i) && 'active',
-                )}
+                className={cn('filter-chip', periodIdx === String(i) && 'active')}
               >
                 {p.label}
               </button>
@@ -117,7 +118,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── KPI Grid — shadcn Card ── */}
+        {/* ── KPI Grid ── */}
         <div className="kpi-grid mb-5">
           {[
             {
@@ -182,15 +183,10 @@ export default function DashboardPage() {
         {/* ── Bento Grid ── */}
         <div className="bento-grid">
 
-          {/* Scorecard 2x2 */}
+          {/* Scorecard */}
           <div className="bento-4">
             <div className="scorecard-grid">
-              {[
-                { label: 'Bulan Ini',        value: fmt(expBulanIni), cls: 'red',    icon: 'calendar_today',  modalType: 'bulanIni' },
-                { label: 'Rata-rata Harian', value: fmt(rataHarian),  cls: 'yellow', icon: 'query_stats',     modalType: 'rataHarian' },
-                { label: 'Proyeksi Akhir',   value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', icon: 'insights',         modalType: 'proyeksi' },
-                { label: 'Sisa Budget',      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', icon: 'account_balance', modalType: 'sisaBudget' },
-              ].map((item, i) => (
+              {SCORECARD_ITEMS.map((item, i) => (
                 <div
                   key={i}
                   onClick={() => setModalType(item.modalType)}
@@ -201,9 +197,7 @@ export default function DashboardPage() {
                     'active:scale-[0.97]',
                   )}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)', marginBottom: 6, display: 'block' }}>
-                    {item.icon}
-                  </span>
+                  <item.Icon size={20} color="var(--accent)" style={{ marginBottom: 6, display: 'block' }} />
                   <div className="scorecard-label">{item.label}</div>
                   <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
                   <div className="text-[9px] text-[var(--text3)] mt-1 opacity-60">tap untuk grafik</div>
@@ -228,7 +222,6 @@ export default function DashboardPage() {
                   <div className="text-[12px] text-[var(--text3)] mb-4">
                     {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                   </div>
-                  {/* Mini bar */}
                   <div className="flex gap-[3px] items-end h-12">
                     {[0,1,2,3,4,5,6].map(d => {
                       const day = new Date(weekStart); day.setDate(weekStart.getDate() + d)
@@ -296,7 +289,9 @@ export default function DashboardPage() {
                       const color = KATEGORI_COLOR[kat] || 'var(--accent)'
                       return (
                         <div key={kat} className="flex items-center gap-3">
-                          <span className="text-[20px] shrink-0">{KATEGORI_ICON[kat] || '📦'}</span>
+                          <span className="shrink-0">
+                            <KategoriIcon kategori={kat} size={20} />
+                          </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between mb-1.5">
                               <span className="text-[13px] font-semibold truncate">{kat}</span>
@@ -387,8 +382,8 @@ export default function DashboardPage() {
                 'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
               )}>
                 <CardContent className="p-4">
-                  <div className="section-title text-[var(--red)]">
-                    <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                  <div className="section-title" style={{ color: 'var(--red)' }}>
+                    <AlertTriangle size={16} style={{ color: 'var(--red)' }} />
                     Transaksi Anomali
                   </div>
                   {anomali.length === 0 ? (
@@ -403,7 +398,7 @@ export default function DashboardPage() {
                           'flex items-center gap-2.5 p-2.5 rounded-lg',
                           'bg-[var(--red-bg)] border border-[rgba(244,63,94,0.2)]',
                         )}>
-                          <span className="material-symbols-outlined shrink-0" style={{ color: 'var(--red)', fontSize: 20, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                          <AlertTriangle size={20} style={{ color: 'var(--red)', flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="font-bold text-[13px] text-[var(--text1)] truncate">{r.toko || '-'}</div>
                             <div className="text-[11px] text-[var(--text3)] truncate">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
@@ -461,8 +456,9 @@ export default function DashboardPage() {
                             {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
                           </td>
                           <td>
-                            <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0">
-                              {KATEGORI_ICON[r.kategori] || ''} {r.kategori}
+                            <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
+                              <KategoriIcon kategori={r.kategori} size={12} />
+                              {r.kategori}
                             </Badge>
                           </td>
                           <td>

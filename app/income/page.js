@@ -4,9 +4,10 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import EditModal from '../../components/modals/EditModal'
 import { useToast } from '../../hooks/useToast'
-import { fmt, fmtTanggalShort, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
+import { fmt, fmtTanggalShort, BULAN_ORDER } from '../../lib/utils'
 import { updateIncome } from '../../lib/data'
 import AppSelect from '../../components/ui/AppSelect'
+import { Pencil } from 'lucide-react'
 
 export default function IncomePage() {
   const { income, filteredIncome, loadData, loading, periodIdx, setPeriodIdx, periods, getUserName, user } = useData()
@@ -171,7 +172,7 @@ export default function IncomePage() {
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
                         {r.sumber || '—'}
-                        {r.edited_at && <span style={{ fontSize: 10, color: 'var(--yellow)' }}>✏️</span>}
+                        {r.edited_at && <Pencil size={10} style={{ color: 'var(--yellow)', flexShrink: 0 }} />}
                       </div>
                       {r.items && <div style={{ fontSize: 11, color: 'var(--text3)' }}>{r.items}</div>}
                     </td>
@@ -185,10 +186,7 @@ export default function IncomePage() {
                     <td className="amount" style={{ color: 'var(--green)' }}>{fmt(r.jumlah)}</td>
                     <td>
                       <button className="edit-btn" onClick={() => setEditData(r)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
+                        <Pencil size={13} />
                       </button>
                     </td>
                   </tr>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useData } from '../DataContext'
 import { cn } from '../../lib/utils-cn'
 import { Button } from '../ui/button'
+import { RefreshCw } from 'lucide-react'
 
 export default function AppHeader({ title, subtitle, onRefresh, loading }) {
   const [time, setTime] = useState('')
@@ -58,21 +59,16 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
               'transition-all duration-150',
             )}
           >
-            <span
-              className="material-symbols-outlined"
-              style={{
-                fontSize: 18,
-                animation: loading ? 'spin 0.8s linear infinite' : 'none',
-                display: 'block',
-              }}
-            >
-              refresh
-            </span>
+            <RefreshCw
+              size={16}
+              className={cn(
+                'transition-transform',
+                loading && 'animate-spin',
+              )}
+            />
           </Button>
         )}
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </header>
   )
 }
