@@ -32,6 +32,15 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
+            // Daftarkan service worker
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                  console.warn('SW registration failed:', err);
+                });
+              });
+            }
+
             document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
             document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
             document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
