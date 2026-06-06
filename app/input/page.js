@@ -319,29 +319,39 @@ Kembalikan HANYA objek JSON tanpa markdown:
     })
   }
 
+  // compressImage dengan timeout 10 detik — kalau canvas.toBlob hang, fallback ke file asli
   function compressImage(file) {
     return new Promise((resolve, reject) => {
+      // Timeout safety: kalau proses hang lebih dari 10 detik, reject agar fallback ke file asli
+      const timeout = setTimeout(() => reject(new Error('Compress timeout')), 10_000)
+
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = (event) => {
-        const img = new Image()
+        const img = new window.Image()
         img.src = event.target.result
         img.onload = () => {
-          const canvas = document.createElement('canvas')
-          let { width, height } = img
-          const maxW = 1000, maxH = 1000
-          if (width > height) { if (width > maxW) { height = Math.round(height * maxW / width); width = maxW } }
-          else { if (height > maxH) { width = Math.round(width * maxH / height); height = maxH } }
-          canvas.width = width; canvas.height = height
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-          canvas.toBlob(blob => {
-            if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }))
-            else reject(new Error('Compression failed'))
-          }, 'image/jpeg', 0.75)
+          try {
+            const canvas = document.createElement('canvas')
+            let { width, height } = img
+            const maxW = 1000, maxH = 1000
+            if (width > height) { if (width > maxW) { height = Math.round(height * maxW / width); width = maxW } }
+            else { if (height > maxH) { width = Math.round(width * maxH / height); height = maxH } }
+            canvas.width = width; canvas.height = height
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+            canvas.toBlob(blob => {
+              clearTimeout(timeout)
+              if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }))
+              else reject(new Error('Compression failed'))
+            }, 'image/jpeg', 0.75)
+          } catch (err) {
+            clearTimeout(timeout)
+            reject(err)
+          }
         }
-        img.onerror = reject
+        img.onerror = (err) => { clearTimeout(timeout); reject(err) }
       }
-      reader.onerror = reject
+      reader.onerror = (err) => { clearTimeout(timeout); reject(err) }
     })
   }
 
@@ -350,7 +360,10 @@ Kembalikan HANYA objek JSON tanpa markdown:
     setAiLoading(true)
     compressImage(file)
       .then(c => { setImageFile(c); imageFileRef.current = c; setImagePreview(URL.createObjectURL(c)); handleAIExtract(c, aiTextRef.current) })
-      .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)); handleAIExtract(file, aiTextRef.current) })
+      .catch(() => {
+        // Fallback: pakai file asli tanpa kompresi
+        setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)); handleAIExtract(file, aiTextRef.current)
+      })
   }
 
   async function handleConfirmSave() {
