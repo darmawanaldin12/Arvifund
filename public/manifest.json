@@ -23,12 +23,19 @@
     }
   ],
   "share_target": {
-    "action": "/input",
-    "method": "GET",
+    "action": "/api/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url"
+      "url": "url",
+      "files": [
+        {
+          "name": "image",
+          "accept": ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/*"]
+        }
+      ]
     }
   },
   "categories": ["finance", "productivity"]
