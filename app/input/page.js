@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
   Check,
+  Share2,
 } from 'lucide-react'
 
 function isIOS() {
@@ -59,23 +60,14 @@ function SavedToast({ show, tipe, amount }) {
         minWidth: 260,
         maxWidth: 'calc(100vw - 32px)',
       }}>
-        {/* Checkmark circle */}
         <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: '50%',
-          background: `${tipeColor}18`,
-          border: `2px solid ${tipeColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
+          width: 36, height: 36, borderRadius: '50%',
+          background: `${tipeColor}18`, border: `2px solid ${tipeColor}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           animation: 'checkPop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.15s both',
         }}>
           <Check size={16} color={tipeColor} strokeWidth={2.5} />
         </div>
-
-        {/* Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
             <TipeIcon size={14} color={tipeColor} />
@@ -87,17 +79,10 @@ function SavedToast({ show, tipe, amount }) {
             </div>
           )}
         </div>
-
-        {/* Subtle progress bar */}
         <div style={{
-          position: 'absolute',
-          bottom: 0, left: 0,
-          height: 3,
-          borderRadius: '0 0 16px 16px',
-          background: tipeColor,
-          opacity: 0.5,
-          animation: 'toastProgress 2.5s linear 0.1s forwards',
-          width: '100%',
+          position: 'absolute', bottom: 0, left: 0, height: 3,
+          borderRadius: '0 0 16px 16px', background: tipeColor, opacity: 0.5,
+          animation: 'toastProgress 2.5s linear 0.1s forwards', width: '100%',
         }} />
       </div>
     </div>
@@ -110,12 +95,11 @@ export default function InputPage() {
   const [tipe, setTipe]     = useState('expense')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
+  const [sharedFromApp, setSharedFromApp] = useState(false)
 
-  // Toast state
   const [toast, setToast]       = useState({ show: false, tipe: 'expense', amount: null })
   const toastTimer              = useRef(null)
 
-  // AI mode state
   const [aiText, setAiText]           = useState('')
   const [aiLoading, setAiLoading]     = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -157,6 +141,53 @@ export default function InputPage() {
     setToast({ show: true, tipe: tipeVal, amount })
     toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2800)
   }
+
+  // ── Web Share Target: tangkap foto yang di-share dari app lain ──
+  useEffect(() => {
+    async function handleShareTarget() {
+      if (typeof window === 'undefined') return
+
+      // Cek Web Share Target via Service Worker (POST method)
+      if ('serviceWorker' in navigator) {
+        const swShare = sessionStorage.getItem('share-target-file')
+        if (swShare) {
+          sessionStorage.removeItem('share-target-file')
+          try {
+            const { url } = JSON.parse(swShare)
+            const res = await fetch(url)
+            const blob = await res.blob()
+            const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
+            setSharedFromApp(true)
+            setMode('ai')
+            handleImageFile(file)
+            return
+          } catch (_) {}
+        }
+      }
+
+      // Fallback: GET params dari share_target (title/text/url)
+      const params = new URLSearchParams(window.location.search)
+      const sharedText = params.get('text') || params.get('title') || ''
+      const sharedUrl  = params.get('url') || ''
+
+      if (sharedText || sharedUrl) {
+        setSharedFromApp(true)
+        setMode('ai')
+        const combined = [sharedText, sharedUrl].filter(Boolean).join(' ').trim()
+        setAiText(combined)
+        aiTextRef.current = combined
+        // Hapus params dari URL tanpa reload
+        window.history.replaceState({}, '', '/input')
+        // Auto trigger AI setelah sebentar
+        setTimeout(() => {
+          if (combined.trim()) handleAIExtractRef.current(null, combined)
+        }, 500)
+      }
+    }
+
+    handleShareTarget()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── AI Extract ──
   const handleAIExtract = useCallback(async (fileOverride = null, textOverride = null) => {
@@ -319,12 +350,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
     })
   }
 
-  // compressImage dengan timeout 10 detik — kalau canvas.toBlob hang, fallback ke file asli
   function compressImage(file) {
     return new Promise((resolve, reject) => {
-      // Timeout safety: kalau proses hang lebih dari 10 detik, reject agar fallback ke file asli
       const timeout = setTimeout(() => reject(new Error('Compress timeout')), 10_000)
-
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = (event) => {
@@ -344,10 +372,7 @@ Kembalikan HANYA objek JSON tanpa markdown:
               if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }))
               else reject(new Error('Compression failed'))
             }, 'image/jpeg', 0.75)
-          } catch (err) {
-            clearTimeout(timeout)
-            reject(err)
-          }
+          } catch (err) { clearTimeout(timeout); reject(err) }
         }
         img.onerror = (err) => { clearTimeout(timeout); reject(err) }
       }
@@ -361,7 +386,6 @@ Kembalikan HANYA objek JSON tanpa markdown:
     compressImage(file)
       .then(c => { setImageFile(c); imageFileRef.current = c; setImagePreview(URL.createObjectURL(c)); handleAIExtract(c, aiTextRef.current) })
       .catch(() => {
-        // Fallback: pakai file asli tanpa kompresi
         setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)); handleAIExtract(file, aiTextRef.current)
       })
   }
@@ -482,20 +506,13 @@ Kembalikan HANYA objek JSON tanpa markdown:
   const confirmPopup = showConfirm && parsedResult ? (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1100,
-      background: 'rgba(0,0,0,0.6)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
+      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
     }} onClick={e => e.target === e.currentTarget && setShowConfirm(false)}>
       <div style={{
-        background: 'var(--surface)',
-        borderRadius: '20px 20px 0 0',
-        width: '100%',
-        maxWidth: 560,
-        maxHeight: '92dvh',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
+        background: 'var(--surface)', borderRadius: '20px 20px 0 0',
+        width: '100%', maxWidth: 560, maxHeight: '92dvh',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         padding: '20px 20px',
         paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)',
       }}>
@@ -563,12 +580,23 @@ Kembalikan HANYA objek JSON tanpa markdown:
     <>
       {loadingOverlay}
       {confirmPopup}
-
-      {/* ── Toast Notification ── */}
       <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} />
 
       <AppHeader title="Input Transaksi" />
       <div className="page-container" style={{ maxWidth: 560 }}>
+
+        {/* Banner kalau dibuka dari share */}
+        {sharedFromApp && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 16,
+            fontSize: 13, color: 'var(--text2)', fontWeight: 600,
+          }}>
+            <Share2 size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
+            Foto diterima dari share — AI sedang membaca struk...
+          </div>
+        )}
 
         {/* Mode Tabs */}
         <div style={{ display: 'flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>
@@ -611,7 +639,6 @@ Kembalikan HANYA objek JSON tanpa markdown:
               </div>
             )}
 
-            {/* Media buttons */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
               <button type="button" onClick={toggleRecording} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -651,7 +678,6 @@ Kembalikan HANYA objek JSON tanpa markdown:
               <input id="input-page-gallery" type="file" accept="image/*" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
             </div>
 
-            {/* Image preview */}
             {imagePreview && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 16 }}>
                 <img src={imagePreview} alt="Struk" style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }} />
