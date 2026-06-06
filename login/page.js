@@ -20,19 +20,16 @@ export default function LoginPage() {
   const [error, setError]       = useState('')
   const [showPass, setShowPass] = useState(false)
 
-  // Lupa password state
   const [showForgot, setShowForgot]       = useState(false)
   const [forgotEmail, setForgotEmail]     = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotMsg, setForgotMsg]         = useState('')
   const [forgotError, setForgotError]     = useState('')
 
-  // Biometric state
   const [bioSupported, setBioSupported]       = useState(false)
   const [bioRegistered, setBioRegistered]     = useState(false)
   const [bioLoading, setBioLoading]           = useState(false)
   const [showRegisterBio, setShowRegisterBio] = useState(false)
-  // Simpan email+password sementara untuk didaftarkan ke biometrik
   const [pendingEmail, setPendingEmail]       = useState('')
   const [pendingPassword, setPendingPassword] = useState('')
 
@@ -43,24 +40,18 @@ export default function LoginPage() {
     async function checkBio() {
       const supported = await isBiometricSupported()
       setBioSupported(supported)
-      // Cek registered dari localStorage — langsung saat mount
       if (supported) setBioRegistered(isBiometricRegistered())
     }
     checkBio()
   }, [])
 
-  // ── Login email + password ───────────────────────────────
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const data = await signIn(email, password)
-
-      // Login berhasil — cek apakah perlu tawarkan biometrik
-      // isBiometricRegistered() baca langsung dari localStorage — reliable
+      await signIn(email, password)
       if (bioSupported && !isBiometricRegistered()) {
-        // Simpan sementara untuk didaftarkan
         setPendingEmail(email)
         setPendingPassword(password)
         setShowRegisterBio(true)
@@ -74,14 +65,11 @@ export default function LoginPage() {
     }
   }
 
-  // ── Login biometrik ──────────────────────────────────────
   async function handleBiometricLogin() {
     setBioLoading(true)
     setError('')
     try {
       await authenticateWithBiometric(supabase)
-      // PENTING: reset session timeout timer sebelum navigate
-      // supaya useSessionTimeout tidak langsung kick user keluar
       try { localStorage.setItem('arvifund_last_active', Date.now().toString()) } catch (_) {}
       router.push('/dashboard')
     } catch (err) {
@@ -94,7 +82,7 @@ export default function LoginPage() {
       } else if (err.message.startsWith('LOGIN_FAILED')) {
         removeBiometricCred()
         setBioRegistered(false)
-        setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang dengan email & password.')
+        setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang.')
       } else {
         setError('Biometrik gagal: ' + err.message)
       }
@@ -103,12 +91,8 @@ export default function LoginPage() {
     }
   }
 
-  // ── Register biometrik setelah login email ───────────────
   async function handleRegisterBio() {
-    if (!pendingEmail || !pendingPassword) {
-      router.push('/dashboard')
-      return
-    }
+    if (!pendingEmail || !pendingPassword) { router.push('/dashboard'); return }
     setBioLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -117,16 +101,9 @@ export default function LoginPage() {
       setBioRegistered(true)
       router.push('/dashboard')
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        // User cancel — lanjut dashboard
-        router.push('/dashboard')
-      } else {
-        // Error lain — tetap lanjut
-        router.push('/dashboard')
-      }
+      router.push('/dashboard')
     } finally {
       setBioLoading(false)
-      // Bersihkan kredensial dari memory
       setPendingEmail('')
       setPendingPassword('')
     }
@@ -138,7 +115,6 @@ export default function LoginPage() {
     router.push('/dashboard')
   }
 
-  // ── Forgot password ──────────────────────────────────────
   async function handleForgot(e) {
     e.preventDefault()
     setForgotError('')
@@ -162,160 +138,425 @@ export default function LoginPage() {
   const bioIcon = isIos ? '🔒' : '🫆'
   const bioLabel = isIos ? 'Face ID / Touch ID' : 'Sidik Jari / Biometrik'
 
-  // ── Screen: tawaran register biometrik ───────────────────
+  // ── Register biometrik screen ─────────────────────────────
   if (showRegisterBio) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
-        <div style={{ width: '100%', maxWidth: 360 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>{bioIcon}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: 'var(--text1)' }}>
-              Aktifkan {bioLabel}?
+      <div style={S.page}>
+        <div style={{ width: '100%', maxWidth: 380 }}>
+          <div style={S.card}>
+            <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+              <div style={S.bioIconCircle}>{bioIcon}</div>
+              <div style={S.cardTitle}>Aktifkan {bioLabel}?</div>
+              <div style={S.cardDesc}>
+                Login lebih cepat lain kali — tanpa ketik password — bahkan setelah sesi habis.
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24, lineHeight: 1.6 }}>
-              Login lebih cepat lain kali — bahkan setelah sesi habis — tanpa perlu ketik password lagi.
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button onClick={handleRegisterBio} disabled={bioLoading}
-                style={{ width: '100%', height: 48, fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 10, cursor: bioLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: bioLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, touchAction: 'manipulation' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
+              <button onClick={handleRegisterBio} disabled={bioLoading} style={{ ...S.btnPrimary, ...(bioLoading ? S.btnDisabled : {}) }}>
                 {bioLoading
-                  ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memproses...</>
-                  : `✅ Ya, Aktifkan`}
+                  ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Memproses...</>
+                  : '✅  Ya, Aktifkan'}
               </button>
-              <button onClick={handleSkipBio}
-                style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
-                Nanti Saja
-              </button>
+              <button onClick={handleSkipBio} style={S.btnSecondary}>Nanti Saja</button>
             </div>
           </div>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{CSS}</style>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
+    <div style={S.page}>
 
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ width: 100, height: 100, background: 'white', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 32px rgba(0,61,155,0.15)', padding: 10 }}>
+      <div style={S.logoWrap}>
+        <div style={S.logoBox}>
           <img src="/logo.png" alt="Arvifund" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
-        <p style={{ color: 'var(--text3)', fontSize: 13 }}>Personal Finance Tracker</p>
+        <div style={S.appName}>Arvifund</div>
+        <div style={S.appSub}>Personal Finance Tracker</div>
       </div>
 
       {/* Timeout banner */}
       {isTimeout && (
-        <div style={{ width: '100%', maxWidth: 360, padding: '12px 16px', marginBottom: 16, background: 'var(--yellow-bg)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, color: 'var(--yellow)', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-          ⏱ Sesi berakhir karena tidak aktif 1 jam
-        </div>
-      )}
-
-      {/* ── Tombol Biometrik (kalau sudah terdaftar) ── */}
-      {bioSupported && bioRegistered && !showForgot && (
-        <div style={{ width: '100%', maxWidth: 360, marginBottom: 16 }}>
-          <button onClick={handleBiometricLogin} disabled={bioLoading}
-            style={{ width: '100%', height: 58, fontSize: 16, fontWeight: 700, background: 'linear-gradient(135deg, #1e3a5f, var(--accent))', color: 'white', border: 'none', borderRadius: 14, cursor: bioLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: bioLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 4px 16px rgba(0,61,155,0.3)', touchAction: 'manipulation' }}>
-            {bioLoading
-              ? <><span className="material-symbols-outlined" style={{ fontSize: 22, animation: 'spin 0.8s linear infinite' }}>refresh</span> Verifikasi...</>
-              : <><span style={{ fontSize: 28 }}>{bioIcon}</span> Masuk dengan {bioLabel}</>}
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>atau gunakan password</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+        <div style={{ width: '100%', maxWidth: 380 }}>
+          <div style={S.timeoutBanner}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, flexShrink: 0 }}>schedule</span>
+            Sesi berakhir karena tidak aktif 1 jam
           </div>
         </div>
       )}
 
-      {/* ── Login Form ── */}
+      {/* Biometric button */}
+      {bioSupported && bioRegistered && !showForgot && (
+        <div style={{ width: '100%', maxWidth: 380 }}>
+          <button onClick={handleBiometricLogin} disabled={bioLoading}
+            style={{ ...S.biometricBtn, ...(bioLoading ? S.btnDisabled : {}) }}>
+            {bioLoading
+              ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Verifikasi...</>
+              : <><span style={{ fontSize: 22 }}>{bioIcon}</span> Masuk dengan {bioLabel}</>}
+          </button>
+          <div style={S.divider}>
+            <div style={S.dividerLine} />
+            <span style={S.dividerText}>atau gunakan password</span>
+            <div style={S.dividerLine} />
+          </div>
+        </div>
+      )}
+
       {!showForgot ? (
-        <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: 360 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" placeholder="email@gmail.com"
+        /* ── Login form ── */
+        <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: 380 }}>
+          <div style={S.card}>
+            <div style={S.fieldGroup}>
+              <label style={S.label}>Email</label>
+              <input style={S.input} type="email" placeholder="email@gmail.com"
                 value={email} onChange={e => setEmail(e.target.value)}
-                required autoComplete="email" inputMode="email" />
+                required autoComplete="email" inputMode="email"
+                className="lp-input" />
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Password</label>
+            <div style={{ ...S.fieldGroup, marginBottom: 0 }}>
+              <label style={S.label}>Password</label>
               <div style={{ position: 'relative' }}>
-                <input className="form-input"
-                  type={showPass ? 'text' : 'password'} placeholder="••••••••"
+                <input
+                  style={{ ...S.input, paddingRight: 44 }}
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="••••••••"
                   value={password} onChange={e => setPassword(e.target.value)}
-                  required autoComplete="current-password" style={{ paddingRight: 44 }} />
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
+                  required autoComplete="current-password"
+                  className="lp-input" />
+                <button type="button" onClick={() => setShowPass(!showPass)} style={S.eyeBtn}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     {showPass ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
               </div>
             </div>
+
             {error && (
-              <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--red-bg)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>
+              <div style={S.errorBox}>
+                <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>error</span>
                 {error}
               </div>
             )}
+
             <button type="submit" disabled={loading}
-              style={{ marginTop: 20, width: '100%', height: 46, fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit', opacity: loading ? 0.8 : 1, touchAction: 'manipulation' }}>
+              style={{ ...S.btnPrimary, marginTop: 20, ...(loading ? S.btnDisabled : {}) }}>
               {loading
-                ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memuat...</>
+                ? <><span className="material-symbols-outlined" style={S.spinIcon}>refresh</span> Memuat...</>
                 : 'Masuk'}
             </button>
           </div>
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
+
+          <div style={{ textAlign: 'center', marginTop: 14 }}>
+            <button type="button"
+              onClick={() => { setShowForgot(true); setForgotEmail(email) }}
+              style={S.textBtn}>
               Lupa Password?
             </button>
           </div>
         </form>
 
       ) : (
-        /* ── Forgot Password ── */
-        <div style={{ width: '100%', maxWidth: 360 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+        /* ── Forgot password ── */
+        <div style={{ width: '100%', maxWidth: 380 }}>
+          <div style={S.card}>
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text1)', marginBottom: 6 }}>🔐 Reset Password</div>
-              <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6 }}>Masukkan email yang terdaftar. Kami akan kirim link reset password.</div>
+              <div style={S.cardTitle}>Reset Password</div>
+              <div style={S.cardDesc}>Masukkan email yang terdaftar. Kami akan kirim link reset password.</div>
             </div>
+
             {forgotMsg ? (
-              <div style={{ padding: '14px 16px', background: 'var(--green-bg)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, color: 'var(--green)', fontSize: 13, fontWeight: 600, lineHeight: 1.6, marginBottom: 16 }}>
-                ✅ {forgotMsg}
+              <div style={S.successBox}>
+                <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>check_circle</span>
+                {forgotMsg}
               </div>
             ) : (
               <form onSubmit={handleForgot}>
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input className="form-input" type="email" placeholder="email@gmail.com"
+                <div style={S.fieldGroup}>
+                  <label style={S.label}>Email</label>
+                  <input style={S.input} type="email" placeholder="email@gmail.com"
                     value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                    required autoComplete="email" inputMode="email" />
+                    required autoComplete="email" inputMode="email"
+                    className="lp-input" />
                 </div>
                 {forgotError && (
-                  <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--red-bg)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>
+                  <div style={{ ...S.errorBox, marginBottom: 12 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 15, flexShrink: 0 }}>error</span>
                     {forgotError}
                   </div>
                 )}
                 <button type="submit" disabled={forgotLoading}
-                  style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: forgotLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit', opacity: forgotLoading ? 0.8 : 1 }}>
-                  {forgotLoading ? 'Mengirim...' : '📧 Kirim Link Reset'}
+                  style={{ ...S.btnPrimary, ...(forgotLoading ? S.btnDisabled : {}) }}>
+                  {forgotLoading ? 'Mengirim...' : 'Kirim Link Reset'}
                 </button>
               </form>
             )}
           </div>
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <button type="button" onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotError('') }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, fontFamily: 'inherit' }}>
+
+          <div style={{ textAlign: 'center', marginTop: 14 }}>
+            <button type="button"
+              onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotError('') }}
+              style={{ ...S.textBtn, color: 'var(--text3)' }}>
               ← Kembali ke Login
             </button>
           </div>
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{CSS}</style>
     </div>
   )
 }
+
+// ── Styles ───────────────────────────────────────────────────
+const S = {
+  page: {
+    minHeight: '100dvh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '32px 20px',
+    background: 'var(--bg)',
+    gap: 20,
+  },
+  logoWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  logoBox: {
+    width: 64,
+    height: 64,
+    background: 'var(--surface)',
+    borderRadius: 18,
+    border: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.06)',
+    padding: 10,
+    marginBottom: 4,
+  },
+  appName: {
+    fontSize: 20,
+    fontWeight: 800,
+    letterSpacing: '-0.4px',
+    color: 'var(--text1)',
+  },
+  appSub: {
+    fontSize: 12,
+    color: 'var(--text3)',
+    fontWeight: 500,
+  },
+  card: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 16,
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.03)',
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--text2)',
+    marginBottom: 6,
+    letterSpacing: '0.2px',
+  },
+  input: {
+    width: '100%',
+    height: 40,
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
+    padding: '0 12px',
+    color: 'var(--text1)',
+    fontSize: 14,
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--text3)',
+    padding: 4,
+    display: 'flex',
+    alignItems: 'center',
+    lineHeight: 1,
+  },
+  btnPrimary: {
+    width: '100%',
+    height: 42,
+    background: 'var(--text1, #0f172a)',
+    color: 'white',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.1)',
+    touchAction: 'manipulation',
+    transition: 'all 0.15s',
+  },
+  btnSecondary: {
+    width: '100%',
+    height: 40,
+    background: 'var(--surface2)',
+    color: 'var(--text2)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    touchAction: 'manipulation',
+  },
+  btnDisabled: {
+    opacity: 0.65,
+    cursor: 'not-allowed',
+  },
+  textBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--accent)',
+    fontSize: 13,
+    fontWeight: 600,
+    fontFamily: 'inherit',
+  },
+  biometricBtn: {
+    width: '100%',
+    height: 54,
+    background: 'var(--text1, #0f172a)',
+    color: 'white',
+    border: 'none',
+    borderRadius: 12,
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.14)',
+    touchAction: 'manipulation',
+    transition: 'all 0.15s',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    background: 'var(--border)',
+  },
+  dividerText: {
+    fontSize: 11,
+    color: 'var(--text3)',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    letterSpacing: '0.3px',
+  },
+  errorBox: {
+    marginTop: 12,
+    padding: '10px 12px',
+    background: 'var(--red-bg)',
+    border: '1px solid rgba(244,63,94,0.2)',
+    borderRadius: 8,
+    color: 'var(--red)',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
+    lineHeight: 1.5,
+  },
+  successBox: {
+    padding: '12px 14px',
+    background: 'var(--green-bg)',
+    border: '1px solid rgba(16,185,129,0.2)',
+    borderRadius: 8,
+    color: 'var(--green)',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
+    lineHeight: 1.5,
+    marginBottom: 16,
+  },
+  timeoutBanner: {
+    background: 'var(--yellow-bg)',
+    border: '1px solid rgba(245,158,11,0.25)',
+    borderRadius: 10,
+    padding: '10px 14px',
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--yellow)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bioIconCircle: {
+    width: 72,
+    height: 72,
+    background: 'var(--surface2)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 36,
+    margin: '0 auto 16px',
+    border: '1px solid var(--border)',
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: 800,
+    color: 'var(--text1)',
+    marginBottom: 8,
+    letterSpacing: '-0.2px',
+  },
+  cardDesc: {
+    fontSize: 13,
+    color: 'var(--text3)',
+    lineHeight: 1.65,
+  },
+  spinIcon: {
+    fontSize: 18,
+    animation: 'spin 0.8s linear infinite',
+  },
+}
+
+const CSS = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lp-input:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-light) !important;
+    background: var(--surface) !important;
+    outline: none;
+  }
+`
