@@ -4,6 +4,20 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
+import {
+  TrendingDown,
+  TrendingUp,
+  Landmark,
+  Bot,
+  PenLine,
+  Mic,
+  MicOff,
+  Camera,
+  Image,
+  Trash2,
+  X,
+  Check,
+} from 'lucide-react'
 
 function isIOS() {
   if (typeof window === 'undefined') return false
@@ -11,9 +25,9 @@ function isIOS() {
 }
 
 const TIPE_LIST = [
-  { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    icon: '💸' },
-  { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  icon: '💰' },
-  { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', icon: '🏧' },
+  { id: 'expense', label: 'Pengeluaran', color: 'var(--red)',    Icon: TrendingDown },
+  { id: 'income',  label: 'Pemasukan',   color: 'var(--green)',  Icon: TrendingUp },
+  { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', Icon: Landmark },
 ]
 
 // ── Toast Notification Component ──────────────────────────────────────────────
@@ -21,7 +35,7 @@ function SavedToast({ show, tipe, amount }) {
   if (!show) return null
   const tipeLabel = tipe === 'income' ? 'Pemasukan' : tipe === 'cash' ? 'Tarik Tunai' : 'Pengeluaran'
   const tipeColor = tipe === 'income' ? '#10b981' : tipe === 'cash' ? '#f59e0b' : '#f43f5e'
-  const tipeIcon  = tipe === 'income' ? '💰' : tipe === 'cash' ? '🏧' : '💸'
+  const TipeIcon  = tipe === 'income' ? TrendingUp : tipe === 'cash' ? Landmark : TrendingDown
 
   return (
     <div style={{
@@ -58,15 +72,14 @@ function SavedToast({ show, tipe, amount }) {
           flexShrink: 0,
           animation: 'checkPop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.15s both',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tipeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
+          <Check size={16} color={tipeColor} strokeWidth={2.5} />
         </div>
 
         {/* Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>
-            {tipeIcon} {tipeLabel} tersimpan
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TipeIcon size={14} color={tipeColor} />
+            {tipeLabel} tersimpan
           </div>
           {amount && (
             <div style={{ fontSize: 12, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
@@ -414,7 +427,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
             <div style={{ position: 'absolute', left: 0, right: 0, height: 60, top: 0, zIndex: 1, background: 'linear-gradient(180deg, rgba(56,189,248,0.18) 0%, transparent 100%)', animation: 'scanGlowMove 1.8s ease-in-out infinite' }} />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text1)', marginBottom: 6 }}>🤖 Membaca Struk...</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text1)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Bot size={16} /> Membaca Struk...
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               {[0, 0.2, 0.4].map((d, i) => <span key={i} style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#38bdf8', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />)}
             </div>
@@ -431,7 +446,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text1)', marginBottom: 6 }}>🤖 AI Memproses...</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text1)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Bot size={16} /> AI Memproses...
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               {[0, 0.15, 0.3].map((d, i) => <span key={i} style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />)}
             </div>
@@ -446,6 +463,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
   ) : null
 
   // ── Confirm popup ──
+  const TipeIconConfirm = parsedResult?.tipe === 'income' ? TrendingUp : parsedResult?.tipe === 'cash' ? Landmark : TrendingDown
+  const tipeColorConfirm = parsedResult?.tipe === 'expense' ? 'var(--red)' : parsedResult?.tipe === 'income' ? 'var(--green)' : 'var(--yellow)'
+
   const confirmPopup = showConfirm && parsedResult ? (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1100,
@@ -468,23 +488,28 @@ Kembalikan HANYA objek JSON tanpa markdown:
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 22 }}>🤖</span>
+            <Bot size={22} color="var(--accent)" />
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Hasil Ekstraksi AI</div>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Periksa dan konfirmasi</div>
             </div>
           </div>
           <button onClick={() => setShowConfirm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            <X size={20} />
           </button>
         </div>
         <div style={{ background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 16, fontSize: 13 }}>
           {[
-            { label: 'Tipe', value: parsedResult.tipe === 'expense' ? '💸 Pengeluaran' : parsedResult.tipe === 'income' ? '💰 Pemasukan' : '🏧 Tarik Tunai', bold: true, color: parsedResult.tipe === 'expense' ? 'var(--red)' : parsedResult.tipe === 'income' ? 'var(--green)' : 'var(--yellow)' },
+            { label: 'Tipe', value: (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, color: tipeColorConfirm }}>
+                <TipeIconConfirm size={14} />
+                {parsedResult.tipe === 'expense' ? 'Pengeluaran' : parsedResult.tipe === 'income' ? 'Pemasukan' : 'Tarik Tunai'}
+              </span>
+            )},
             { label: 'Tanggal', value: parsedResult.tanggal },
             { label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant', value: parsedResult.toko || '—' },
             { label: 'Uraian', value: parsedResult.uraian || '—' },
-            { label: 'Jumlah', value: `Rp ${parseFloat(parsedResult.total || 0).toLocaleString('id-ID')}`, bold: true, color: parsedResult.tipe === 'expense' ? 'var(--red)' : parsedResult.tipe === 'income' ? 'var(--green)' : 'var(--yellow)' },
+            { label: 'Jumlah', value: `Rp ${parseFloat(parsedResult.total || 0).toLocaleString('id-ID')}`, bold: true, color: tipeColorConfirm },
             ...(parsedResult.tipe === 'expense' ? [{ label: 'Kategori', value: parsedResult.kategori || 'Lainnya' }] : []),
             { label: 'Bank / Dompet', value: parsedResult.bank || 'Cash' },
             { label: 'Metode', value: parsedResult.metode || 'Cash' },
@@ -498,9 +523,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
                   <option value="">Pilih User</option>
                   {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
                 </select>
-              ) : (
+              ) : typeof row.value === 'string' ? (
                 <span style={{ fontWeight: row.bold ? 700 : 600, color: row.color || 'var(--text1)' }}>{row.value}</span>
-              )}
+              ) : row.value}
             </div>
           ))}
         </div>
@@ -510,9 +535,11 @@ Kembalikan HANYA objek JSON tanpa markdown:
             setTipe(parsedResult.tipe || 'expense')
             setForm({ tanggal: parsedResult.tanggal || today, toko: parsedResult.toko || '', uraian: parsedResult.uraian || '', total: parsedResult.total ? String(parsedResult.total) : '', kategori: parsedResult.kategori || '', metode: parsedResult.metode || 'Cash', bank: parsedResult.bank || 'Cash', user_id: parsedResult.user_id || user?.id || '' })
             setShowConfirm(false); setMode('manual')
-          }} style={{ flex: 1 }}>✍️ Edit Manual</button>
-          <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving} style={{ flex: 2 }}>
-            {saving ? 'Menyimpan...' : '✅ Konfirmasi & Simpan'}
+          }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <PenLine size={15} /> Edit Manual
+          </button>
+          <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {saving ? 'Menyimpan...' : <><Check size={15} /> Konfirmasi & Simpan</>}
           </button>
         </div>
       </div>
@@ -537,13 +564,19 @@ Kembalikan HANYA objek JSON tanpa markdown:
             background: mode === 'ai' ? 'var(--accent)' : 'transparent',
             color: mode === 'ai' ? 'white' : 'var(--text3)',
             fontWeight: 700, fontSize: 13, transition: 'all 0.2s', touchAction: 'manipulation',
-          }}>🤖 Input AI</button>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <Bot size={15} /> Input AI
+          </button>
           <button type="button" onClick={() => setMode('manual')} style={{
             flex: 1, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
             background: mode === 'manual' ? 'var(--accent)' : 'transparent',
             color: mode === 'manual' ? 'white' : 'var(--text3)',
             fontWeight: 700, fontSize: 13, transition: 'all 0.2s', touchAction: 'manipulation',
-          }}>✍️ Manual</button>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <PenLine size={15} /> Manual
+          </button>
         </div>
 
         {/* ── AI MODE ── */}
@@ -561,7 +594,7 @@ Kembalikan HANYA objek JSON tanpa markdown:
 
             {iosDevice && (
               <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-                📱 <strong>iPhone:</strong> Tap 🎙️ Suara → bicara → otomatis diproses. Atau pakai ikon mikrofon di keyboard Safari.
+                📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses. Atau pakai ikon mikrofon di keyboard Safari.
               </div>
             )}
 
@@ -576,7 +609,7 @@ Kembalikan HANYA objek JSON tanpa markdown:
                 cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation',
                 animation: isRecording ? 'pulse-record 1.5s infinite' : 'none',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{isRecording ? 'mic' : 'mic_none'}</span>
+                {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
                 <span style={{ fontSize: 11, fontWeight: 700 }}>{isRecording ? 'Rekam...' : 'Suara'}</span>
               </button>
               <button type="button" onClick={() => document.getElementById('input-page-camera').click()} style={{
@@ -587,7 +620,7 @@ Kembalikan HANYA objek JSON tanpa markdown:
                 color: imageFile ? 'var(--green)' : 'var(--text2)',
                 cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>photo_camera</span>
+                <Camera size={22} />
                 <span style={{ fontSize: 11, fontWeight: 700 }}>Kamera</span>
               </button>
               <button type="button" onClick={() => document.getElementById('input-page-gallery').click()} style={{
@@ -598,7 +631,7 @@ Kembalikan HANYA objek JSON tanpa markdown:
                 color: imageFile ? 'var(--green)' : 'var(--text2)',
                 cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>image</span>
+                <Image size={22} />
                 <span style={{ fontSize: 11, fontWeight: 700 }}>Galeri</span>
               </button>
               <input id="input-page-camera" type="file" accept="image/*" capture="environment" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
@@ -614,15 +647,16 @@ Kembalikan HANYA objek JSON tanpa markdown:
                   <div style={{ fontSize: 11, color: 'var(--text3)' }}>{imageFile ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB` : ''}</div>
                 </div>
                 <button type="button" onClick={() => { setImageFile(null); imageFileRef.current = null; setImagePreview('') }} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 4 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>delete</span>
+                  <Trash2 size={20} />
                 </button>
               </div>
             )}
 
             {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
 
-            <button type="button" className="btn btn-primary btn-full" onClick={() => handleAIExtract()} disabled={aiLoading || (!aiText.trim() && !imageFile)} style={{ height: 48, fontSize: 15 }}>
-              {aiLoading ? 'Memproses...' : '🤖 Ekstrak Data AI'}
+            <button type="button" className="btn btn-primary btn-full" onClick={() => handleAIExtract()} disabled={aiLoading || (!aiText.trim() && !imageFile)} style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Bot size={18} />
+              {aiLoading ? 'Memproses...' : 'Ekstrak Data AI'}
             </button>
           </div>
         )}
@@ -631,19 +665,22 @@ Kembalikan HANYA objek JSON tanpa markdown:
         {mode === 'manual' && (
           <div className="card">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
-              {TIPE_LIST.map(t => (
-                <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{
-                  padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                  border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`,
-                  background: tipe === t.id ? `${t.color}18` : 'var(--surface2)',
-                  color: tipe === t.id ? t.color : 'var(--text3)',
-                  fontWeight: 700, fontSize: 11, touchAction: 'manipulation',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                }}>
-                  <span style={{ fontSize: 22 }}>{t.icon}</span>
-                  {t.label}
-                </button>
-              ))}
+              {TIPE_LIST.map(t => {
+                const IconComp = t.Icon
+                return (
+                  <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{
+                    padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                    border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`,
+                    background: tipe === t.id ? `${t.color}18` : 'var(--surface2)',
+                    color: tipe === t.id ? t.color : 'var(--text3)',
+                    fontWeight: 700, fontSize: 11, touchAction: 'manipulation',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  }}>
+                    <IconComp size={22} />
+                    {t.label}
+                  </button>
+                )
+              })}
             </div>
 
             <form onSubmit={handleManualSubmit}>
@@ -694,8 +731,9 @@ Kembalikan HANYA objek JSON tanpa markdown:
                 </select>
               </div>
               {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-              <button type="submit" className="btn btn-primary btn-full" disabled={saving} style={{ height: 48, fontSize: 15 }}>
-                {saving ? 'Menyimpan...' : '✅ Simpan Transaksi'}
+              <button type="submit" className="btn btn-primary btn-full" disabled={saving} style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Check size={18} />
+                {saving ? 'Menyimpan...' : 'Simpan Transaksi'}
               </button>
             </form>
           </div>
