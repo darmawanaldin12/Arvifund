@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
-// Hanya gunakan gemini-2.5-flash dan gemini-2.0-flash
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash']
+// Hanya gunakan gemini-2.5-flash
+const MODELS = ['gemini-2.5-flash']
 
 // Timeout per request ke Gemini (30 detik)
 const GEMINI_TIMEOUT_MS = 30_000
