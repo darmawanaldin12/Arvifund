@@ -6,7 +6,6 @@ export const size = { width: 512, height: 512 }
 export const contentType = 'image/png'
 
 export default async function Icon() {
-  // Baca logo.png dari public folder secara lokal
   const logoData = await readFile(join(process.cwd(), 'public', 'logo.png'))
   const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`
 
@@ -14,24 +13,26 @@ export default async function Icon() {
     (
       <div
         style={{
-          width: '100%',
-          height: '100%',
+          width: '512px',
+          height: '512px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           background: '#ffffff',
-          borderRadius: 80,
+          borderRadius: '96px',
+          padding: '48px',
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoBase64}
-          width={400}
-          height={347}
+          width={416}
+          height={416}
           alt="Arvifund"
+          style={{ objectFit: 'contain' }}
         />
       </div>
     ),
-    { ...size }
+    { width: 512, height: 512 }
   )
 }
