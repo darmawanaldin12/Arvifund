@@ -3,7 +3,7 @@
   "short_name": "Arvifund",
   "description": "Personal Finance Tracker",
   "start_url": "/login",
-  "id": "/",
+  "id": "/login",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -17,10 +17,10 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icon",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
   "share_target": {
