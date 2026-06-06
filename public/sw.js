@@ -1,52 +1,59 @@
-// Arvifund Service Worker
-const CACHE_NAME = 'arvifund-v1';
-const SHARE_TARGET_CACHE = 'arvifund-share-images';
+// Arvifund Service Worker v2
+const SHARE_TARGET_CACHE = 'arvifund-share-images-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  // Hapus semua cache lama
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== SHARE_TARGET_CACHE)
+          .map((key) => caches.delete(key))
+      )
+    ).then(() => clients.claim())
+  );
 });
 
-// Handle fetch: intercept share-target POST
+// HANYA intercept POST ke /api/share-target
+// Semua request lain dibiarkan lewat langsung ke network
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Intercept POST ke /api/share-target
   if (url.pathname === '/api/share-target' && event.request.method === 'POST') {
     event.respondWith(handleShareTarget(event.request));
-    return;
   }
-
-  // Semua request lain: network first
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  // Tidak ada else — request lain tidak di-intercept sama sekali
 });
 
 async function handleShareTarget(request) {
   try {
     const formData = await request.formData();
-    const imageFile = formData.get('image') || formData.get('file') || formData.get('files');
+    const imageFile =
+      formData.get('image') ||
+      formData.get('file') ||
+      formData.get('files');
 
     if (imageFile && typeof imageFile !== 'string') {
-      // Simpan file di Cache Storage sementara
       const arrayBuffer = await imageFile.arrayBuffer();
       const base64 = bufferToBase64(arrayBuffer);
       const mimeType = imageFile.type || 'image/jpeg';
       const dataUrl = `data:${mimeType};base64,${base64}`;
 
-      // Simpan ke cache dengan key tetap
       const cache = await caches.open(SHARE_TARGET_CACHE);
-      const response = new Response(JSON.stringify({ dataUrl, timestamp: Date.now() }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      await cache.put('/share-image-pending', response);
+      await cache.put(
+        '/share-image-pending',
+        new Response(JSON.stringify({ dataUrl, timestamp: Date.now() }), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
     }
 
-    // Redirect ke halaman input
     return Response.redirect('/input?shared=1', 303);
-  } catch (err) {
+  } catch {
     return Response.redirect('/input', 303);
   }
 }
