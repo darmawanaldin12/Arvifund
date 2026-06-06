@@ -1,20 +1,28 @@
-// Arvifund Service Worker v2
-const SHARE_TARGET_CACHE = 'arvifund-share-images-v2';
+// Arvifund Service Worker v3
+// Bump versi ini setiap kali ada perubahan SW agar browser update otomatis
+const SW_VERSION = 'v3';
+const SHARE_TARGET_CACHE = 'arvifund-share-images-v3';
 
 self.addEventListener('install', (event) => {
+  // Skip waiting agar SW baru langsung aktif
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  // Hapus semua cache lama
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
           .filter((key) => key !== SHARE_TARGET_CACHE)
-          .map((key) => caches.delete(key))
+          .map((key) => {
+            console.log('[SW] Deleting old cache:', key);
+            return caches.delete(key);
+          })
       )
-    ).then(() => clients.claim())
+    ).then(() => {
+      console.log('[SW] Activated:', SW_VERSION);
+      return clients.claim();
+    })
   );
 });
 
