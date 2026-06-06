@@ -79,18 +79,22 @@ export default function LoginPage() {
     setBioLoading(true)
     setError('')
     try {
-      // authenticateWithBiometric sekarang selalu re-login ke Supabase
-      // tidak tergantung session yang mungkin sudah expired
       await authenticateWithBiometric(supabase)
       router.push('/dashboard')
     } catch (err) {
       if (err.name === 'NotAllowedError') {
-        setError('Autentikasi biometrik dibatalkan.')
-      } else if (err.message.includes('Login gagal')) {
-        // Password berubah / akun bermasalah — hapus bio lama
+        // User cancel — tidak perlu pesan error
+        setError('')
+      } else if (err.message === 'NEEDS_REREGISTER' || err.message.includes('NEEDS_REREGISTER')) {
+        // Credential lama / korup — hapus dan minta daftar ulang via email
         removeBiometricCred()
         setBioRegistered(false)
-        setError('Biometrik tidak valid lagi. Silakan login dengan email & password untuk daftarkan ulang.')
+        setError('Data biometrik perlu didaftarkan ulang. Silakan login dengan email & password.')
+      } else if (err.message.startsWith('LOGIN_FAILED')) {
+        // Password berubah
+        removeBiometricCred()
+        setBioRegistered(false)
+        setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang dengan email & password.')
       } else {
         setError('Biometrik gagal: ' + err.message)
       }
