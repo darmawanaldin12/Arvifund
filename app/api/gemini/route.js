@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server'
 // Hanya gunakan gemini-2.5-flash dan gemini-2.0-flash
 const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash']
 
+// Timeout per request ke Gemini (30 detik)
+const GEMINI_TIMEOUT_MS = 30_000
+
+function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer))
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
@@ -48,13 +58,14 @@ export async function POST(request) {
             requestBody.systemInstruction = systemInstruction
           }
 
-          const res = await fetch(
+          const res = await fetchWithTimeout(
             `https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${key}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(requestBody),
-            }
+            },
+            GEMINI_TIMEOUT_MS
           )
 
           if (res.ok) {
@@ -95,6 +106,11 @@ export async function POST(request) {
           continue
 
         } catch (err) {
+          if (err.name === 'AbortError') {
+            // Timeout → coba model/key berikutnya
+            lastError = `[${mdl}] Timeout setelah ${GEMINI_TIMEOUT_MS / 1000}s (key ...${key.slice(-4)})`
+            continue
+          }
           // Network error → coba key berikutnya
           lastError = `[${mdl}] Network error: ${err.message}`
           continue
