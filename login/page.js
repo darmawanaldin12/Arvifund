@@ -136,10 +136,23 @@ export default function LoginPage() {
     if (!forgotEmail) { setForgotError('Masukkan email kamu'); return }
     setForgotLoading(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      // Cek dulu apakah email terdaftar via RPC
+      const { data: emailExists, error: rpcError } = await supabase
+        .rpc('check_email_exists', { p_email: forgotEmail })
+
+      if (rpcError) throw rpcError
+
+      if (!emailExists) {
+        setForgotError('Email ini tidak terdaftar di Arvifund.')
+        return
+      }
+
+      // Email terdaftar — kirim reset
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       })
-      if (error) throw error
+      if (resetError) throw resetError
+
       setForgotMsg(`Link reset dikirim ke ${forgotEmail} — cek inbox atau folder spam!`)
     } catch (err) {
       setForgotError('Gagal kirim email: ' + err.message)
@@ -314,7 +327,7 @@ export default function LoginPage() {
                 <button type="submit" disabled={forgotLoading}
                   style={{ ...S.btnPrimary, ...(forgotLoading ? S.btnDisabled : {}) }}>
                   {forgotLoading
-                    ? <><Loader2 size={16} style={S.spinIcon} /> Mengirim...</>
+                    ? <><Loader2 size={16} style={S.spinIcon} /> Memeriksa...</>
                     : <><Send size={15} /> Kirim Link Reset</>}
                 </button>
               </form>
