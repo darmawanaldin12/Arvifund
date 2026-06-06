@@ -1,4 +1,5 @@
 import './globals.css'
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 export const metadata = {
   title: 'Arvifund',
@@ -29,34 +30,35 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            // Daftarkan service worker
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                  console.warn('SW registration failed:', err);
-                });
-              });
-            }
-
-            document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
-            document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
-            document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
-            var lastTouchEnd = 0;
-            document.addEventListener('touchend', function(e) {
-              var now = Date.now();
-              if (now - lastTouchEnd < 300) { e.preventDefault(); }
-              lastTouchEnd = now;
-            }, { passive: false });
-            document.addEventListener('touchmove', function(e) {
-              if (e.touches && e.touches.length > 1) { e.preventDefault(); }
-            }, { passive: false });
-          })();
-        `}} />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+                document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+                document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+                var lastTouchEnd = 0;
+                document.addEventListener('touchend', function(e) {
+                  var now = Date.now();
+                  if (now - lastTouchEnd < 300) { e.preventDefault(); }
+                  lastTouchEnd = now;
+                }, { passive: false });
+                document.addEventListener('touchmove', function(e) {
+                  if (e.touches && e.touches.length > 1) { e.preventDefault(); }
+                }, { passive: false });
+              })();
+            `,
+          }}
+        />
       </head>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   )
 }
