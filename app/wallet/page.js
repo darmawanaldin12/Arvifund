@@ -4,11 +4,18 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer, deleteTransfer } from '../../lib/data'
-import { fmt, fmtTanggal, BULAN_ORDER, BANK_LIST } from '../../lib/utils'
+import { fmt, fmtTanggal, BULAN_ORDER } from '../../lib/utils'
 import {
   ArrowLeftRight, Plus, Trash2, X, ChevronRight,
   TrendingDown, TrendingUp, Landmark, Wallet,
 } from 'lucide-react'
+
+// Bank list per user — sesuai akun di tabel accounts
+const BANK_BY_USER = {
+  '9f5a9e66-a47e-4cf1-bfe6-107da0574a2e': ['BCA', 'Mandiri', 'BRI', 'Cash'], // Aldin
+  '42b635cc-a32d-4b15-95d6-d9afb504a850': ['BCA', 'Mandiri', 'Cash'],         // Solikhatun
+}
+const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
 
 const USER_COLORS = {
   a: { bg: '#8b5cf6', text: '#fff' },
@@ -37,8 +44,8 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
     tanggal:   today,
     from_user: user?.id || '',
     to_user:   '',
-    from_bank: 'BCA',
-    to_bank:   'BCA',
+    from_bank: '',
+    to_bank:   '',
     jumlah:    '',
     catatan:   '',
   })
@@ -47,6 +54,20 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  // Bank list dinamis per user yang dipilih
+  const fromBanks = form.from_user ? (BANK_BY_USER[form.from_user] || DEFAULT_BANKS) : DEFAULT_BANKS
+  const toBanks   = form.to_user   ? (BANK_BY_USER[form.to_user]   || DEFAULT_BANKS) : DEFAULT_BANKS
+
+  // Reset bank saat user berubah
+  const handleFromUserChange = (uid) => {
+    const banks = BANK_BY_USER[uid] || DEFAULT_BANKS
+    setForm(f => ({ ...f, from_user: uid, from_bank: banks[0] || '' }))
+  }
+  const handleToUserChange = (uid) => {
+    const banks = BANK_BY_USER[uid] || DEFAULT_BANKS
+    setForm(f => ({ ...f, to_user: uid, to_bank: banks[0] || '' }))
+  }
+
   // Cek apakah ini transfer internal (user sama)
   const isInternal = form.from_user === form.to_user && form.from_user !== ''
 
@@ -54,6 +75,8 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
     setError('')
     if (!form.from_user)       return setError('Pilih pengirim')
     if (!form.to_user)         return setError('Pilih penerima')
+    if (!form.from_bank)       return setError('Pilih rekening asal')
+    if (!form.to_bank)         return setError('Pilih rekening tujuan')
     if (isInternal && form.from_bank === form.to_bank)
       return setError('Rekening asal dan tujuan tidak boleh sama')
     if (!form.jumlah || isNaN(parseFloat(form.jumlah)) || parseFloat(form.jumlah) <= 0)
@@ -78,6 +101,9 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
       setSaving(false)
     }
   }
+
+  const fromName = profiles.find(p => p.id === form.from_user)?.username || ''
+  const toName   = profiles.find(p => p.id === form.to_user)?.username   || ''
 
   return (
     <div style={{
@@ -116,9 +142,9 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
         {/* From / To user */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
           <div>
-            <label className="form-label">Dari (pengirim)</label>
-            <select className="form-select" value={form.from_user} onChange={e => setF('from_user', e.target.value)}>
-              <option value="">Pilih</option>
+            <label className="form-label">Dari</label>
+            <select className="form-select" value={form.from_user} onChange={e => handleFromUserChange(e.target.value)}>
+              <option value="">Pilih pengirim</option>
               {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
             </select>
           </div>
@@ -126,20 +152,21 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
             <ArrowLeftRight size={16} />
           </div>
           <div>
-            <label className="form-label">Ke (penerima)</label>
-            <select className="form-select" value={form.to_user} onChange={e => setF('to_user', e.target.value)}>
-              <option value="">Pilih</option>
+            <label className="form-label">Ke</label>
+            <select className="form-select" value={form.to_user} onChange={e => handleToUserChange(e.target.value)}>
+              <option value="">Pilih penerima</option>
               {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
             </select>
           </div>
         </div>
 
-        {/* From / To bank */}
+        {/* From / To bank — dinamis per user */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
           <div>
             <label className="form-label">Rekening asal</label>
-            <select className="form-select" value={form.from_bank} onChange={e => setF('from_bank', e.target.value)}>
-              {BANK_LIST.filter(b => b !== 'QRIS').map(b => <option key={b}>{b}</option>)}
+            <select className="form-select" value={form.from_bank} onChange={e => setF('from_bank', e.target.value)} disabled={!form.from_user}>
+              {!form.from_user && <option value="">Pilih pengirim dulu</option>}
+              {fromBanks.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div style={{ paddingBottom: 10, color: 'var(--text3)' }}>
@@ -147,14 +174,15 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
           </div>
           <div>
             <label className="form-label">Rekening tujuan</label>
-            <select className="form-select" value={form.to_bank} onChange={e => setF('to_bank', e.target.value)}>
-              {BANK_LIST.filter(b => b !== 'QRIS').map(b => <option key={b}>{b}</option>)}
+            <select className="form-select" value={form.to_bank} onChange={e => setF('to_bank', e.target.value)} disabled={!form.to_user}>
+              {!form.to_user && <option value="">Pilih penerima dulu</option>}
+              {toBanks.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
         </div>
 
         {/* Info label transfer type */}
-        {form.from_user && form.to_user && (
+        {form.from_user && form.to_user && form.from_bank && form.to_bank && (
           <div style={{
             padding: '8px 12px', marginBottom: 14,
             background: isInternal ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)',
@@ -162,8 +190,8 @@ function TransferModal({ profiles, user, onClose, onSaved }) {
             borderRadius: 8, fontSize: 12, color: 'var(--text2)',
           }}>
             {isInternal
-              ? `Pindah rekening ${profiles.find(p=>p.id===form.from_user)?.username || ''}: ${form.from_bank} → ${form.to_bank}`
-              : `Transfer dari ${profiles.find(p=>p.id===form.from_user)?.username||''} ke ${profiles.find(p=>p.id===form.to_user)?.username||''}`
+              ? `Pindah rekening ${fromName}: ${form.from_bank} → ${form.to_bank}`
+              : `${fromName} (${form.from_bank}) → ${toName} (${form.to_bank})`
             }
           </div>
         )}
@@ -216,10 +244,9 @@ export default function WalletPage() {
 
   const s = summaryPeriode
 
-  // Saldo Cash per User (existing logic)
   const cashSaldoEntries = Object.entries(s.saldoCashByUser || {})
 
-  // Transfer summary untuk periode aktif
+  // Transfer difilter sesuai periode aktif
   const filteredTransfers = useMemo(() => {
     if (periodIdx === '' || periodIdx === null) return transfers
     const idx = parseInt(periodIdx)
@@ -238,21 +265,18 @@ export default function WalletPage() {
     Object.entries(bankBalances).forEach(([userId, banks]) => {
       const userName = getUserName(userId)
       Object.entries(banks).forEach(([bank, saldo]) => {
-        if (bank === 'Cash' || bank === 'QRIS' || bank === 'Cardless') return // skip non-rekening
+        if (bank === 'Cash' || bank === 'QRIS' || bank === 'Cardless') return
         list.push({ userId, userName, bank, saldo })
       })
     })
-    // sort: per user, per bank
     list.sort((a, b) => a.userName.localeCompare(b.userName) || a.bank.localeCompare(b.bank))
     return list
   }, [bankBalances, getUserName])
 
-  // Total transfer periode aktif per arah
-  const totalTransferKeluar = useMemo(() =>
+  const totalTransferPeriode = useMemo(() =>
     filteredTransfers.reduce((s, r) => s + (r.jumlah || 0), 0)
   , [filteredTransfers])
 
-  // Cash vs QRIS vs Transfer breakdown per 3 bulan (existing)
   const metodeByBulan = useMemo(() => {
     const now = new Date()
     const months = []
@@ -319,7 +343,6 @@ export default function WalletPage() {
               <span className="badge badge-blue" style={{ fontSize: 11 }}>REALTIME</span>
             </div>
 
-            {/* Group per user */}
             {(() => {
               const grouped = {}
               bankBalanceList.forEach(item => {
@@ -382,11 +405,9 @@ export default function WalletPage() {
               <div className="section-title" style={{ margin: 0 }}>
                 <ArrowLeftRight size={14} /> Riwayat Transfer
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="badge badge-blue" style={{ fontSize: 11 }}>
-                  {filteredTransfers.length} transaksi
-                </span>
-              </div>
+              <span className="badge badge-blue" style={{ fontSize: 11 }}>
+                {filteredTransfers.length} transaksi
+              </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -407,7 +428,6 @@ export default function WalletPage() {
                     borderRadius: 10,
                     border: '1px solid var(--border)',
                   }}>
-                    {/* Icon */}
                     <div style={{
                       width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                       background: isInternal ? 'rgba(245,158,11,0.12)' : 'rgba(56,189,248,0.12)',
@@ -416,7 +436,6 @@ export default function WalletPage() {
                       <ArrowLeftRight size={16} color={isInternal ? 'var(--yellow)' : 'var(--accent)'} />
                     </div>
 
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>
                         {isInternal
@@ -424,21 +443,21 @@ export default function WalletPage() {
                           : `${fromName} → ${toName}`
                         }
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', gap: 6 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span>{fmtTanggal(t.tanggal)}</span>
-                        {!isInternal && <span>· {t.from_bank} → {t.to_bank}</span>}
+                        {!isInternal && t.from_bank && t.to_bank && (
+                          <span>· {t.from_bank} → {t.to_bank}</span>
+                        )}
                         {t.catatan && <span>· {t.catatan}</span>}
                       </div>
                     </div>
 
-                    {/* Jumlah */}
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>
                         {fmt(t.jumlah)}
                       </div>
                     </div>
 
-                    {/* Hapus */}
                     <button
                       onClick={() => handleDeleteTransfer(t.id)}
                       disabled={deletingId === t.id}
@@ -451,20 +470,19 @@ export default function WalletPage() {
               })}
             </div>
 
-            {/* Total periode */}
             {filteredTransfers.length > 0 && (
               <div style={{
                 display: 'flex', justifyContent: 'space-between',
                 marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)',
               }}>
                 <span style={{ fontSize: 13, color: 'var(--text3)' }}>Total transfer periode ini</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>{fmt(totalTransferKeluar)}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>{fmt(totalTransferPeriode)}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Saldo Cash per User (existing) ──────────────────── */}
+        {/* ── Saldo Cash per User ──────────────────────────────── */}
         {cashSaldoEntries.length > 0 && (
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
