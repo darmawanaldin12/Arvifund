@@ -13,7 +13,6 @@ import {
 import {
   Fingerprint,
   ScanFace,
-  Lock,
   Eye,
   EyeOff,
   Mail,
@@ -153,7 +152,7 @@ export default function LoginPage() {
   const BioIcon = isIos ? ScanFace : Fingerprint
   const bioLabel = isIos ? 'Face ID / Touch ID' : 'Sidik Jari / Biometrik'
 
-  // ── Register biometrik screen ─────────────────────────────
+  // ── Register biometrik screen ─────────────────────────
   if (showRegisterBio) {
     return (
       <div style={S.page}>
@@ -187,7 +186,7 @@ export default function LoginPage() {
   return (
     <div style={S.page}>
 
-      {/* Logo — tetap /logo.png */}
+      {/* Logo — tetap /logo.png, tidak berubah */}
       <div style={S.logoWrap}>
         <div style={S.logoBox}>
           <img src="/logo.png" alt="Arvifund" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -250,9 +249,7 @@ export default function LoginPage() {
                   required autoComplete="current-password"
                   className="lp-input" />
                 <button type="button" onClick={() => setShowPass(!showPass)} style={S.eyeBtn}>
-                  {showPass
-                    ? <EyeOff size={16} />
-                    : <Eye size={16} />}
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -339,7 +336,7 @@ export default function LoginPage() {
   )
 }
 
-// ── Styles ────────────────────────────────────────────────
+// ── Styles ───────────────────────────────────────────────
 const S = {
   page: {
     minHeight: '100dvh',
