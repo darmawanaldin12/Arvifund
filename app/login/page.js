@@ -32,7 +32,6 @@ export default function LoginPage() {
   const [bioRegistered, setBioRegistered]     = useState(false)
   const [bioLoading, setBioLoading]           = useState(false)
   const [showRegisterBio, setShowRegisterBio] = useState(false)
-  // Simpan email+password sementara untuk didaftarkan ke biometrik
   const [pendingEmail, setPendingEmail]       = useState('')
   const [pendingPassword, setPendingPassword] = useState('')
 
@@ -43,24 +42,18 @@ export default function LoginPage() {
     async function checkBio() {
       const supported = await isBiometricSupported()
       setBioSupported(supported)
-      // Cek registered dari localStorage — langsung saat mount
       if (supported) setBioRegistered(isBiometricRegistered())
     }
     checkBio()
   }, [])
 
-  // ── Login email + password ───────────────────────────────
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
       const data = await signIn(email, password)
-
-      // Login berhasil — cek apakah perlu tawarkan biometrik
-      // isBiometricRegistered() baca langsung dari localStorage — reliable
       if (bioSupported && !isBiometricRegistered()) {
-        // Simpan sementara untuk didaftarkan
         setPendingEmail(email)
         setPendingPassword(password)
         setShowRegisterBio(true)
@@ -74,24 +67,21 @@ export default function LoginPage() {
     }
   }
 
-  // ── Login biometrik ──────────────────────────────────────
   async function handleBiometricLogin() {
     setBioLoading(true)
     setError('')
     try {
       await authenticateWithBiometric(supabase)
+      try { localStorage.setItem('arvifund_last_active', Date.now().toString()) } catch (_) {}
       router.push('/dashboard')
     } catch (err) {
       if (err.name === 'NotAllowedError') {
-        // User cancel — tidak perlu pesan error
         setError('')
       } else if (err.message === 'NEEDS_REREGISTER' || err.message.includes('NEEDS_REREGISTER')) {
-        // Credential lama / korup — hapus dan minta daftar ulang via email
         removeBiometricCred()
         setBioRegistered(false)
         setError('Data biometrik perlu didaftarkan ulang. Silakan login dengan email & password.')
       } else if (err.message.startsWith('LOGIN_FAILED')) {
-        // Password berubah
         removeBiometricCred()
         setBioRegistered(false)
         setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang dengan email & password.')
@@ -103,7 +93,6 @@ export default function LoginPage() {
     }
   }
 
-  // ── Register biometrik setelah login email ───────────────
   async function handleRegisterBio() {
     if (!pendingEmail || !pendingPassword) {
       router.push('/dashboard')
@@ -117,16 +106,9 @@ export default function LoginPage() {
       setBioRegistered(true)
       router.push('/dashboard')
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        // User cancel — lanjut dashboard
-        router.push('/dashboard')
-      } else {
-        // Error lain — tetap lanjut
-        router.push('/dashboard')
-      }
+      router.push('/dashboard')
     } finally {
       setBioLoading(false)
-      // Bersihkan kredensial dari memory
       setPendingEmail('')
       setPendingPassword('')
     }
@@ -138,7 +120,6 @@ export default function LoginPage() {
     router.push('/dashboard')
   }
 
-  // ── Forgot password ──────────────────────────────────────
   async function handleForgot(e) {
     e.preventDefault()
     setForgotError('')
@@ -162,25 +143,20 @@ export default function LoginPage() {
   const bioIcon = isIos ? '🔒' : '🫆'
   const bioLabel = isIos ? 'Face ID / Touch ID' : 'Sidik Jari / Biometrik'
 
-  // ── Screen: tawaran register biometrik ───────────────────
   if (showRegisterBio) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
         <div style={{ width: '100%', maxWidth: 360 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 28, boxShadow: '0 4px 12px rgba(0,0,0,0.06)', textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>{bioIcon}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: 'var(--text1)' }}>
-              Aktifkan {bioLabel}?
-            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: 'var(--text1)' }}>Aktifkan {bioLabel}?</div>
             <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24, lineHeight: 1.6 }}>
               Login lebih cepat lain kali — bahkan setelah sesi habis — tanpa perlu ketik password lagi.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button onClick={handleRegisterBio} disabled={bioLoading}
                 style={{ width: '100%', height: 48, fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 10, cursor: bioLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: bioLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, touchAction: 'manipulation' }}>
-                {bioLoading
-                  ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memproses...</>
-                  : `✅ Ya, Aktifkan`}
+                {bioLoading ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memproses...</> : `✅ Ya, Aktifkan`}
               </button>
               <button onClick={handleSkipBio}
                 style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
@@ -196,8 +172,6 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
-
-      {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div style={{ width: 100, height: 100, background: 'white', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 32px rgba(0,61,155,0.15)', padding: 10 }}>
           <img src="/logo.png" alt="Arvifund" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -205,14 +179,12 @@ export default function LoginPage() {
         <p style={{ color: 'var(--text3)', fontSize: 13 }}>Personal Finance Tracker</p>
       </div>
 
-      {/* Timeout banner */}
       {isTimeout && (
         <div style={{ width: '100%', maxWidth: 360, padding: '12px 16px', marginBottom: 16, background: 'var(--yellow-bg)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, color: 'var(--yellow)', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
           ⏱ Sesi berakhir karena tidak aktif 1 jam
         </div>
       )}
 
-      {/* ── Tombol Biometrik (kalau sudah terdaftar) ── */}
       {bioSupported && bioRegistered && !showForgot && (
         <div style={{ width: '100%', maxWidth: 360, marginBottom: 16 }}>
           <button onClick={handleBiometricLogin} disabled={bioLoading}
@@ -229,7 +201,6 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ── Login Form ── */}
       {!showForgot ? (
         <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: 360 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
@@ -261,9 +232,7 @@ export default function LoginPage() {
             )}
             <button type="submit" disabled={loading}
               style={{ marginTop: 20, width: '100%', height: 46, fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit', opacity: loading ? 0.8 : 1, touchAction: 'manipulation' }}>
-              {loading
-                ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memuat...</>
-                : 'Masuk'}
+              {loading ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memuat...</> : 'Masuk'}
             </button>
           </div>
           <div style={{ textAlign: 'center', marginTop: 16 }}>
@@ -273,9 +242,7 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-
       ) : (
-        /* ── Forgot Password ── */
         <div style={{ width: '100%', maxWidth: 360 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ marginBottom: 20 }}>
