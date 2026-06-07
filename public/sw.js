@@ -1,10 +1,9 @@
-// Arvifund Service Worker v3
+// Arvifund Service Worker v4
 // Bump versi ini setiap kali ada perubahan SW agar browser update otomatis
-const SW_VERSION = 'v3';
-const SHARE_TARGET_CACHE = 'arvifund-share-images-v3';
+const SW_VERSION = 'v4';
+const SHARE_TARGET_CACHE = 'arvifund-share-images-v4';
 
 self.addEventListener('install', (event) => {
-  // Skip waiting agar SW baru langsung aktif
   self.skipWaiting();
 });
 
@@ -27,14 +26,14 @@ self.addEventListener('activate', (event) => {
 });
 
 // HANYA intercept POST ke /api/share-target
-// Semua request lain dibiarkan lewat langsung ke network
+// Semua request lain dibiarkan lewat ke network
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   if (url.pathname === '/api/share-target' && event.request.method === 'POST') {
     event.respondWith(handleShareTarget(event.request));
   }
-  // Tidak ada else — request lain tidak di-intercept sama sekali
+  // Tidak ada else — request lain tidak di-intercept
 });
 
 async function handleShareTarget(request) {
@@ -46,6 +45,7 @@ async function handleShareTarget(request) {
       formData.get('files');
 
     if (imageFile && typeof imageFile !== 'string') {
+      // Gambar diterima — simpan ke Cache API
       const arrayBuffer = await imageFile.arrayBuffer();
       const base64 = bufferToBase64(arrayBuffer);
       const mimeType = imageFile.type || 'image/jpeg';
@@ -58,10 +58,20 @@ async function handleShareTarget(request) {
           headers: { 'Content-Type': 'application/json' },
         })
       );
+
+      return Response.redirect('/input?shared=1', 303);
     }
 
-    return Response.redirect('/input?shared=1', 303);
-  } catch {
+    // Tidak ada gambar — cek teks/url dari formData
+    const text = formData.get('text') || '';
+    const url  = formData.get('url')  || '';
+    const redirectUrl = new URL('/input', self.location.origin);
+    if (text) redirectUrl.searchParams.set('text', text);
+    if (url)  redirectUrl.searchParams.set('url',  url);
+    return Response.redirect(redirectUrl.toString(), 303);
+
+  } catch (err) {
+    console.error('[SW] share-target error:', err);
     return Response.redirect('/input', 303);
   }
 }

@@ -29,20 +29,9 @@ const BANK_BY_USER = {
 }
 const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
 
-// Helper: baca semua cookies sebagai object
-function parseCookies() {
-  return Object.fromEntries(
-    document.cookie.split(';').map(c => {
-      const [k, ...v] = c.trim().split('=')
-      return [k, decodeURIComponent(v.join('='))]
-    })
-  )
-}
-
-// Helper: hapus cookie
-function deleteCookie(name) {
-  document.cookie = `${name}=; Max-Age=0; path=/`
-}
+// Nama cache harus selalu sinkron dengan SW_VERSION di sw.js
+const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
+const SHARE_CACHE_KEY  = '/share-image-pending'
 
 // ── Toast ──────────────────────────────────────────────────────────────
 function SavedToast({ show, tipe, amount }) {
@@ -78,7 +67,6 @@ function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, erro
   const fromName = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName   = profiles.find(p => p.id === form.to_user)?.username   || ''
 
-  // Live amount formatting untuk transfer jumlah
   const transferAmt = useAmountInput(form.jumlah, v => setF('jumlah', v))
 
   return (
@@ -213,7 +201,6 @@ export default function InputPage() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })) }
   function getBulan(tgl) { if (!tgl) return ''; return BULAN_ORDER[new Date(tgl + 'T00:00:00').getMonth()] }
 
-  // ── Live amount formatting ──
   const manualAmt  = useAmountInput(form.total, v => setF('total', v))
   const confirmAmt = useAmountInput(
     parsedResult?.total ?? '',
@@ -227,6 +214,7 @@ export default function InputPage() {
   }
 
   // ── Web Share Target ──
+  // SW simpan gambar ke Cache API, halaman baca dari sana (bukan cookie)
   useEffect(() => {
     async function handleShareTarget() {
       if (typeof window === 'undefined') return
@@ -238,19 +226,23 @@ export default function InputPage() {
         window.history.replaceState({}, '', '/input')
 
         try {
-          const cookies = parseCookies()
-          const numChunks = parseInt(cookies['arvifund-share-chunks'] || '0', 10)
+          // Baca gambar dari Cache API yang disimpan SW
+          const cache = await caches.open(SHARE_CACHE_NAME)
+          const cached = await cache.match(SHARE_CACHE_KEY)
 
-          if (numChunks > 0) {
-            let dataUrl = ''
-            for (let i = 0; i < numChunks; i++) {
-              dataUrl += cookies[`arvifund-share-${i}`] || ''
+          if (cached) {
+            const { dataUrl, timestamp } = await cached.json()
+
+            // Hapus dari cache agar tidak dipakai ulang
+            await cache.delete(SHARE_CACHE_KEY)
+
+            // Tolak data lama (> 5 menit)
+            if (Date.now() - timestamp > 5 * 60 * 1000) {
+              console.warn('[Share] Data kedaluwarsa, diabaikan')
+              return
             }
 
-            deleteCookie('arvifund-share-chunks')
-            for (let i = 0; i < numChunks; i++) deleteCookie(`arvifund-share-${i}`)
-
-            if (dataUrl.startsWith('data:')) {
+            if (dataUrl && dataUrl.startsWith('data:')) {
               const res = await fetch(dataUrl)
               const blob = await res.blob()
               const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
@@ -260,9 +252,12 @@ export default function InputPage() {
               return
             }
           }
-        } catch (_) {}
+        } catch (err) {
+          console.error('[Share] Gagal baca cache:', err)
+        }
       }
 
+      // Fallback: teks/url dari query string (share teks bukan gambar)
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
@@ -728,7 +723,7 @@ export default function InputPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
               {TIPE_LIST.map(t => { const I = t.Icon; return (
                 <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{ padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`, background: tipe === t.id ? `${t.color}18` : 'var(--surface2)', color: tipe === t.id ? t.color : 'var(--text3)', fontWeight: 700, fontSize: 11, touchAction: 'manipulation', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><I size={22} />{t.label}</button>
-              )})}
+              )})}  
             </div>
             <form onSubmit={handleManualSubmit}>
               <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
