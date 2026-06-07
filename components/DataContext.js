@@ -6,62 +6,96 @@ import { buildSummary, buildPeriods, getCurrentPeriodIndex, filterByPeriod } fro
 
 const DataContext = createContext(null)
 
-// ── Hitung saldo per bank per user dari semua transaksi ───
-// Formula:
-//   saldo[userId][bank] =
-//     income masuk ke bank ini
-//     - expenses yang pakai bank ini
-//     - cash_records (tarik tunai) dari bank ini
-//     - transfers KELUAR dari bank ini (from_user=userId, from_bank=bank)
-//     + transfers MASUK ke bank ini (to_user=userId, to_bank=bank)
-export function buildBankBalances(expenses, income, cashRecords, transfers, profiles) {
+// ── Hitung saldo per akun berdasarkan baseline + transaksi setelah baseline ──
+// Formula per akun:
+//   saldo = account.balance (baseline manual)
+//           + income setelah balance_set_at
+//           - expenses setelah balance_set_at
+//           - cash_records setelah balance_set_at
+//           +/- transfers setelah balance_set_at
+//
+// Kalau balance_set_at null (belum pernah di-set) → saldo = 0, tandai needsSetup
+export function buildBankBalances(expenses, income, cashRecords, transfers, accounts) {
+  // result[userId][bankName] = { saldo, needsSetup, balance_set_at, account_id }
   const result = {}
 
-  const ensureUser = (uid) => {
+  const ensure = (uid, bank) => {
     if (!result[uid]) result[uid] = {}
-  }
-  const add = (uid, bank, val) => {
-    ensureUser(uid)
-    result[uid][bank] = (result[uid][bank] || 0) + val
+    if (!result[uid][bank]) result[uid][bank] = { saldo: 0, needsSetup: true, balance_set_at: null, account_id: null }
   }
 
-  // Income → tambah saldo bank penerima
+  // Inisialisasi dari tabel accounts
+  accounts.forEach(acc => {
+    ensure(acc.user_id, acc.name)
+    const hasBaseline = !!acc.balance_set_at
+    result[acc.user_id][acc.name] = {
+      saldo: hasBaseline ? Number(acc.balance) : 0,
+      needsSetup: !hasBaseline,
+      balance_set_at: acc.balance_set_at || null,
+      account_id: acc.id,
+    }
+  })
+
+  // Helper: apakah transaksi ini terjadi SETELAH baseline akun terkait?
+  const afterBaseline = (tanggal, userId, bankName) => {
+    const baseline = result[userId]?.[bankName]?.balance_set_at
+    if (!baseline) return false // belum ada baseline → abaikan transaksi lama
+    return new Date(tanggal + 'T00:00:00') > new Date(baseline)
+  }
+
+  // Income → tambah
   income.forEach(r => {
-    if (r.user_id && r.bank) add(r.user_id, r.bank, r.jumlah || 0)
+    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+      ensure(r.user_id, r.bank)
+      result[r.user_id][r.bank].saldo += Number(r.jumlah) || 0
+    }
   })
 
-  // Expenses → kurangi saldo bank yang dipakai
+  // Expenses → kurangi
   expenses.forEach(r => {
-    if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
+    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+      ensure(r.user_id, r.bank)
+      result[r.user_id][r.bank].saldo -= Number(r.nilai) || 0
+    }
   })
 
-  // Cash records (tarik tunai) → kurangi saldo bank asal
+  // Cash records → kurangi dari bank asal
   cashRecords.forEach(r => {
-    if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
+    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+      ensure(r.user_id, r.bank)
+      result[r.user_id][r.bank].saldo -= Number(r.nilai) || 0
+    }
   })
 
   // Transfers → kurangi from, tambah to
   transfers.forEach(r => {
-    if (r.from_user && r.from_bank) add(r.from_user, r.from_bank, -(r.jumlah || 0))
-    if (r.to_user && r.to_bank)     add(r.to_user,   r.to_bank,    (r.jumlah || 0))
+    if (r.from_user && r.from_bank && afterBaseline(r.tanggal, r.from_user, r.from_bank)) {
+      ensure(r.from_user, r.from_bank)
+      result[r.from_user][r.from_bank].saldo -= Number(r.jumlah) || 0
+    }
+    if (r.to_user && r.to_bank && afterBaseline(r.tanggal, r.to_user, r.to_bank)) {
+      ensure(r.to_user, r.to_bank)
+      result[r.to_user][r.to_bank].saldo += Number(r.jumlah) || 0
+    }
   })
 
   return result
 }
 
 export function DataProvider({ children }) {
-  const [user, setUser]           = useState(null)
-  const [profile, setProfile]     = useState(null)
-  const [profiles, setProfiles]   = useState([])
-  const [expenses, setExpenses]   = useState([])
-  const [income, setIncome]       = useState([])
+  const [user, setUser]               = useState(null)
+  const [profile, setProfile]         = useState(null)
+  const [profiles, setProfiles]       = useState([])
+  const [expenses, setExpenses]       = useState([])
+  const [income, setIncome]           = useState([])
   const [allExpenses, setAllExpenses] = useState([])
   const [allIncome, setAllIncome]     = useState([])
   const [cashRecords, setCashRecords] = useState([])
   const [budgetPlans, setBudgetPlans] = useState([])
-  const [transfers, setTransfers] = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(null)
+  const [transfers, setTransfers]     = useState([])
+  const [accounts, setAccounts]       = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
 
   const payPeriodDate = profile?.pay_period_date || 25
@@ -98,6 +132,7 @@ export function DataProvider({ children }) {
       setCashRecords(dashData.cashRecords || [])
       setBudgetPlans(dashData.budgetPlans || [])
       setTransfers(dashData.transfers || [])
+      setAccounts(dashData.accounts || [])
       setLastRefresh(new Date())
     } catch (err) {
       setError(err.message)
@@ -109,33 +144,29 @@ export function DataProvider({ children }) {
 
   useEffect(() => {
     loadData()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setProfile(null)
-        setExpenses([])
-        setIncome([])
-        setAllExpenses([])
-        setAllIncome([])
-        setCashRecords([])
-        setBudgetPlans([])
-        setTransfers([])
+        setUser(null); setProfile(null)
+        setExpenses([]); setIncome([])
+        setAllExpenses([]); setAllIncome([])
+        setCashRecords([]); setBudgetPlans([])
+        setTransfers([]); setAccounts([])
       }
     })
     return () => subscription.unsubscribe()
   }, [loadData])
 
-  const filteredExpenses = periodIdx !== '' ? filterByPeriod(expenses, periodIdx, payPeriodDate, overrides) : expenses
-  const filteredIncome = periodIdx !== ''
-    ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate, overrides)
-      .map(({ nilai: _nilai, ...r }) => r)
+  const filteredExpenses    = periodIdx !== '' ? filterByPeriod(expenses, periodIdx, payPeriodDate, overrides) : expenses
+  const filteredIncome      = periodIdx !== ''
+    ? filterByPeriod(income.map(r => ({ ...r, nilai: r.jumlah })), periodIdx, payPeriodDate, overrides).map(({ nilai: _, ...r }) => r)
     : income
   const filteredCashRecords = periodIdx !== '' ? filterByPeriod(cashRecords, periodIdx, payPeriodDate, overrides) : cashRecords
 
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  const bankBalances = buildBankBalances(allExpenses, allIncome, cashRecords, transfers, profiles)
+  // bankBalances sekarang pakai baseline — objek berisi { saldo, needsSetup, balance_set_at, account_id }
+  const bankBalances = buildBankBalances(allExpenses, allIncome, cashRecords, transfers, accounts)
 
   function getUserName(userId) {
     const p = profiles.find(p => p.id === userId)
@@ -145,7 +176,7 @@ export function DataProvider({ children }) {
   return (
     <DataContext.Provider value={{
       user, profile, profiles,
-      expenses, income, cashRecords, budgetPlans, transfers,
+      expenses, income, cashRecords, budgetPlans, transfers, accounts,
       filteredExpenses, filteredIncome, filteredCashRecords,
       summaryPeriode, summaryAll,
       bankBalances,
