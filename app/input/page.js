@@ -28,6 +28,21 @@ const BANK_BY_USER = {
 }
 const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
 
+// Helper: baca semua cookies sebagai object
+function parseCookies() {
+  return Object.fromEntries(
+    document.cookie.split(';').map(c => {
+      const [k, ...v] = c.trim().split('=')
+      return [k, decodeURIComponent(v.join('='))]
+    })
+  )
+}
+
+// Helper: hapus cookie
+function deleteCookie(name) {
+  document.cookie = `${name}=; Max-Age=0; path=/`
+}
+
 // ── Toast ──────────────────────────────────────────────────────────────
 function SavedToast({ show, tipe, amount }) {
   if (!show) return null
@@ -194,16 +209,26 @@ export default function InputPage() {
       const params = new URLSearchParams(window.location.search)
       const isShared = params.get('shared') === '1'
 
-      // Ambil foto dari SW Cache Storage (dikirim via web share foto)
-      if (isShared && 'caches' in window) {
+      if (isShared) {
         window.history.replaceState({}, '', '/input')
+
+        // Baca foto dari chunked cookies yang dikirim oleh /api/share-target
         try {
-          const cache = await caches.open('arvifund-share-images-v2')
-          const cached = await cache.match('/share-image-pending')
-          if (cached) {
-            await cache.delete('/share-image-pending')
-            const { dataUrl } = await cached.json()
-            if (dataUrl) {
+          const cookies = parseCookies()
+          const numChunks = parseInt(cookies['arvifund-share-chunks'] || '0', 10)
+
+          if (numChunks > 0) {
+            // Gabungkan semua chunk jadi dataUrl
+            let dataUrl = ''
+            for (let i = 0; i < numChunks; i++) {
+              dataUrl += cookies[`arvifund-share-${i}`] || ''
+            }
+
+            // Hapus semua cookies
+            deleteCookie('arvifund-share-chunks')
+            for (let i = 0; i < numChunks; i++) deleteCookie(`arvifund-share-${i}`)
+
+            if (dataUrl.startsWith('data:')) {
               const res = await fetch(dataUrl)
               const blob = await res.blob()
               const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
