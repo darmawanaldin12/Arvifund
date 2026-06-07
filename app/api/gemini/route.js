@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 
-// Hanya gunakan gemini-2.5-flash
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash']
+// Urutan model: coba yang paling capable dulu, fallback ke yang lebih ringan
+// gemini-2.5-flash-lite = gratis, limit lebih longgar, cocok sebagai last resort
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite']
 
 // Timeout per request ke Gemini (30 detik)
 const GEMINI_TIMEOUT_MS = 30_000
@@ -11,6 +12,16 @@ function fetchWithTimeout(url, options, timeoutMs) {
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timer))
+}
+
+// Fisher-Yates shuffle untuk distribusi key yang benar-benar acak
+function shuffleArray(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
 }
 
 export async function POST(request) {
@@ -39,14 +50,14 @@ export async function POST(request) {
     let lastError = null
     let responseData = null
 
-    // Iterasi model → iterasi key
-    // Jika key kena 429, langsung coba key berikutnya (bukan tunggu lama)
+    // Iterasi model → iterasi key (di-shuffle tiap model untuk distribusi merata)
+    // Jika key kena 429, langsung coba key berikutnya
     // Jika semua key untuk satu model habis, pindah ke model berikutnya
     for (const mdl of modelsToTry) {
       if (responseData) break
 
-      // Acak urutan key untuk distribusi beban merata (round-robin sederhana)
-      const shuffledKeys = [...apiKeys]
+      // Shuffle key secara acak (Fisher-Yates) agar beban tersebar merata
+      const shuffledKeys = shuffleArray(apiKeys)
 
       for (const key of shuffledKeys) {
         if (responseData) break
@@ -70,7 +81,7 @@ export async function POST(request) {
 
           if (res.ok) {
             responseData = await res.json()
-            // Tandai model yang berhasil (opsional, untuk debug)
+            // Tandai model yang berhasil (untuk debug)
             responseData._usedModel = mdl
             break
           }
@@ -82,10 +93,10 @@ export async function POST(request) {
           const errMsg = parsed?.error?.message || errText || `HTTP ${res.status}`
 
           if (res.status === 429) {
-            // Rate limit → langsung coba key berikutnya, tanpa delay panjang
+            // Rate limit → langsung coba key berikutnya dengan delay singkat
             lastError = `[${mdl}] Rate limit (key ...${key.slice(-4)}): ${errMsg}`
-            // Delay singkat 200ms sebelum coba key berikutnya
-            await new Promise(r => setTimeout(r, 200))
+            // Delay 500ms sebelum coba key berikutnya
+            await new Promise(r => setTimeout(r, 500))
             continue
           }
 
