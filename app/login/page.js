@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from '../../lib/supabase'
 import { supabase } from '../../lib/supabase'
@@ -31,28 +31,76 @@ export default function LoginPage() {
   const [bioSupported, setBioSupported]       = useState(false)
   const [bioRegistered, setBioRegistered]     = useState(false)
   const [bioLoading, setBioLoading]           = useState(false)
+  const [bioAutoTriggered, setBioAutoTriggered] = useState(false)
   const [showRegisterBio, setShowRegisterBio] = useState(false)
   const [pendingEmail, setPendingEmail]       = useState('')
   const [pendingPassword, setPendingPassword] = useState('')
 
+  const autoTriggerRef = useRef(false)
+
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const isTimeout = searchParams?.get('reason') === 'timeout'
 
+  // ── Inisialisasi: cek support + registered, lalu auto-trigger ──
   useEffect(() => {
-    async function checkBio() {
+    async function initBio() {
+      // iOS Safari: PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable
+      // kadang butuh waktu, jadi kita coba dua kali.
       const supported = await isBiometricSupported()
       setBioSupported(supported)
-      if (supported) setBioRegistered(isBiometricRegistered())
+
+      const registered = isBiometricRegistered()
+      setBioRegistered(registered)
+
+      // Auto-trigger: kalau sudah pernah daftar & supported → langsung minta biometric
+      // Tapi hanya SEKALI (pakai ref supaya tidak loop di strict mode)
+      if (supported && registered && !autoTriggerRef.current) {
+        autoTriggerRef.current = true
+        setBioAutoTriggered(true)
+        // Sedikit delay supaya halaman sempat render dulu (penting di iOS)
+        setTimeout(() => triggerBiometric(), 400)
+      }
     }
-    checkBio()
+    initBio()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Core biometric trigger (dipakai auto + tap manual) ──
+  async function triggerBiometric() {
+    setBioLoading(true)
+    setError('')
+    try {
+      await authenticateWithBiometric(supabase)
+      try { localStorage.setItem('arvifund_last_active', Date.now().toString()) } catch (_) {}
+      router.push('/dashboard')
+    } catch (err) {
+      setBioAutoTriggered(false)
+      if (err.name === 'NotAllowedError') {
+        // User cancel / timeout — tidak perlu error, cukup tampil form manual
+        setError('')
+      } else if (err.message === 'NEEDS_REREGISTER' || err.message.includes('NEEDS_REREGISTER')) {
+        removeBiometricCred()
+        setBioRegistered(false)
+        setError('Data biometrik perlu didaftarkan ulang. Silakan login dengan email & password.')
+      } else if (err.message.startsWith('LOGIN_FAILED')) {
+        removeBiometricCred()
+        setBioRegistered(false)
+        setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang dengan email & password.')
+      } else {
+        // Biometric gagal tapi registered masih valid — tetap tampilkan tombol
+        setError('Biometrik gagal: ' + err.message)
+      }
+    } finally {
+      setBioLoading(false)
+    }
+  }
 
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const data = await signIn(email, password)
+      await signIn(email, password)
       if (bioSupported && !isBiometricRegistered()) {
         setPendingEmail(email)
         setPendingPassword(password)
@@ -64,32 +112,6 @@ export default function LoginPage() {
       setError(err.message || 'Email atau password salah')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleBiometricLogin() {
-    setBioLoading(true)
-    setError('')
-    try {
-      await authenticateWithBiometric(supabase)
-      try { localStorage.setItem('arvifund_last_active', Date.now().toString()) } catch (_) {}
-      router.push('/dashboard')
-    } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        setError('')
-      } else if (err.message === 'NEEDS_REREGISTER' || err.message.includes('NEEDS_REREGISTER')) {
-        removeBiometricCred()
-        setBioRegistered(false)
-        setError('Data biometrik perlu didaftarkan ulang. Silakan login dengan email & password.')
-      } else if (err.message.startsWith('LOGIN_FAILED')) {
-        removeBiometricCred()
-        setBioRegistered(false)
-        setError('Login biometrik gagal. Password mungkin sudah berubah. Silakan login ulang dengan email & password.')
-      } else {
-        setError('Biometrik gagal: ' + err.message)
-      }
-    } finally {
-      setBioLoading(false)
     }
   }
 
@@ -139,10 +161,11 @@ export default function LoginPage() {
     }
   }
 
-  const isIos = typeof navigator !== 'undefined' && /iPhone|iPad|Mac/.test(navigator.userAgent)
-  const bioIcon = isIos ? '🔒' : '🫆'
+  const isIos = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Mac/.test(navigator.userAgent)
+  const bioIcon = isIos ? '\uD83D\uDD12' : '\uD83E\uDDB6'
   const bioLabel = isIos ? 'Face ID / Touch ID' : 'Sidik Jari / Biometrik'
 
+  // ── Layar daftar biometrik (muncul setelah login email pertama kali) ──
   if (showRegisterBio) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
@@ -151,12 +174,12 @@ export default function LoginPage() {
             <div style={{ fontSize: 56, marginBottom: 12 }}>{bioIcon}</div>
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: 'var(--text1)' }}>Aktifkan {bioLabel}?</div>
             <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24, lineHeight: 1.6 }}>
-              Login lebih cepat lain kali — bahkan setelah sesi habis — tanpa perlu ketik password lagi.
+              Login lebih cepat lain kali \u2014 bahkan setelah sesi habis \u2014 tanpa perlu ketik password lagi.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button onClick={handleRegisterBio} disabled={bioLoading}
                 style={{ width: '100%', height: 48, fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 10, cursor: bioLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: bioLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, touchAction: 'manipulation' }}>
-                {bioLoading ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memproses...</> : `✅ Ya, Aktifkan`}
+                {bioLoading ? <><span className="material-symbols-outlined" style={{ fontSize: 18, animation: 'spin 0.8s linear infinite' }}>refresh</span> Memproses...</> : '\u2705 Ya, Aktifkan'}
               </button>
               <button onClick={handleSkipBio}
                 style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
@@ -166,6 +189,35 @@ export default function LoginPage() {
           </div>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  // ── Layar loading auto-trigger biometric (pertama kali halaman dibuka) ──
+  // Tampil hanya saat sedang auto-trigger sebelum user punya kesempatan cancel
+  if (bioAutoTriggered && bioLoading) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 72, marginBottom: 20 }}>{bioIcon}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text1)', marginBottom: 8 }}>Verifikasi Identitas</div>
+          <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 28 }}>Gunakan {bioLabel} untuk masuk</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+            {[0, 0.2, 0.4].map((d, i) => (
+              <span key={i} style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setBioAutoTriggered(false); setBioLoading(false) }}
+          style={{ position: 'fixed', bottom: 40, left: '50%', transform: 'translateX(-50%)', background: 'none', border: 'none', color: 'var(--text3)', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', padding: '12px 24px' }}
+        >
+          Gunakan Password
+        </button>
+        <style>{`
+          @keyframes dotPulse { 0%,80%,100% { transform:scale(0.6);opacity:0.4 } 40% { transform:scale(1.2);opacity:1 } }
+        `}</style>
       </div>
     )
   }
@@ -181,13 +233,14 @@ export default function LoginPage() {
 
       {isTimeout && (
         <div style={{ width: '100%', maxWidth: 360, padding: '12px 16px', marginBottom: 16, background: 'var(--yellow-bg)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, color: 'var(--yellow)', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-          ⏱ Sesi berakhir karena tidak aktif 1 jam
+          \u23f1 Sesi berakhir karena tidak aktif 1 jam
         </div>
       )}
 
+      {/* Tombol biometrik — tampil kalau supported & registered & tidak sedang auto-loading */}
       {bioSupported && bioRegistered && !showForgot && (
         <div style={{ width: '100%', maxWidth: 360, marginBottom: 16 }}>
-          <button onClick={handleBiometricLogin} disabled={bioLoading}
+          <button onClick={triggerBiometric} disabled={bioLoading}
             style={{ width: '100%', height: 58, fontSize: 16, fontWeight: 700, background: 'linear-gradient(135deg, #1e3a5f, var(--accent))', color: 'white', border: 'none', borderRadius: 14, cursor: bioLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: bioLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 4px 16px rgba(0,61,155,0.3)', touchAction: 'manipulation' }}>
             {bioLoading
               ? <><span className="material-symbols-outlined" style={{ fontSize: 22, animation: 'spin 0.8s linear infinite' }}>refresh</span> Verifikasi...</>
@@ -214,7 +267,7 @@ export default function LoginPage() {
               <label className="form-label">Password</label>
               <div style={{ position: 'relative' }}>
                 <input className="form-input"
-                  type={showPass ? 'text' : 'password'} placeholder="••••••••"
+                  type={showPass ? 'text' : 'password'} placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
                   value={password} onChange={e => setPassword(e.target.value)}
                   required autoComplete="current-password" style={{ paddingRight: 44 }} />
                 <button type="button" onClick={() => setShowPass(!showPass)}
@@ -246,12 +299,12 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: 360 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text1)', marginBottom: 6 }}>🔐 Reset Password</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text1)', marginBottom: 6 }}>\uD83D\uDD10 Reset Password</div>
               <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6 }}>Masukkan email yang terdaftar. Kami akan kirim link reset password.</div>
             </div>
             {forgotMsg ? (
               <div style={{ padding: '14px 16px', background: 'var(--green-bg)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, color: 'var(--green)', fontSize: 13, fontWeight: 600, lineHeight: 1.6, marginBottom: 16 }}>
-                ✅ {forgotMsg}
+                \u2705 {forgotMsg}
               </div>
             ) : (
               <form onSubmit={handleForgot}>
@@ -268,7 +321,7 @@ export default function LoginPage() {
                 )}
                 <button type="submit" disabled={forgotLoading}
                   style={{ width: '100%', height: 44, fontSize: 14, fontWeight: 700, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: forgotLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit', opacity: forgotLoading ? 0.8 : 1 }}>
-                  {forgotLoading ? 'Mengirim...' : '📧 Kirim Link Reset'}
+                  {forgotLoading ? 'Mengirim...' : '\uD83D\uDCE7 Kirim Link Reset'}
                 </button>
               </form>
             )}
@@ -276,7 +329,7 @@ export default function LoginPage() {
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <button type="button" onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotError('') }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, fontFamily: 'inherit' }}>
-              ← Kembali ke Login
+              \u2190 Kembali ke Login
             </button>
           </div>
         </div>
