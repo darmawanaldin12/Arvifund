@@ -9,14 +9,13 @@ const DataContext = createContext(null)
 // ── Hitung saldo per akun berdasarkan baseline + transaksi setelah baseline ──
 // Formula per akun:
 //   saldo = account.balance (baseline manual)
-//           + income setelah balance_set_at
-//           - expenses setelah balance_set_at
-//           - cash_records setelah balance_set_at
-//           +/- transfers setelah balance_set_at
+//           + income pada/setelah balance_set_at
+//           - expenses pada/setelah balance_set_at
+//           - cash_records pada/setelah balance_set_at
+//           +/- transfers pada/setelah balance_set_at
 //
 // Kalau balance_set_at null (belum pernah di-set) → saldo = 0, tandai needsSetup
 export function buildBankBalances(expenses, income, cashRecords, transfers, accounts) {
-  // result[userId][bankName] = { saldo, needsSetup, balance_set_at, account_id }
   const result = {}
 
   const ensure = (uid, bank) => {
@@ -36,16 +35,19 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Helper: apakah transaksi ini terjadi SETELAH baseline akun terkait?
-  const afterBaseline = (tanggal, userId, bankName) => {
+  // Helper: apakah tanggal transaksi >= tanggal baseline?
+  // Pakai >= supaya transaksi di hari yang sama dengan set baseline ikut terhitung
+  const onOrAfterBaseline = (tanggal, userId, bankName) => {
     const baseline = result[userId]?.[bankName]?.balance_set_at
-    if (!baseline) return false // belum ada baseline → abaikan transaksi lama
-    return new Date(tanggal + 'T00:00:00') > new Date(baseline)
+    if (!baseline) return false
+    const baselineDate = new Date(baseline)
+    baselineDate.setHours(0, 0, 0, 0) // bandingkan per hari
+    return new Date(tanggal + 'T00:00:00') >= baselineDate
   }
 
   // Income → tambah
   income.forEach(r => {
-    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+    if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
       result[r.user_id][r.bank].saldo += Number(r.jumlah) || 0
     }
@@ -53,7 +55,7 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
 
   // Expenses → kurangi
   expenses.forEach(r => {
-    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+    if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
       result[r.user_id][r.bank].saldo -= Number(r.nilai) || 0
     }
@@ -61,7 +63,7 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
 
   // Cash records → kurangi dari bank asal
   cashRecords.forEach(r => {
-    if (r.user_id && r.bank && afterBaseline(r.tanggal, r.user_id, r.bank)) {
+    if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
       result[r.user_id][r.bank].saldo -= Number(r.nilai) || 0
     }
@@ -69,11 +71,11 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
 
   // Transfers → kurangi from, tambah to
   transfers.forEach(r => {
-    if (r.from_user && r.from_bank && afterBaseline(r.tanggal, r.from_user, r.from_bank)) {
+    if (r.from_user && r.from_bank && onOrAfterBaseline(r.tanggal, r.from_user, r.from_bank)) {
       ensure(r.from_user, r.from_bank)
       result[r.from_user][r.from_bank].saldo -= Number(r.jumlah) || 0
     }
-    if (r.to_user && r.to_bank && afterBaseline(r.tanggal, r.to_user, r.to_bank)) {
+    if (r.to_user && r.to_bank && onOrAfterBaseline(r.tanggal, r.to_user, r.to_bank)) {
       ensure(r.to_user, r.to_bank)
       result[r.to_user][r.to_bank].saldo += Number(r.jumlah) || 0
     }
@@ -165,7 +167,6 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  // bankBalances sekarang pakai baseline — objek berisi { saldo, needsSetup, balance_set_at, account_id }
   const bankBalances = buildBankBalances(allExpenses, allIncome, cashRecords, transfers, accounts)
 
   function getUserName(userId) {
