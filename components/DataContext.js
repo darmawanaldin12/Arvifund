@@ -11,11 +11,12 @@ const DataContext = createContext(null)
 //   saldo[userId][bank] =
 //     income masuk ke bank ini
 //     - expenses yang pakai bank ini
-//     - cash_records (tarik tunai) dari bank ini → kurangi bank asal, tambah Cash
-//     - transfers KELUAR dari bank ini (from_user=userId, from_bank=bank)
-//     + transfers MASUK ke bank ini (to_user=userId, to_bank=bank)
+//     - cash_records biasa (bank != null) → kurangi bank asal, tambah Cash
+//     - cash_records AUDIT (bank = null) → hanya tambah Cash (tidak menyentuh bank manapun)
+//     - transfers KELUAR dari bank ini
+//     + transfers MASUK ke bank ini
 export function buildBankBalances(expenses, income, cashRecords, transfers, profiles) {
-  const result = {} // { userId: { bankName: saldo } }
+  const result = {}
 
   const ensureUser = (uid) => {
     if (!result[uid]) result[uid] = {}
@@ -35,10 +36,13 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, prof
     if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
   })
 
-  // Cash records → kurangi bank asal, tambah Cash
+  // Cash records:
+  // - Jika bank ada → kurangi bank asal, tambah Cash (tarik tunai normal)
+  // - Jika bank null → hanya tambah Cash (AUDIT/penyesuaian saldo)
   cashRecords.forEach(r => {
-    if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
-    if (r.user_id)           add(r.user_id, 'Cash',  +(r.nilai || 0))
+    if (!r.user_id) return
+    if (r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
+    add(r.user_id, 'Cash', +(r.nilai || 0))
   })
 
   // Transfers → kurangi from, tambah to
@@ -54,10 +58,10 @@ export function DataProvider({ children }) {
   const [user, setUser]           = useState(null)
   const [profile, setProfile]     = useState(null)
   const [profiles, setProfiles]   = useState([])
-  const [expenses, setExpenses]   = useState([])   // untuk UI (tanpa AUDIT)
-  const [income, setIncome]       = useState([])   // untuk UI (tanpa AUDIT)
-  const [allExpenses, setAllExpenses] = useState([]) // untuk hitung saldo (semua)
-  const [allIncome, setAllIncome]     = useState([]) // untuk hitung saldo (semua)
+  const [expenses, setExpenses]   = useState([])
+  const [income, setIncome]       = useState([])
+  const [allExpenses, setAllExpenses] = useState([])
+  const [allIncome, setAllIncome]     = useState([])
   const [cashRecords, setCashRecords] = useState([])
   const [budgetPlans, setBudgetPlans] = useState([])
   const [transfers, setTransfers] = useState([])
@@ -65,7 +69,6 @@ export function DataProvider({ children }) {
   const [error, setError]         = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
 
-  // Period filter
   const payPeriodDate = profile?.pay_period_date || 25
   const overrides     = profile?.pay_period_overrides || {}
   const periods       = buildPeriods(payPeriodDate, overrides)
