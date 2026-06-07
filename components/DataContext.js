@@ -53,8 +53,10 @@ export function DataProvider({ children }) {
   const [user, setUser]           = useState(null)
   const [profile, setProfile]     = useState(null)
   const [profiles, setProfiles]   = useState([])
-  const [expenses, setExpenses]   = useState([])
-  const [income, setIncome]       = useState([])
+  const [expenses, setExpenses]   = useState([])   // untuk UI (tanpa AUDIT)
+  const [income, setIncome]       = useState([])   // untuk UI (tanpa AUDIT)
+  const [allExpenses, setAllExpenses] = useState([]) // untuk hitung saldo (semua)
+  const [allIncome, setAllIncome]     = useState([]) // untuk hitung saldo (semua)
   const [cashRecords, setCashRecords] = useState([])
   const [budgetPlans, setBudgetPlans] = useState([])
   const [transfers, setTransfers] = useState([])
@@ -90,8 +92,10 @@ export function DataProvider({ children }) {
 
       setProfile(profileData)
       setProfiles(dashData.profiles || [])
-      setExpenses(dashData.expenses || [])
-      setIncome(dashData.income || [])
+      setExpenses(dashData.expenses || [])         // tanpa AUDIT → untuk UI
+      setIncome(dashData.income || [])             // tanpa AUDIT → untuk UI
+      setAllExpenses(dashData.allExpenses || [])   // semua → untuk saldo
+      setAllIncome(dashData.allIncome || [])       // semua → untuk saldo
       setCashRecords(dashData.cashRecords || [])
       setBudgetPlans(dashData.budgetPlans || [])
       setTransfers(dashData.transfers || [])
@@ -112,6 +116,8 @@ export function DataProvider({ children }) {
         setProfile(null)
         setExpenses([])
         setIncome([])
+        setAllExpenses([])
+        setAllIncome([])
         setCashRecords([])
         setBudgetPlans([])
         setTransfers([])
@@ -130,8 +136,8 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  // Saldo per bank per user — dihitung dari semua data historis (bukan filtered)
-  const bankBalances = buildBankBalances(expenses, income, cashRecords, transfers, profiles)
+  // Saldo per bank per user — pakai allExpenses & allIncome (termasuk AUDIT) agar saldo akurat
+  const bankBalances = buildBankBalances(allExpenses, allIncome, cashRecords, transfers, profiles)
 
   function getUserName(userId) {
     const p = profiles.find(p => p.id === userId)
