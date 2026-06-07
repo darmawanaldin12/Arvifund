@@ -13,10 +13,10 @@ import {
 
 // Bank list per user
 const BANK_BY_USER = {
-  '9f5a9e66-a47e-4cf1-bfe6-107da0574a2e': ['BCA', 'Mandiri', 'BRI', 'Cash'],
-  '42b635cc-a32d-4b15-95d6-d9afb504a850': ['BCA', 'Mandiri', 'Cash'],
+  '9f5a9e66-a47e-4cf1-bfe6-107da0574a2e': ['Cash', 'BCA', 'Mandiri'],
+  '42b635cc-a32d-4b15-95d6-d9afb504a850': ['Cash', 'BCA', 'Mandiri', 'BRI'],
 }
-const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
+const DEFAULT_BANKS = ['Cash', 'BCA', 'Mandiri', 'BRI']
 
 // ── Shared biometric helper ─────────────────────────────────────────────────
 async function requireBiometric() {
