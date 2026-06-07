@@ -5,20 +5,18 @@ import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer, updateTransfer, deleteTransfer } from '../../lib/data'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
-import { fmt, fmtTanggalShort, BULAN_ORDER } from '../../lib/utils'
+import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER } from '../../lib/utils'
 import {
   ArrowLeftRight, Plus, Trash2, X, ChevronRight,
-  Pencil, Landmark, ShieldCheck, Wallet2, ArrowDownToLine,
+  Pencil, ShieldCheck, Wallet2, ArrowDownToLine,
 } from 'lucide-react'
 
-// Bank list per user
 const BANK_BY_USER = {
   '9f5a9e66-a47e-4cf1-bfe6-107da0574a2e': ['Cash', 'BCA', 'Mandiri'],
   '42b635cc-a32d-4b15-95d6-d9afb504a850': ['Cash', 'BCA', 'Mandiri', 'BRI'],
 }
 const DEFAULT_BANKS = ['Cash', 'BCA', 'Mandiri', 'BRI']
 
-// Warna kartu ATM per bank
 const CARD_THEME = {
   BCA:     { bg: 'linear-gradient(135deg, #003d82 0%, #0066cc 60%, #0099ff 100%)', chip: '#f5c842', label: '#a8d4ff' },
   Mandiri: { bg: 'linear-gradient(135deg, #1a3a00 0%, #2d6a00 60%, #4a9e00 100%)', chip: '#f5d442', label: '#b8e87a' },
@@ -27,7 +25,6 @@ const CARD_THEME = {
   default: { bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)', chip: '#e0c97f', label: '#9eafd4' },
 }
 
-// ── Shared biometric helper ─────────────────────────────────────────────────
 async function requireBiometric() {
   const supported  = await isBiometricSupported()
   const registered = isBiometricRegistered()
@@ -36,54 +33,37 @@ async function requireBiometric() {
   return true
 }
 
-// ── ATM Card Component ──────────────────────────────────────────────────────
-function AtmCard({ bankName, saldo, userName, color }) {
+// ── ATM Card ────────────────────────────────────────────────────────────────
+function AtmCard({ bankName, saldo, userName }) {
   const theme = CARD_THEME[bankName] || CARD_THEME.default
   const isNeg = saldo < 0
   return (
     <div style={{
-      width: '100%',
-      aspectRatio: '1.586 / 1',
-      borderRadius: 16,
-      background: theme.bg,
-      padding: '18px 20px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-      position: 'relative',
-      overflow: 'hidden',
-      flexShrink: 0,
-      userSelect: 'none',
+      width: '100%', aspectRatio: '1.586 / 1', borderRadius: 16,
+      background: theme.bg, padding: '18px 20px',
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.35)', position: 'relative',
+      overflow: 'hidden', flexShrink: 0, userSelect: 'none',
     }}>
-      {/* Dekoratif lingkaran */}
       <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 20, right: 20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -20, left: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-
-      {/* Header: nama bank + chip */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '0.04em', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>{bankName}</div>
-        {/* Chip EMV */}
         <div style={{ width: 28, height: 22, borderRadius: 4, background: theme.chip, opacity: 0.9, boxShadow: '0 1px 4px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: 18, height: 14, borderRadius: 2, border: '1px solid rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, padding: 2 }}>
             {[0,1,2,3].map(i => <div key={i} style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 1 }} />)}
           </div>
         </div>
       </div>
-
-      {/* Saldo */}
       <div>
         <div style={{ fontSize: 10, color: theme.label, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Saldo Rekening</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: isNeg ? '#ff6b6b' : '#fff', letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
-          {fmt(saldo)}
+        <div style={{ fontSize: 20, fontWeight: 800, color: isNeg ? '#ff6b6b' : '#fff', letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+          {fmtFull(saldo)}
         </div>
       </div>
-
-      {/* Footer: nama user */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{userName}</div>
-        {/* Contactless logo */}
         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           {[8, 12, 16].map((s, i) => (
             <div key={i} style={{ width: s, height: s, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.4)', opacity: 0.7 - i * 0.1 }} />
@@ -98,64 +78,30 @@ function AtmCard({ bankName, saldo, userName, color }) {
 function AtmCardSlider({ userBanks, userName }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const sliderRef = useRef(null)
-
   const handleScroll = () => {
     if (!sliderRef.current) return
     const el = sliderRef.current
-    const cardW = el.offsetWidth
-    const idx = Math.round(el.scrollLeft / cardW)
-    setActiveIdx(idx)
+    setActiveIdx(Math.round(el.scrollLeft / el.offsetWidth))
   }
-
   const scrollTo = (idx) => {
     if (!sliderRef.current) return
     sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'smooth' })
     setActiveIdx(idx)
   }
-
   if (userBanks.length === 0) return null
-
   return (
     <div style={{ paddingBottom: 4 }}>
-      {/* Slider */}
-      <div
-        ref={sliderRef}
-        onScroll={handleScroll}
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
-          scrollbarWidth: 'none',
-          gap: 0,
-          paddingLeft: 16,
-          paddingRight: 16,
-          margin: '0 -16px',
-        }}
-      >
-        <style>{`.atm-slider::-webkit-scrollbar { display: none }`}</style>
-        {userBanks.map(([bank, saldo], i) => (
+      <div ref={sliderRef} onScroll={handleScroll} style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', gap: 0, paddingLeft: 16, paddingRight: 16, margin: '0 -16px' }}>
+        {userBanks.map(([bank, saldo]) => (
           <div key={bank} style={{ scrollSnapAlign: 'start', flexShrink: 0, width: '100%', padding: '0 4px', boxSizing: 'border-box' }}>
             <AtmCard bankName={bank} saldo={saldo} userName={userName} />
           </div>
         ))}
       </div>
-
-      {/* Dot indicator — hanya tampil kalau lebih dari 1 kartu */}
       {userBanks.length > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
           {userBanks.map((_, i) => (
-            <div
-              key={i}
-              onClick={() => scrollTo(i)}
-              style={{
-                width: i === activeIdx ? 20 : 6,
-                height: 6,
-                borderRadius: 3,
-                background: i === activeIdx ? 'var(--accent)' : 'var(--border)',
-                cursor: 'pointer',
-                transition: 'width 0.25s ease, background 0.25s ease',
-              }}
-            />
+            <div key={i} onClick={() => scrollTo(i)} style={{ width: i === activeIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === activeIdx ? 'var(--accent)' : 'var(--border)', cursor: 'pointer', transition: 'width 0.25s ease, background 0.25s ease' }} />
           ))}
         </div>
       )}
@@ -163,46 +109,39 @@ function AtmCardSlider({ userBanks, userName }) {
   )
 }
 
-// ── Cash Section ────────────────────────────────────────────────────────────
-function CashSection({ userId, userName, expenses, cashRecords, color }) {
+// ── Cash Section — pakai bankBalances['Cash'] yang sudah include adjustment ──
+function CashSection({ userId, bankBalances, cashRecords }) {
   const [expanded, setExpanded] = useState(false)
 
-  const myTarik        = cashRecords.filter(r => r.user_id === userId)
-  const totalTarik     = myTarik.reduce((s, r) => s + (r.nilai || 0), 0)
-  const totalCashPakai = expenses.filter(r => r.user_id === userId && r.transaksi === 'Cash').reduce((s, r) => s + (r.nilai || 0), 0)
-  const sisaCash       = totalTarik - totalCashPakai
+  // Saldo cash dari bankBalances (sudah include audit adjustment)
+  const sisaCash = (bankBalances[userId] || {})['Cash'] || 0
 
-  // Riwayat tarik tunai, sort terbaru dulu
-  const riwayat = [...myTarik].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+  // Riwayat penarikan tunai untuk info detail
+  const riwayat = [...cashRecords.filter(r => r.user_id === userId)]
+    .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
   return (
     <div style={{ borderTop: '1px solid var(--border)' }}>
-      {/* Summary bar */}
-      <div
-        onClick={() => setExpanded(v => !v)}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', background: 'transparent' }}
-      >
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: `color-mix(in srgb, var(--yellow) 15%, transparent)`, border: '1.5px solid var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div onClick={() => setExpanded(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer' }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'color-mix(in srgb, var(--yellow) 15%, transparent)', border: '1.5px solid var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Wallet2 size={15} color="var(--yellow)" />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>Cash</div>
-          <div style={{ fontSize: 10, color: 'var(--text3)' }}>Tarik: {fmt(totalTarik)} · Pakai: {fmt(totalCashPakai)}</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)' }}>Saldo uang tunai</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 1 }}>Sisa</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: sisaCash >= 0 ? 'var(--yellow)' : 'var(--red)' }}>{fmt(sisaCash)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: sisaCash >= 0 ? 'var(--yellow)' : 'var(--red)' }}>{fmtFull(sisaCash)}</div>
         </div>
         <div style={{ color: 'var(--text3)', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>
           <ChevronRight size={14} />
         </div>
       </div>
-
-      {/* Riwayat penarikan tunai */}
       {expanded && (
         <div style={{ padding: '0 16px 14px' }}>
           {riwayat.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: 'var(--text3)' }}>Belum ada penarikan tunai</div>
+            <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: 'var(--text3)' }}>Belum ada riwayat penarikan tunai</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {riwayat.map((r, i) => (
@@ -216,7 +155,7 @@ function CashSection({ userId, userName, expenses, cashRecords, color }) {
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text3)' }}>{fmtTanggalShort(r.tanggal)}{r.bank ? ` · via ${r.bank}` : ''}</div>
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--yellow)', flexShrink: 0 }}>{fmt(r.nilai)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--yellow)', flexShrink: 0 }}>{fmtFull(r.nilai)}</div>
                 </div>
               ))}
             </div>
@@ -228,29 +167,28 @@ function CashSection({ userId, userName, expenses, cashRecords, color }) {
 }
 
 // ── User Summary Card ───────────────────────────────────────────────────────
-function UserSummary({ userId, userName, bankBalances, expenses, income, cashRecords, getUserName }) {
+function UserSummary({ userId, userName, bankBalances, expenses, income, cashRecords }) {
   const initial = userName?.[0]?.toUpperCase() || '?'
   const isAldin = userName?.toLowerCase().includes('ald')
   const color   = isAldin ? 'var(--accent)' : '#db2777'
 
-  // Bank accounts (exclude Cash/QRIS/Cardless)
   const userBanks = Object.entries(bankBalances[userId] || {})
     .filter(([bank]) => !['Cash', 'QRIS', 'Cardless'].includes(bank))
     .sort((a, b) => a[0].localeCompare(b[0]))
 
   const myExpenses = expenses.filter(r => r.user_id === userId)
   const myIncome   = income.filter(r => r.user_id === userId)
-  const myTarik    = cashRecords.filter(r => r.user_id === userId)
   const totalOut   = myExpenses.reduce((s, r) => s + (r.nilai  || 0), 0)
   const totalIn    = myIncome.reduce((s, r)   => s + (r.jumlah || 0), 0)
-  const totalTarik = myTarik.reduce((s, r)    => s + (r.nilai  || 0), 0)
-  const totalCashPakai = myExpenses.filter(r => r.transaksi === 'Cash').reduce((s, r) => s + (r.nilai || 0), 0)
-  const sisaCash   = totalTarik - totalCashPakai
   const net        = totalIn - totalOut
+
+  // Saldo bersih termasuk cash
+  const cashSaldo  = (bankBalances[userId] || {})['Cash'] || 0
+  const bankTotal  = userBanks.reduce((s, [, v]) => s + v, 0)
+  const totalNet   = bankTotal + cashSaldo
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border)', background: `color-mix(in srgb, ${color} 5%, var(--surface))` }}>
         <div style={{ width: 38, height: 38, borderRadius: 12, background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color, flexShrink: 0 }}>
           {initial}
@@ -261,11 +199,9 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>Saldo bersih</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: net >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(net)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: totalNet >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtFull(totalNet)}</div>
         </div>
       </div>
-
-      {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid var(--border)' }}>
         {[
           { label: 'Masuk',  val: totalIn,  color: 'var(--green)' },
@@ -273,27 +209,17 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
         ].map((item, i) => (
           <div key={item.label} style={{ padding: '12px 10px', textAlign: 'center', borderRight: i < 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: item.color }}>{fmt(item.val)}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: item.color }}>{fmtFull(item.val)}</div>
           </div>
         ))}
       </div>
-
-      {/* ATM Card Slider */}
       {userBanks.length > 0 && (
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Rekening Bank</div>
           <AtmCardSlider userBanks={userBanks} userName={userName} />
         </div>
       )}
-
-      {/* Cash section */}
-      <CashSection
-        userId={userId}
-        userName={userName}
-        expenses={expenses}
-        cashRecords={cashRecords}
-        color={color}
-      />
+      <CashSection userId={userId} bankBalances={bankBalances} cashRecords={cashRecords} />
     </div>
   )
 }
@@ -312,7 +238,7 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
   const fromBanks = form.from_user ? (BANK_BY_USER[form.from_user] || DEFAULT_BANKS) : DEFAULT_BANKS
   const toBanks   = form.to_user   ? (BANK_BY_USER[form.to_user]   || DEFAULT_BANKS) : DEFAULT_BANKS
   const handleFromUser = uid => { const b = BANK_BY_USER[uid] || DEFAULT_BANKS; setForm(f => ({ ...f, from_user: uid, from_bank: b[0] || '' })) }
-  const handleToUser   = uid => { const b = BANK_BY_USER[uid] || DEFAULT_BANKS; setForm(f => ({ ...f, to_user:   uid, to_bank:   b[0] || '' })) }
+  const handleToUser   = uid => { const b = BANK_BY_USER[uid] || DEFAULT_BANKS; setForm(f => ({ ...f, to_user: uid, to_bank: b[0] || '' })) }
   const isInternal = form.from_user === form.to_user && form.from_user !== ''
   const fromName   = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName     = profiles.find(p => p.id === form.to_user)?.username   || ''
@@ -347,12 +273,10 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={20} /></button>
         </div>
-
         <div className="form-group">
           <label className="form-label">Tanggal</label>
           <input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} />
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
           <div>
             <label className="form-label">Dari</label>
@@ -370,7 +294,6 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
             </select>
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
           <div>
             <label className="form-label">Rekening asal</label>
@@ -388,13 +311,11 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
             </select>
           </div>
         </div>
-
         {form.from_user && form.to_user && form.from_bank && form.to_bank && (
           <div style={{ padding: '8px 12px', marginBottom: 14, background: isInternal ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)', border: `1px solid ${isInternal ? 'rgba(245,158,11,0.3)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, fontSize: 12, color: 'var(--text2)' }}>
             {isInternal ? `Pindah rekening ${fromName}: ${form.from_bank} → ${form.to_bank}` : `${fromName} (${form.from_bank}) → ${toName} (${form.to_bank})`}
           </div>
         )}
-
         <div className="form-group">
           <label className="form-label">Jumlah</label>
           <input className="form-input" type="number" inputMode="numeric" placeholder="0" value={form.jumlah} onChange={e => setF('jumlah', e.target.value)} min="0" />
@@ -403,9 +324,7 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
           <label className="form-label">Catatan (opsional)</label>
           <input className="form-input" type="text" placeholder="Contoh: buat belanja bulan ini" value={form.catatan} onChange={e => setF('catatan', e.target.value)} />
         </div>
-
         {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-
         <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-full"
           style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <ArrowLeftRight size={18} />
@@ -416,7 +335,7 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
+// ── Main Page ───────────────────────────────────────────────────────────────
 export default function WalletPage() {
   const {
     filteredExpenses, filteredIncome, filteredCashRecords,
@@ -457,9 +376,7 @@ export default function WalletPage() {
       } else {
         setBioError('Gagal hapus: ' + e.message)
       }
-    } finally {
-      setDeletingId(null)
-    }
+    } finally { setDeletingId(null) }
   }
 
   async function handleSaveAdd(form) {
@@ -485,37 +402,28 @@ export default function WalletPage() {
   return (
     <>
       {showAddModal && (
-        <TransferForm
-          profiles={profiles} user={user}
+        <TransferForm profiles={profiles} user={user}
           onClose={() => setShowAddModal(false)}
           onSaved={handleSaveAdd}
-          title="Catat Transfer"
-          submitLabel="Simpan Transfer"
+          title="Catat Transfer" submitLabel="Simpan Transfer"
         />
       )}
       {editTransfer && (
-        <TransferForm
-          profiles={profiles} user={user}
+        <TransferForm profiles={profiles} user={user}
           initial={{
-            tanggal:   editTransfer.tanggal,
-            from_user: editTransfer.from_user,
-            to_user:   editTransfer.to_user,
-            from_bank: editTransfer.from_bank,
-            to_bank:   editTransfer.to_bank,
-            jumlah:    String(editTransfer.jumlah),
-            catatan:   editTransfer.catatan || '',
+            tanggal: editTransfer.tanggal, from_user: editTransfer.from_user,
+            to_user: editTransfer.to_user, from_bank: editTransfer.from_bank,
+            to_bank: editTransfer.to_bank, jumlah: String(editTransfer.jumlah),
+            catatan: editTransfer.catatan || '',
           }}
           onClose={() => setEditTransfer(null)}
           onSaved={handleSaveEdit}
-          title="Edit Transfer"
-          submitLabel="Simpan Perubahan"
+          title="Edit Transfer" submitLabel="Simpan Perubahan"
         />
       )}
 
       <AppHeader title="Wallet" onRefresh={loadData} loading={loading} />
       <div className="page-container">
-
-        {/* Period Filter */}
         <div className="filter-bar" style={{ marginBottom: 14 }}>
           <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
           {periods.map((p, i) => (
@@ -523,7 +431,6 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {/* Tab */}
         <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 }}>
           {[
             { id: 'summary',  label: 'Ringkasan' },
@@ -540,7 +447,6 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {/* ── Tab: Ringkasan ── */}
         {tab === 'summary' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {users.map(u => (
@@ -549,29 +455,25 @@ export default function WalletPage() {
                 userId={u.id}
                 userName={u.username}
                 bankBalances={bankBalances}
-                expenses={filteredExpenses}
-                income={filteredIncome}
-                cashRecords={filteredCashRecords}
-                getUserName={getUserName}
+                expenses={expenses}
+                income={income}
+                cashRecords={cashRecords}
               />
             ))}
           </div>
         )}
 
-        {/* ── Tab: Transfer ── */}
         {tab === 'transfer' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => setShowAddModal(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 12, border: '2px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               <Plus size={18} /> Catat Transfer Baru
             </button>
-
             {bioError && (
               <div style={{ padding: '10px 14px', background: 'var(--red-bg)', borderRadius: 10, color: 'var(--red)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ShieldCheck size={15} /> {bioError}
               </div>
             )}
-
             {filteredTransfers.length === 0 ? (
               <div className="empty-state"><div className="emoji">↔️</div><p>Belum ada transfer di periode ini</p></div>
             ) : filteredTransfers.map(t => {
@@ -593,37 +495,26 @@ export default function WalletPage() {
                       {t.catatan && <span>· {t.catatan}</span>}
                     </div>
                   </div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--accent)', flexShrink: 0 }}>{fmt(t.jumlah)}</div>
-                  <button
-                    onClick={() => { setBioError(''); setEditTransfer(t) }}
+                  <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--accent)', flexShrink: 0 }}>{fmtFull(t.jumlah)}</div>
+                  <button onClick={() => { setBioError(''); setEditTransfer(t) }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, flexShrink: 0 }}
-                    title="Edit transfer"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTransfer(t.id)}
-                    disabled={deletingId === t.id}
+                    title="Edit transfer"><Pencil size={14} /></button>
+                  <button onClick={() => handleDeleteTransfer(t.id)} disabled={deletingId === t.id}
                     style={{ background: 'none', border: 'none', cursor: deletingId === t.id ? 'not-allowed' : 'pointer', color: deletingId === t.id ? 'var(--text3)' : 'var(--red)', padding: 4, flexShrink: 0, opacity: deletingId === t.id ? 0.5 : 1 }}
-                    title="Hapus (perlu biometrik)"
-                  >
-                    {deletingId === t.id
-                      ? <ShieldCheck size={14} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
-                      : <Trash2 size={14} />}
+                    title="Hapus (perlu biometrik)">
+                    {deletingId === t.id ? <ShieldCheck size={14} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} /> : <Trash2 size={14} />}
                   </button>
                 </div>
               )
             })}
-
             {filteredTransfers.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 13 }}>
                 <span style={{ color: 'var(--text3)' }}>Total periode ini</span>
-                <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{fmt(filteredTransfers.reduce((s, r) => s + (r.jumlah || 0), 0))}</span>
+                <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{fmtFull(filteredTransfers.reduce((s, r) => s + (r.jumlah || 0), 0))}</span>
               </div>
             )}
           </div>
         )}
-
       </div>
       <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }`}</style>
     </>
