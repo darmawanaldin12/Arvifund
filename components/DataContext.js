@@ -6,15 +6,6 @@ import { buildSummary, buildPeriods, getCurrentPeriodIndex, filterByPeriod } fro
 
 const DataContext = createContext(null)
 
-// ── Hitung saldo per akun berdasarkan baseline + transaksi setelah baseline ──
-// Formula per akun:
-//   saldo = account.balance (baseline manual)
-//           + income pada/setelah balance_set_at
-//           - expenses pada/setelah balance_set_at  (tanpa [AUDIT])
-//           - cash_records pada/setelah balance_set_at
-//           +/- transfers pada/setelah balance_set_at
-//
-// Kalau balance_set_at null → saldo = 0, tandai needsSetup
 export function buildBankBalances(expenses, income, cashRecords, transfers, accounts) {
   const result = {}
 
@@ -42,6 +33,7 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     return new Date(tanggal + 'T00:00:00') >= baselineDate
   }
 
+  // Income → tambah saldo bank tujuan
   income.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -49,6 +41,7 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
+  // Expenses → kurangi saldo bank
   expenses.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -56,13 +49,27 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
+  // Cash records (tarik tunai):
+  //   - Kurangi saldo bank asal (kolom `bank`)
+  //   - Tambah saldo Cash user yang sama
   cashRecords.forEach(r => {
-    if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
+    if (!r.user_id || !r.bank) return
+    const jumlah = Number(r.nilai) || 0
+
+    // Kurangi bank asal
+    if (onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
-      result[r.user_id][r.bank].saldo -= Number(r.nilai) || 0
+      result[r.user_id][r.bank].saldo -= jumlah
+    }
+
+    // Tambah Cash — cek baseline Cash user ini
+    if (onOrAfterBaseline(r.tanggal, r.user_id, 'Cash')) {
+      ensure(r.user_id, 'Cash')
+      result[r.user_id]['Cash'].saldo += jumlah
     }
   })
 
+  // Transfers → kurangi from, tambah to
   transfers.forEach(r => {
     if (r.from_user && r.from_bank && onOrAfterBaseline(r.tanggal, r.from_user, r.from_bank)) {
       ensure(r.from_user, r.from_bank)
@@ -160,7 +167,6 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  // Pakai expenses (tanpa AUDIT) — dengan sistem baseline, [AUDIT] lama tidak relevan lagi
   const bankBalances = buildBankBalances(expenses, income, cashRecords, transfers, accounts)
 
   function getUserName(userId) {
