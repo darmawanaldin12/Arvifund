@@ -5,6 +5,7 @@ import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
+import { useAmountInput } from '../../hooks/useAmountInput'
 import {
   TrendingDown, TrendingUp, Landmark, Bot, PenLine,
   Mic, MicOff, Camera, Image, Trash2, X, Check,
@@ -77,6 +78,9 @@ function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, erro
   const fromName = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName   = profiles.find(p => p.id === form.to_user)?.username   || ''
 
+  // Live amount formatting untuk transfer jumlah
+  const transferAmt = useAmountInput(form.jumlah, v => setF('jumlah', v))
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onCancel()}>
@@ -138,14 +142,28 @@ function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, erro
         )}
         <div className="form-group">
           <label className="form-label">Jumlah</label>
-          <input className="form-input" type="number" inputMode="numeric" placeholder="0" value={form.jumlah} onChange={e => setF('jumlah', e.target.value)} min="0" />
+          <input
+            className="form-input"
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
+            value={transferAmt.display}
+            onChange={transferAmt.onChange}
+            onKeyDown={transferAmt.onKeyDown}
+            style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
+          />
+          {transferAmt.formatted && (
+            <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: transferAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
+              {transferAmt.formatted}
+            </div>
+          )}
         </div>
         <div className="form-group">
           <label className="form-label">Catatan (opsional)</label>
           <input className="form-input" type="text" placeholder="Contoh: buat belanja bulan ini" value={form.catatan || ''} onChange={e => setF('catatan', e.target.value)} />
         </div>
         {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-        <button onClick={() => onSave(form)} disabled={saving} className="btn btn-primary btn-full"
+        <button onClick={() => onSave({ ...form, jumlah: form.jumlah })} disabled={saving} className="btn btn-primary btn-full"
           style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <ArrowLeftRight size={18} />{saving ? 'Menyimpan...' : 'Simpan Transfer'}
         </button>
@@ -195,6 +213,13 @@ export default function InputPage() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })) }
   function getBulan(tgl) { if (!tgl) return ''; return BULAN_ORDER[new Date(tgl + 'T00:00:00').getMonth()] }
 
+  // ── Live amount formatting ──
+  const manualAmt  = useAmountInput(form.total, v => setF('total', v))
+  const confirmAmt = useAmountInput(
+    parsedResult?.total ?? '',
+    v => setParsedResult(p => ({ ...p, total: v }))
+  )
+
   function showToast(tipeVal, amount) {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ show: true, tipe: tipeVal, amount })
@@ -212,19 +237,16 @@ export default function InputPage() {
       if (isShared) {
         window.history.replaceState({}, '', '/input')
 
-        // Baca foto dari chunked cookies yang dikirim oleh /api/share-target
         try {
           const cookies = parseCookies()
           const numChunks = parseInt(cookies['arvifund-share-chunks'] || '0', 10)
 
           if (numChunks > 0) {
-            // Gabungkan semua chunk jadi dataUrl
             let dataUrl = ''
             for (let i = 0; i < numChunks; i++) {
               dataUrl += cookies[`arvifund-share-${i}`] || ''
             }
 
-            // Hapus semua cookies
             deleteCookie('arvifund-share-chunks')
             for (let i = 0; i < numChunks; i++) deleteCookie(`arvifund-share-${i}`)
 
@@ -241,7 +263,6 @@ export default function InputPage() {
         } catch (_) {}
       }
 
-      // Fallback: share teks/url dari app lain
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
@@ -266,53 +287,7 @@ export default function InputPage() {
       const userList = (profiles || []).map(p => ({ id: p.id, username: p.username }))
       const knownUsernames = (profiles || []).map(p => p.username?.toLowerCase()).filter(Boolean)
 
-      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk Arvifund. Ekstrak data transaksi dari kalimat bahasa natural atau foto struk menjadi JSON.
-Hari ini: ${today}.
-
-=== TIPE TRANSAKSI (pilih salah satu) ===
-"expense"  → pengeluaran / belanja / bayar sesuatu / transfer ke orang lain di luar keluarga
-"income"   → pemasukan / gaji / dapat uang
-"cash"     → KHUSUS tarik tunai / ambil uang ATM
-"transfer" → KHUSUS pindah dana antar rekening atau antar anggota keluarga Arvifund
-
-=== ATURAN KRITIS: KAPAN PAKAI "transfer" vs "expense" ===
-Gunakan "transfer" HANYA jika penerima adalah salah satu user terdaftar di Arvifund: ${JSON.stringify(knownUsernames)}
-Jika penerima adalah orang lain (teman, warung, tukang, siapapun yang BUKAN user Arvifund) → gunakan "expense", BUKAN "transfer".
-
-CONTOH BENAR:
-✅ "transfer 500rb ke solikhatun" → tipe: "transfer" (solikhatun = user Arvifund)
-✅ "kirim 200rb ke aldin BCA" → tipe: "transfer" (aldin = user Arvifund)
-✅ "pindahin 300rb dari BCA ke Mandiri" → tipe: "transfer" (pindah rekening sendiri)
-✅ "kasih uang ke solikhatun 100rb" → tipe: "transfer"
-❌ "transfer 50rb ke warung bu siti" → tipe: "expense" (bu siti BUKAN user Arvifund)
-❌ "kirim 100rb ke teman" → tipe: "expense" (teman BUKAN user Arvifund)
-❌ "bayar tukang 500rb" → tipe: "expense"
-❌ "transfer pulsa ke adik 50rb" → tipe: "expense" (adik BUKAN user Arvifund)
-
-=== USER ===
-Daftar user Arvifund: ${JSON.stringify(userList)}
-User yang login: ${user?.id} (${profiles?.find(p => p.id === user?.id)?.username || ''})
-
-Prefix cepat:
-"a ..." atau "a:" → pengirim/user = user dengan username mulai "al"
-"s ..." atau "s:" → pengirim/user = user dengan username mulai "sol"
-
-=== FORMAT OUTPUT ===
-Untuk tipe expense/income/cash:
-{"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string","user_id":"uuid"}
-
-Untuk tipe transfer:
-{"tipe":"transfer","tanggal":"YYYY-MM-DD","from_user":"uuid","to_user":"uuid","from_bank":"string","to_bank":"string","jumlah":number,"catatan":"string"}
-
-Aturan:
-- tanggal: YYYY-MM-DD, default hari ini jika tidak disebutkan
-- total / jumlah: angka murni (50000, bukan "50rb")
-- kategori: hanya untuk expense, dari: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}
-- bank / from_bank / to_bank: dari ${JSON.stringify(BANK_LIST)}
-- metode: dari ${JSON.stringify(METODE_LIST)}
-- Jika transfer dan from_user tidak disebutkan, gunakan user yang login
-- Jika transfer internal (pindah rekening sendiri), from_user = to_user = user yang login
-- Kembalikan HANYA JSON tanpa markdown`
+      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk Arvifund. Ekstrak data transaksi dari kalimat bahasa natural atau foto struk menjadi JSON.\nHari ini: ${today}.\n\n=== TIPE TRANSAKSI (pilih salah satu) ===\n"expense"  → pengeluaran / belanja / bayar sesuatu / transfer ke orang lain di luar keluarga\n"income"   → pemasukan / gaji / dapat uang\n"cash"     → KHUSUS tarik tunai / ambil uang ATM\n"transfer" → KHUSUS pindah dana antar rekening atau antar anggota keluarga Arvifund\n\n=== ATURAN KRITIS: KAPAN PAKAI "transfer" vs "expense" ===\nGunakan "transfer" HANYA jika penerima adalah salah satu user terdaftar di Arvifund: ${JSON.stringify(knownUsernames)}\nJika penerima adalah orang lain (teman, warung, tukang, siapapun yang BUKAN user Arvifund) → gunakan "expense", BUKAN "transfer".\n\nCONTOH BENAR:\n✅ "transfer 500rb ke solikhatun" → tipe: "transfer" (solikhatun = user Arvifund)\n✅ "kirim 200rb ke aldin BCA" → tipe: "transfer" (aldin = user Arvifund)\n✅ "pindahin 300rb dari BCA ke Mandiri" → tipe: "transfer" (pindah rekening sendiri)\n✅ "kasih uang ke solikhatun 100rb" → tipe: "transfer"\n❌ "transfer 50rb ke warung bu siti" → tipe: "expense" (bu siti BUKAN user Arvifund)\n❌ "kirim 100rb ke teman" → tipe: "expense" (teman BUKAN user Arvifund)\n❌ "bayar tukang 500rb" → tipe: "expense"\n❌ "transfer pulsa ke adik 50rb" → tipe: "expense" (adik BUKAN user Arvifund)\n\n=== USER ===\nDaftar user Arvifund: ${JSON.stringify(userList)}\nUser yang login: ${user?.id} (${profiles?.find(p => p.id === user?.id)?.username || ''})\n\nPrefix cepat:\n"a ..." atau "a:" → pengirim/user = user dengan username mulai "al"\n"s ..." atau "s:" → pengirim/user = user dengan username mulai "sol"\n\n=== FORMAT OUTPUT ===\nUntuk tipe expense/income/cash:\n{"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string","user_id":"uuid"}\n\nUntuk tipe transfer:\n{"tipe":"transfer","tanggal":"YYYY-MM-DD","from_user":"uuid","to_user":"uuid","from_bank":"string","to_bank":"string","jumlah":number,"catatan":"string"}\n\nAturan:\n- tanggal: YYYY-MM-DD, default hari ini jika tidak disebutkan\n- total / jumlah: angka murni (50000, bukan "50rb")\n- kategori: hanya untuk expense, dari: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}\n- bank / from_bank / to_bank: dari ${JSON.stringify(BANK_LIST)}\n- metode: dari ${JSON.stringify(METODE_LIST)}\n- Jika transfer dan from_user tidak disebutkan, gunakan user yang login\n- Jika transfer internal (pindah rekening sendiri), from_user = to_user = user yang login\n- Kembalikan HANYA JSON tanpa markdown`
 
       const parts = activeFile
         ? [{ inlineData: { mimeType: activeFile.type, data: await fileToBase64(activeFile) } }, { text: `${systemInstruction}\n\nEkstrak dari struk. Catatan: "${activeText}"` }]
@@ -585,7 +560,7 @@ Aturan:
             { label: 'Tanggal', value: parsedResult.tanggal },
             { label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant', value: parsedResult.toko || '—' },
             { label: 'Uraian', value: parsedResult.uraian || '—' },
-            { label: 'Jumlah', value: `Rp ${parseFloat(parsedResult.total || 0).toLocaleString('id-ID')}`, bold: true, color: tipeColorConfirm },
+            { label: 'Jumlah', isAmountInput: true },
             ...(parsedResult.tipe === 'expense' ? [{ label: 'Kategori', value: parsedResult.kategori || 'Lainnya' }] : []),
             { label: 'Bank / Dompet', value: parsedResult.bank || 'Cash' },
             { label: 'Metode', value: parsedResult.metode || 'Cash' },
@@ -593,7 +568,36 @@ Aturan:
           ].map((row, i, arr) => (
             <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <span style={{ color: 'var(--text3)' }}>{row.label}</span>
-              {row.isUserSelect ? (
+              {row.isAmountInput ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={confirmAmt.display}
+                    onChange={confirmAmt.onChange}
+                    onKeyDown={confirmAmt.onKeyDown}
+                    style={{
+                      background: 'var(--surface)',
+                      color: tipeColorConfirm,
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textAlign: 'right',
+                      width: 140,
+                      letterSpacing: '-0.01em',
+                    }}
+                  />
+                  {confirmAmt.formatted && (
+                    <span style={{ fontSize: 10, color: tipeColorConfirm, opacity: 0.7 }}>
+                      {confirmAmt.formatted}
+                    </span>
+                  )}
+                </div>
+              ) : row.isUserSelect ? (
                 <select value={parsedResult.user_id} onChange={e => setParsedResult(p => ({ ...p, user_id: e.target.value }))} style={{ background: 'var(--surface)', color: 'var(--text1)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}>
                   <option value="">Pilih User</option>
                   {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
@@ -730,7 +734,29 @@ Aturan:
               <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
               <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Sumber' : tipe === 'cash' ? 'Lokasi ATM' : 'Toko / Merchant'}</label><input className="form-input" type="text" placeholder={tipe === 'income' ? 'Nama perusahaan' : tipe === 'cash' ? 'Nama ATM / lokasi' : 'Nama toko'} value={form.toko} onChange={e => setF('toko', e.target.value)} /></div>
               <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Keterangan' : 'Uraian / Items'}</label><input className="form-input" type="text" placeholder="Deskripsi transaksi" value={form.uraian} onChange={e => setF('uraian', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label><input className="form-input" type="number" inputMode="numeric" placeholder="0" value={form.total} onChange={e => setF('total', e.target.value)} required min="0" /></div>
+              <div className="form-group">
+                <label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={manualAmt.display}
+                  onChange={manualAmt.onChange}
+                  onKeyDown={manualAmt.onKeyDown}
+                  style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
+                />
+                {manualAmt.formatted && (
+                  <div style={{
+                    marginTop: 6, fontSize: 20, fontWeight: 800,
+                    color: manualAmt.previewColor,
+                    textAlign: 'center', letterSpacing: '-0.02em',
+                    transition: 'color 0.2s',
+                  }}>
+                    {manualAmt.formatted}
+                  </div>
+                )}
+              </div>
               {tipe === 'expense' && (<div className="form-group"><label className="form-label">Kategori</label><select className="form-select" value={form.kategori} onChange={e => setF('kategori', e.target.value)}><option value="">Pilih Kategori</option>{KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}</select></div>)}
               {tipe !== 'cash' && (<div className="form-group"><label className="form-label">Metode</label><select className="form-select" value={form.metode} onChange={e => setF('metode', e.target.value)}>{METODE_LIST.map(m => <option key={m}>{m}</option>)}</select></div>)}
               <div className="form-group"><label className="form-label">Bank / Dompet</label><select className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)}>{BANK_LIST.map(b => <option key={b}>{b}</option>)}</select></div>
