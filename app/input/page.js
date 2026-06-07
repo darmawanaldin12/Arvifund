@@ -5,8 +5,11 @@ import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
+import { buildSystemPrompt } from '../../lib/ai-prompt'
 import { useAmountInput } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
+import BottomSheet, { SavedToast } from '../../components/input/BottomSheet'
+import TransferConfirmPopup from '../../components/input/TransferConfirmPopup'
 import {
   TrendingDown, TrendingUp, Landmark, Bot, PenLine,
   Mic, MicOff, Camera, Image, Trash2, X, Check,
@@ -24,175 +27,8 @@ const TIPE_LIST = [
   { id: 'cash',     label: 'Tarik Tunai', color: 'var(--yellow)', Icon: Landmark },
 ]
 
-const BANK_BY_USER = {
-  '9f5a9e66-a47e-4cf1-bfe6-107da0574a2e': ['BCA', 'Mandiri', 'BRI', 'Cash'],
-  '42b635cc-a32d-4b15-95d6-d9afb504a850': ['BCA', 'Mandiri', 'Cash'],
-}
-const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
-
 const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
 const SHARE_CACHE_KEY  = '/share-image-pending'
-
-// Bottom nav height — popup harus di atas ini
-const BOTTOM_NAV_H = 60
-
-// ── Toast ──────────────────────────────────────────────────────────────
-function SavedToast({ show, tipe, amount }) {
-  if (!show) return null
-  const label = tipe === 'income' ? 'Pemasukan' : tipe === 'cash' ? 'Tarik Tunai' : tipe === 'transfer' ? 'Transfer' : 'Pengeluaran'
-  const color = tipe === 'income' ? '#10b981' : tipe === 'cash' ? '#f59e0b' : tipe === 'transfer' ? 'var(--accent)' : '#f43f5e'
-  const Icon  = tipe === 'income' ? TrendingUp : tipe === 'cash' ? Landmark : tipe === 'transfer' ? ArrowLeftRight : TrendingDown
-  return (
-    <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, animation: 'toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards', pointerEvents: 'none' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '12px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', minWidth: 260, maxWidth: 'calc(100vw - 32px)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${color}18`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Check size={16} color={color} strokeWidth={2.5} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon size={14} color={color} />{label} tersimpan
-          </div>
-          {amount && <div style={{ fontSize: 12, color: 'var(--text3)' }}>Rp {Number(amount).toLocaleString('id-ID')}</div>}
-        </div>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 3, borderRadius: '0 0 16px 16px', background: color, opacity: 0.5, animation: 'toastProgress 2.5s linear 0.1s forwards', width: '100%' }} />
-      </div>
-    </div>
-  )
-}
-
-// ── Sheet Popup wrapper — selalu di atas bottom nav ────────────────────
-// Gunakan position:fixed, bottom = BOTTOM_NAV_H, bukan flex-end ke bottom layar.
-// Ini mencegah popup tertutup bottom nav iOS saat scroll bounce.
-function BottomSheet({ onBackdropClick, children }) {
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1100,
-        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-      }}
-      onClick={e => e.target === e.currentTarget && onBackdropClick?.()}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          bottom: BOTTOM_NAV_H,
-          left: 0, right: 0,
-          margin: '0 auto',
-          maxWidth: 560,
-          maxHeight: `calc(100dvh - ${BOTTOM_NAV_H}px - 24px)`,
-          background: 'var(--surface)',
-          borderRadius: '20px 20px 0 0',
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
-          WebkitOverflowScrolling: 'touch',
-          padding: '20px 20px 24px',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ── Transfer Confirm Popup ────────────────────────────────────────────────
-function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, error }) {
-  const [form, setForm] = useState({ ...result })
-  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const fromBanks = form.from_user ? (BANK_BY_USER[form.from_user] || DEFAULT_BANKS) : DEFAULT_BANKS
-  const toBanks   = form.to_user   ? (BANK_BY_USER[form.to_user]   || DEFAULT_BANKS) : DEFAULT_BANKS
-  const isInternal = form.from_user === form.to_user && form.from_user !== ''
-  const fromName = profiles.find(p => p.id === form.from_user)?.username || ''
-  const toName   = profiles.find(p => p.id === form.to_user)?.username   || ''
-
-  const transferAmt = useAmountInput(form.jumlah, v => setF('jumlah', v))
-
-  return (
-    <BottomSheet onBackdropClick={onCancel}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bot size={22} color="var(--accent)" />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Transfer Terdeteksi</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Periksa detail transfer</div>
-          </div>
-        </div>
-        <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={20} /></button>
-      </div>
-      <div className="form-group">
-        <label className="form-label">Tanggal</label>
-        <input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
-        <div>
-          <label className="form-label">Dari</label>
-          <select className="form-select" value={form.from_user} onChange={e => { const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS; setForm(f => ({ ...f, from_user: e.target.value, from_bank: b[0] || '' })) }}>
-            <option value="">Pilih pengirim</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-          </select>
-        </div>
-        <div style={{ paddingBottom: 10, color: 'var(--text3)' }}><ArrowLeftRight size={16} /></div>
-        <div>
-          <label className="form-label">Ke</label>
-          <select className="form-select" value={form.to_user} onChange={e => { const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS; setForm(f => ({ ...f, to_user: e.target.value, to_bank: b[0] || '' })) }}>
-            <option value="">Pilih penerima</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
-        <div>
-          <label className="form-label">Rekening asal</label>
-          <select className="form-select" value={form.from_bank} onChange={e => setF('from_bank', e.target.value)} disabled={!form.from_user}>
-            {!form.from_user && <option value="">Pilih pengirim dulu</option>}
-            {fromBanks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-        <div style={{ paddingBottom: 10, color: 'var(--text3)' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
-        </div>
-        <div>
-          <label className="form-label">Rekening tujuan</label>
-          <select className="form-select" value={form.to_bank} onChange={e => setF('to_bank', e.target.value)} disabled={!form.to_user}>
-            {!form.to_user && <option value="">Pilih penerima dulu</option>}
-            {toBanks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-      </div>
-      {form.from_user && form.to_user && form.from_bank && form.to_bank && (
-        <div style={{ padding: '8px 12px', marginBottom: 14, background: isInternal ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)', border: `1px solid ${isInternal ? 'rgba(245,158,11,0.3)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, fontSize: 12, color: 'var(--text2)' }}>
-          {isInternal ? `Pindah rekening ${fromName}: ${form.from_bank} \u2192 ${form.to_bank}` : `${fromName} (${form.from_bank}) \u2192 ${toName} (${form.to_bank})`}
-        </div>
-      )}
-      <div className="form-group">
-        <label className="form-label">Jumlah</label>
-        <input
-          className="form-input"
-          type="text"
-          inputMode="numeric"
-          placeholder="0"
-          value={transferAmt.display}
-          onChange={transferAmt.onChange}
-          onKeyDown={transferAmt.onKeyDown}
-          style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
-        />
-        {transferAmt.formatted && (
-          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: transferAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
-            {transferAmt.formatted}
-          </div>
-        )}
-      </div>
-      <div className="form-group">
-        <label className="form-label">Catatan (opsional)</label>
-        <input className="form-input" type="text" placeholder="Contoh: buat belanja bulan ini" value={form.catatan || ''} onChange={e => setF('catatan', e.target.value)} />
-      </div>
-      {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-      <button onClick={() => onSave({ ...form, jumlah: form.jumlah })} disabled={saving} className="btn btn-primary btn-full"
-        style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <ArrowLeftRight size={18} />{saving ? 'Menyimpan...' : 'Simpan Transfer'}
-      </button>
-    </BottomSheet>
-  )
-}
 
 // ── Main ───────────────────────────────────────────────────────────────────
 export default function InputPage() {
@@ -243,12 +79,8 @@ export default function InputPage() {
     v => setParsedResult(p => ({ ...p, total: v }))
   )
 
-  // Tab order untuk menentukan arah slide
   const TAB_ORDER = { ai: 0, manual: 1 }
-  function handleModeChange(newMode) {
-    setPrevMode(mode)
-    setMode(newMode)
-  }
+  function handleModeChange(newMode) { setPrevMode(mode); setMode(newMode) }
   const tabDirection = TAB_ORDER[mode] > TAB_ORDER[prevMode] ? 'left' : 'right'
 
   function showToast(tipeVal, amount) {
@@ -303,10 +135,8 @@ export default function InputPage() {
     if (!activeText.trim() && !activeFile) return
     setAiLoading(true); setError('')
     try {
-      const userList = (profiles || []).map(p => ({ id: p.id, username: p.username }))
-      const knownUsernames = (profiles || []).map(p => p.username?.toLowerCase()).filter(Boolean)
-
-      const systemInstruction = `Kamu adalah asisten keuangan pintar untuk Arvifund. Ekstrak data transaksi dari kalimat bahasa natural atau foto struk menjadi JSON.\nHari ini: ${today}.\n\n=== TIPE TRANSAKSI (pilih salah satu) ===\n"expense"  \u2192 pengeluaran / belanja / bayar sesuatu / transfer ke orang lain di luar keluarga\n"income"   \u2192 pemasukan / gaji / dapat uang\n"cash"     \u2192 KHUSUS tarik tunai / ambil uang ATM\n"transfer" \u2192 KHUSUS pindah dana antar rekening atau antar anggota keluarga Arvifund\n\n=== ATURAN KRITIS: KAPAN PAKAI "transfer" vs "expense" ===\nGunakan "transfer" HANYA jika penerima adalah salah satu user terdaftar di Arvifund: ${JSON.stringify(knownUsernames)}\nJika penerima adalah orang lain (teman, warung, tukang, siapapun yang BUKAN user Arvifund) \u2192 gunakan "expense", BUKAN "transfer".\n\nCONTOH BENAR:\n\u2705 "transfer 500rb ke solikhatun" \u2192 tipe: "transfer" (solikhatun = user Arvifund)\n\u2705 "kirim 200rb ke aldin BCA" \u2192 tipe: "transfer" (aldin = user Arvifund)\n\u2705 "pindahin 300rb dari BCA ke Mandiri" \u2192 tipe: "transfer" (pindah rekening sendiri)\n\u2705 "kasih uang ke solikhatun 100rb" \u2192 tipe: "transfer"\n\u274c "transfer 50rb ke warung bu siti" \u2192 tipe: "expense" (bu siti BUKAN user Arvifund)\n\u274c "kirim 100rb ke teman" \u2192 tipe: "expense" (teman BUKAN user Arvifund)\n\u274c "bayar tukang 500rb" \u2192 tipe: "expense"\n\u274c "transfer pulsa ke adik 50rb" \u2192 tipe: "expense" (adik BUKAN user Arvifund)\n\n=== USER ===\nDaftar user Arvifund: ${JSON.stringify(userList)}\nUser yang login: ${user?.id} (${profiles?.find(p => p.id === user?.id)?.username || ''})\n\nPrefix cepat:\n"a ..." atau "a:" \u2192 pengirim/user = user dengan username mulai "al"\n"s ..." atau "s:" \u2192 pengirim/user = user dengan username mulai "sol"\n\n=== FORMAT OUTPUT ===\nUntuk tipe expense/income/cash:\n{"tipe":"expense","tanggal":"YYYY-MM-DD","toko":"string","uraian":"string","total":number,"kategori":"string","metode":"string","bank":"string","user_id":"uuid"}\n\nUntuk tipe transfer:\n{"tipe":"transfer","tanggal":"YYYY-MM-DD","from_user":"uuid","to_user":"uuid","from_bank":"string","to_bank":"string","jumlah":number,"catatan":"string"}\n\n=== ATURAN URAIAN OTOMATIS ===\nField "uraian" HARUS diisi dengan PRODUK/LAYANAN yang dibeli, BUKAN metode pembayaran.\nJangan pernah isi uraian dengan "Pembayaran QRIS", "Transfer", "Bayar via QRIS", dll.\n\nLogika pengisian uraian:\n1. Jika ada nama toko/merchant yang jelas \u2192 simpulkan produk/layanannya dari nama toko:\n   - nama mengandung "barbershop/barber/pangkas/cukur" \u2192 uraian: "Potong Rambut"\n   - nama mengandung "dimsum/bakso/mie/nasi/warung/makan/resto/cafe/kopi/boba" \u2192 uraian: nama makanan/minuman tersebut\n   - nama mengandung "spbu/pertamina/shell/vivo/bensin/bbm" \u2192 uraian: "Bensin"\n   - nama mengandung "indomaret/alfamart/supermarket/minimarket" \u2192 uraian: "Belanja"\n   - nama mengandung "apotek/apotik/kimia farma/guardian" \u2192 uraian: "Obat"\n   - nama mengandung "grab/gojek/ojek" \u2192 uraian: "Ojek Online"\n   - nama mengandung "parkir" \u2192 uraian: "Parkir"\n   - nama mengandung "listrik/pln/air/pdam" \u2192 uraian: "Tagihan"\n2. Jika teks input sudah menyebut uraian secara eksplisit \u2192 gunakan itu\n3. Jika tidak ada informasi sama sekali \u2192 isi uraian dengan nama toko\n\nUntuk transfer m-banking:\n- Jika ada keterangan berita/pesan transfer \u2192 gunakan sebagai uraian\n- Contoh: "transfer 200rb traktir makan" \u2192 uraian: "Traktir Makan"\n- Jika tidak ada keterangan \u2192 uraian boleh kosong\n\nAturan lain:\n- tanggal: YYYY-MM-DD, default hari ini jika tidak disebutkan\n- total / jumlah: angka murni (50000, bukan "50rb")\n- kategori: hanya untuk expense, dari: ${JSON.stringify(KATEGORI_LIST.filter(k => k !== 'Pemasukan'))}\n- bank / from_bank / to_bank: dari ${JSON.stringify(BANK_LIST)}\n- metode: dari ${JSON.stringify(METODE_LIST)}\n- Jika transfer dan from_user tidak disebutkan, gunakan user yang login\n- Jika transfer internal (pindah rekening sendiri), from_user = to_user = user yang login\n- Kembalikan HANYA JSON tanpa markdown`
+      // System prompt diambil dari lib/ai-prompt.js — edit di sana untuk hemat token
+      const systemInstruction = buildSystemPrompt(profiles, today, user)
 
       const parts = activeFile
         ? [{ inlineData: { mimeType: activeFile.type, data: await fileToBase64(activeFile) } }, { text: `${systemInstruction}\n\nEkstrak dari struk. Catatan: "${activeText}"` }]
@@ -418,23 +248,14 @@ export default function InputPage() {
       setError(iosDevice ? 'Pastikan Safari terbaru (iOS 14.5+) dan izinkan mikrofon.' : 'Browser tidak mendukung voice. Gunakan Chrome atau Safari.')
       return
     }
-    if (isRecording) {
-      clearRecordingTimers()
-      try { recognitionRef.current?.stop() } catch (e) {}
-      return
-    }
+    if (isRecording) { clearRecordingTimers(); try { recognitionRef.current?.stop() } catch (e) {}; return }
     setError('')
     try {
       const rec = new SR()
-      rec.continuous      = false
-      rec.interimResults  = false
-      rec.lang            = 'id-ID'
-      rec.maxAlternatives = 1
+      rec.continuous = false; rec.interimResults = false; rec.lang = 'id-ID'; rec.maxAlternatives = 1
       rec.onstart = () => {
         setIsRecording(true); setError('')
-        safetyTimer.current = setTimeout(() => {
-          try { recognitionRef.current?.stop() } catch (_) {}
-        }, 10_000)
+        safetyTimer.current = setTimeout(() => { try { recognitionRef.current?.stop() } catch (_) {} }, 10_000)
       }
       rec.onresult = (e) => {
         let t = ''
@@ -450,8 +271,7 @@ export default function InputPage() {
         else if (e.error !== 'aborted')   setError('Error: ' + e.error)
       }
       rec.onend = () => { setIsRecording(false); clearRecordingTimers(); triggerAutoExtract() }
-      recognitionRef.current = rec
-      rec.start()
+      recognitionRef.current = rec; rec.start()
     } catch (err) { setError('Gagal mulai rekam: ' + err.message); setIsRecording(false) }
   }
 
@@ -546,6 +366,7 @@ export default function InputPage() {
     finally { setSaving(false) }
   }
 
+  // ── Loading Overlay ──────────────────────────────────────────────────────
   const loadingOverlay = aiLoading && !showConfirm && !showTransferConfirm ? (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
       {imagePreview ? (
@@ -598,8 +419,8 @@ export default function InputPage() {
         {[
           { label: 'Tipe', value: (<span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, color: tipeColorConfirm }}><TipeIconConfirm size={14} />{parsedResult.tipe === 'expense' ? 'Pengeluaran' : parsedResult.tipe === 'income' ? 'Pemasukan' : 'Tarik Tunai'}</span>) },
           { label: 'Tanggal', value: parsedResult.tanggal },
-          { label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant', value: parsedResult.toko || '\u2014' },
-          { label: 'Uraian', value: parsedResult.uraian || '\u2014' },
+          { label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant', value: parsedResult.toko || '—' },
+          { label: 'Uraian', value: parsedResult.uraian || '—' },
           { label: 'Jumlah', isAmountInput: true },
           ...(parsedResult.tipe === 'expense' ? [{ label: 'Kategori', value: parsedResult.kategori || 'Lainnya' }] : []),
           { label: 'Bank / Dompet', value: parsedResult.bank || 'Cash' },
@@ -610,17 +431,13 @@ export default function InputPage() {
             <span style={{ color: 'var(--text3)' }}>{row.label}</span>
             {row.isAmountInput ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                <input
-                  type="text" inputMode="numeric"
-                  value={confirmAmt.display}
-                  onChange={confirmAmt.onChange}
-                  onKeyDown={confirmAmt.onKeyDown}
-                  style={{ background: 'var(--surface)', color: tipeColorConfirm, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', outline: 'none', textAlign: 'right', width: 140, letterSpacing: '-0.01em' }}
-                />
+                <input type="text" inputMode="numeric" value={confirmAmt.display} onChange={confirmAmt.onChange} onKeyDown={confirmAmt.onKeyDown}
+                  style={{ background: 'var(--surface)', color: tipeColorConfirm, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', outline: 'none', textAlign: 'right', width: 140, letterSpacing: '-0.01em' }} />
                 {confirmAmt.formatted && (<span style={{ fontSize: 10, color: tipeColorConfirm, opacity: 0.7 }}>{confirmAmt.formatted}</span>)}
               </div>
             ) : row.isUserSelect ? (
-              <select value={parsedResult.user_id} onChange={e => setParsedResult(p => ({ ...p, user_id: e.target.value }))} style={{ background: 'var(--surface)', color: 'var(--text1)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}>
+              <select value={parsedResult.user_id} onChange={e => setParsedResult(p => ({ ...p, user_id: e.target.value }))}
+                style={{ background: 'var(--surface)', color: 'var(--text1)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}>
                 <option value="">Pilih User</option>
                 {(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
               </select>
@@ -639,7 +456,8 @@ export default function InputPage() {
         }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <PenLine size={15} /> Edit Manual
         </button>
-        <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <button type="button" className="btn btn-primary" onClick={handleConfirmSave} disabled={saving}
+          style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           {saving ? 'Menyimpan...' : <><Check size={15} /> Konfirmasi &amp; Simpan</>}
         </button>
       </div>
@@ -665,7 +483,7 @@ export default function InputPage() {
         {sharedFromApp && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--text2)', fontWeight: 600 }}>
             <Share2 size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
-            Foto diterima dari share \u2014 AI sedang membaca struk...
+            Foto diterima dari share — AI sedang membaca struk...
           </div>
         )}
 
@@ -682,19 +500,19 @@ export default function InputPage() {
           ))}
         </div>
 
-        {/* Tab content dengan animasi slide */}
+        {/* Tab content */}
         <div style={{ overflow: 'hidden' }}>
           <TabTransition tabKey={mode} direction={tabDirection}>
             {mode === 'ai' && (
               <div className="card">
                 <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>\ud83d\udca1 Contoh perintah AI:</div>
-                  <div>\u2022 <span style={{ color: 'var(--text1)' }}>Pengeluaran:</span> "beli bensin 50rb aldin BCA"</div>
-                  <div>\u2022 <span style={{ color: 'var(--text1)' }}>Pemasukan:</span> "gaji 5jt mandiri aldin"</div>
-                  <div>\u2022 <span style={{ color: 'var(--text1)' }}>Tarik tunai:</span> "tarik 200rb ATM BCA"</div>
-                  <div>\u2022 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Transfer ke Solikhatun/Aldin:</span> "transfer 500rb ke solikhatun"</div>
-                  <div>\u2022 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Pindah rekening:</span> "pindah 1jt BCA ke Mandiri"</div>
-                  <div style={{ marginTop: 4, color: 'var(--text3)', fontSize: 11 }}>\u26a0\ufe0f Transfer ke orang lain (bukan Aldin/Solikhatun) otomatis dicatat sebagai pengeluaran</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>💡 Contoh perintah AI:</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Pengeluaran:</span> "beli bensin 50rb aldin BCA"</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Pemasukan:</span> "gaji 5jt mandiri aldin"</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Tarik tunai:</span> "tarik 200rb ATM BCA"</div>
+                  <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Transfer ke Solikhatun/Aldin:</span> "transfer 500rb ke solikhatun"</div>
+                  <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Pindah rekening:</span> "pindah 1jt BCA ke Mandiri"</div>
+                  <div style={{ marginTop: 4, color: 'var(--text3)', fontSize: 11 }}>⚠️ Transfer ke orang lain (bukan Aldin/Solikhatun) otomatis dicatat sebagai pengeluaran</div>
                 </div>
 
                 <div className="form-group">
@@ -709,7 +527,7 @@ export default function InputPage() {
 
                 {iosDevice && (
                   <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-                    \ud83d\udcf1 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara \u2192 bicara \u2192 otomatis diproses. Rekaman berhenti otomatis setelah kamu diam atau maksimal 10 detik.
+                    📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses. Rekaman berhenti otomatis setelah kamu diam atau maksimal 10 detik.
                   </div>
                 )}
 
@@ -753,7 +571,7 @@ export default function InputPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
                   {TIPE_LIST.map(t => { const I = t.Icon; return (
                     <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{ padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`, background: tipe === t.id ? `${t.color}18` : 'var(--surface2)', color: tipe === t.id ? t.color : 'var(--text3)', fontWeight: 700, fontSize: 11, touchAction: 'manipulation', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><I size={22} />{t.label}</button>
-                  )})}  
+                  )})}
                 </div>
                 <form onSubmit={handleManualSubmit}>
                   <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
@@ -763,8 +581,7 @@ export default function InputPage() {
                     <label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label>
                     <input className="form-input" type="text" inputMode="numeric" placeholder="0"
                       value={manualAmt.display} onChange={manualAmt.onChange} onKeyDown={manualAmt.onKeyDown}
-                      style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
-                    />
+                      style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }} />
                     {manualAmt.formatted && (
                       <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: manualAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
                         {manualAmt.formatted}
