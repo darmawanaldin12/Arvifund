@@ -11,7 +11,7 @@ const DataContext = createContext(null)
 //   saldo[userId][bank] =
 //     income masuk ke bank ini
 //     - expenses yang pakai bank ini
-//     - cash_records (tarik tunai) dari bank ini
+//     - cash_records (tarik tunai) dari bank ini → kurangi bank asal, tambah Cash
 //     - transfers KELUAR dari bank ini (from_user=userId, from_bank=bank)
 //     + transfers MASUK ke bank ini (to_user=userId, to_bank=bank)
 export function buildBankBalances(expenses, income, cashRecords, transfers, profiles) {
@@ -35,9 +35,10 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, prof
     if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
   })
 
-  // Cash records (tarik tunai) → kurangi saldo bank asal
+  // Cash records (tarik tunai) → kurangi saldo bank asal, tambah saldo Cash
   cashRecords.forEach(r => {
     if (r.user_id && r.bank) add(r.user_id, r.bank, -(r.nilai || 0))
+    if (r.user_id)           add(r.user_id, 'Cash',  +(r.nilai || 0))
   })
 
   // Transfers → kurangi from, tambah to
