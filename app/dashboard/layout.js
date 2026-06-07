@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
-import BottomNav from '../../components/layout/BottomNav'
 import Sidebar from '../../components/layout/Sidebar'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
 
@@ -19,8 +18,7 @@ function AppShell({ children }) {
       <div className="app-main">
         {children}
       </div>
-      {/* Bottom Nav - mobile only */}
-      <BottomNav />
+      {/* BottomNav dipindah ke template.jsx agar tidak ikut animasi */}
     </div>
   )
 }
@@ -30,11 +28,9 @@ export default function DashboardLayout({ children }) {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    // Bug fix: tambahkan timeout fallback + catch error
-    // supaya tidak stuck di loading kalau getSession() gagal/lambat
     const timeout = setTimeout(() => {
       router.replace('/login')
-    }, 8000) // fallback 8 detik → redirect ke login
+    }, 8000)
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
