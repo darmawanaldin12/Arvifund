@@ -190,20 +190,33 @@ export default function InputPage() {
   useEffect(() => {
     async function handleShareTarget() {
       if (typeof window === 'undefined') return
-      if ('serviceWorker' in navigator) {
-        const swShare = sessionStorage.getItem('share-target-file')
-        if (swShare) {
-          sessionStorage.removeItem('share-target-file')
-          try {
-            const { url } = JSON.parse(swShare)
-            const res = await fetch(url)
-            const blob = await res.blob()
-            const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
-            setSharedFromApp(true); setMode('ai'); handleImageFile(file); return
-          } catch (_) {}
-        }
-      }
+
       const params = new URLSearchParams(window.location.search)
+      const isShared = params.get('shared') === '1'
+
+      // Ambil foto dari SW Cache Storage (dikirim via web share foto)
+      if (isShared && 'caches' in window) {
+        window.history.replaceState({}, '', '/input')
+        try {
+          const cache = await caches.open('arvifund-share-images-v2')
+          const cached = await cache.match('/share-image-pending')
+          if (cached) {
+            await cache.delete('/share-image-pending')
+            const { dataUrl } = await cached.json()
+            if (dataUrl) {
+              const res = await fetch(dataUrl)
+              const blob = await res.blob()
+              const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
+              setSharedFromApp(true)
+              setMode('ai')
+              handleImageFile(file)
+              return
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Fallback: share teks/url dari app lain
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
@@ -226,7 +239,6 @@ export default function InputPage() {
     setAiLoading(true); setError('')
     try {
       const userList = (profiles || []).map(p => ({ id: p.id, username: p.username }))
-      // Daftar nama user Arvifund (lowercase) untuk validasi transfer internal
       const knownUsernames = (profiles || []).map(p => p.username?.toLowerCase()).filter(Boolean)
 
       const systemInstruction = `Kamu adalah asisten keuangan pintar untuk Arvifund. Ekstrak data transaksi dari kalimat bahasa natural atau foto struk menjadi JSON.
