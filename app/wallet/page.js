@@ -214,7 +214,6 @@ function AccountSlider({ userId, userName, bankBalances, accounts, onSetSaldo, o
 function RiwayatDrawer({ account, userName, expenses, income, cashRecords, transfers, getUserName, periodIdx, periods, onClose }) {
   const theme = CARD_THEME[account.name] || CARD_THEME.default
 
-  // Filter transaksi sesuai periode & baseline akun ini
   const baselineDate = account.balance_set_at ? (() => {
     const d = new Date(account.balance_set_at)
     d.setHours(0, 0, 0, 0)
@@ -238,34 +237,28 @@ function RiwayatDrawer({ account, userName, expenses, income, cashRecords, trans
 
   const rows = []
 
-  // Income masuk ke akun ini
   income.forEach(r => {
     if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal)) {
       rows.push({ id: r.id, tanggal: r.tanggal, label: r.sumber || 'Pemasukan', sub: r.kategori || '', amount: r.jumlah, type: 'in' })
     }
   })
 
-  // Expenses dari akun ini
   expenses.forEach(r => {
     if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal)) {
       rows.push({ id: r.id, tanggal: r.tanggal, label: r.toko || 'Pengeluaran', sub: r.kategori || '', amount: r.nilai, type: 'out' })
     }
   })
 
-  // Cash records: kurangi bank asal atau tambah Cash
   cashRecords.forEach(r => {
     if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
-    // Jika akun ini adalah bank asal tarik tunai
     if (r.bank === account.name && r.user_id === account.user_id) {
       rows.push({ id: r.id + '_out', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `ke Cash`, amount: r.nilai, type: 'out' })
     }
-    // Jika akun ini adalah Cash, tarik tunai masuk
     if (account.name === 'Cash' && r.user_id === account.user_id) {
       rows.push({ id: r.id + '_in', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `dari ${r.bank}`, amount: r.nilai, type: 'in' })
     }
   })
 
-  // Transfers
   transfers.forEach(r => {
     if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
     if (r.from_user === account.user_id && r.from_bank === account.name) {
@@ -289,7 +282,6 @@ function RiwayatDrawer({ account, userName, expenses, income, cashRecords, trans
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
-        {/* Drawer header — ATM card mini */}
         <div style={{ background: theme.bg, borderRadius: '20px 20px 0 0', padding: '16px 20px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -302,7 +294,6 @@ function RiwayatDrawer({ account, userName, expenses, income, cashRecords, trans
               <div style={{ fontSize: 18, fontWeight: 800, color: account.saldo < 0 ? '#ff6b6b' : '#fff' }}>{fmtFull(account.saldo)}</div>
             </div>
           </div>
-          {/* In/Out summary */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
             <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 10px' }}>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Masuk</div>
@@ -318,8 +309,8 @@ function RiwayatDrawer({ account, userName, expenses, income, cashRecords, trans
           </button>
         </div>
 
-        {/* Transaction list */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
+        {/* Transaction list — padding bottom = bottom nav + safe area */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', paddingBottom: 'calc(60px + max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
           {rows.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>
               Belum ada transaksi di periode ini
@@ -371,7 +362,7 @@ function SetSaldoModal({ account, userName, onClose, onSaved }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px', paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px', paddingBottom: 'calc(60px + max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Set Saldo Aktual</div>
@@ -437,7 +428,7 @@ function TransferForm({ profiles, accounts, user, initial, onClose, onSaved, tit
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', padding: '20px 20px', paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', padding: '20px 20px', paddingBottom: 'calc(60px + max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <ArrowLeftRight size={20} color="var(--accent)" />
@@ -526,7 +517,7 @@ export default function WalletPage() {
   const [bioError, setBioError]             = useState('')
   const [setSaldoTarget, setSetSaldoTarget] = useState(null)
   const [setSaldoUser, setSetSaldoUser]     = useState(null)
-  const [historyAcc, setHistoryAcc]         = useState(null) // { ...acc, user_id, userName }
+  const [historyAcc, setHistoryAcc]         = useState(null)
 
   const users = profiles.filter(p => p.username)
 
@@ -571,7 +562,6 @@ export default function WalletPage() {
 
   return (
     <>
-      {/* Riwayat Drawer */}
       {historyAcc && (
         <RiwayatDrawer
           account={historyAcc}
@@ -587,7 +577,6 @@ export default function WalletPage() {
         />
       )}
 
-      {/* Set Saldo Modal */}
       {setSaldoTarget && (
         <SetSaldoModal
           account={setSaldoTarget}
@@ -597,7 +586,6 @@ export default function WalletPage() {
         />
       )}
 
-      {/* Transfer Modals */}
       {showAddModal && (
         <TransferForm profiles={profiles} accounts={accounts} user={user}
           onClose={() => setShowAddModal(false)} onSaved={handleSaveAdd}
