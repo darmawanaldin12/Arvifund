@@ -74,7 +74,7 @@ function AtmCard({ bankName, saldo, userName }) {
   )
 }
 
-// ── ATM Card Slider ─────────────────────────────────────────────────────────
+// ── ATM Card Slider ──────────────────────────────────────────────────────────────
 function AtmCardSlider({ userBanks, userName }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const sliderRef = useRef(null)
@@ -109,14 +109,13 @@ function AtmCardSlider({ userBanks, userName }) {
   )
 }
 
-// ── Cash Section — pakai bankBalances['Cash'] yang sudah include adjustment ──
+// ── Cash Section — saldo dari bankBalances agar selalu sync dengan adjustment ──
 function CashSection({ userId, bankBalances, cashRecords }) {
   const [expanded, setExpanded] = useState(false)
 
-  // Saldo cash dari bankBalances (sudah include audit adjustment)
+  // Ambil saldo Cash langsung dari bankBalances (sudah include semua adjustment)
   const sisaCash = (bankBalances[userId] || {})['Cash'] || 0
 
-  // Riwayat penarikan tunai untuk info detail
   const riwayat = [...cashRecords.filter(r => r.user_id === userId)]
     .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
@@ -151,7 +150,7 @@ function CashSection({ userId, bankBalances, cashRecords }) {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {r.alamat || r.kategori || 'Tarik Tunai'}
+                      {r.edited_note || r.alamat || r.kategori || 'Tarik Tunai'}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text3)' }}>{fmtTanggalShort(r.tanggal)}{r.bank ? ` · via ${r.bank}` : ''}</div>
                   </div>
@@ -166,7 +165,7 @@ function CashSection({ userId, bankBalances, cashRecords }) {
   )
 }
 
-// ── User Summary Card ───────────────────────────────────────────────────────
+// ── User Summary Card ────────────────────────────────────────────────────────────
 function UserSummary({ userId, userName, bankBalances, expenses, income, cashRecords }) {
   const initial = userName?.[0]?.toUpperCase() || '?'
   const isAldin = userName?.toLowerCase().includes('ald')
@@ -180,12 +179,10 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
   const myIncome   = income.filter(r => r.user_id === userId)
   const totalOut   = myExpenses.reduce((s, r) => s + (r.nilai  || 0), 0)
   const totalIn    = myIncome.reduce((s, r)   => s + (r.jumlah || 0), 0)
-  const net        = totalIn - totalOut
 
-  // Saldo bersih termasuk cash
-  const cashSaldo  = (bankBalances[userId] || {})['Cash'] || 0
-  const bankTotal  = userBanks.reduce((s, [, v]) => s + v, 0)
-  const totalNet   = bankTotal + cashSaldo
+  const cashSaldo = (bankBalances[userId] || {})['Cash'] || 0
+  const bankTotal = userBanks.reduce((s, [, v]) => s + v, 0)
+  const totalNet  = bankTotal + cashSaldo
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
@@ -198,7 +195,7 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
           <div style={{ fontSize: 11, color: 'var(--text3)' }}>Ringkasan keuangan</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>Saldo bersih</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>Total aset</div>
           <div style={{ fontSize: 14, fontWeight: 800, color: totalNet >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtFull(totalNet)}</div>
         </div>
       </div>
@@ -224,7 +221,7 @@ function UserSummary({ userId, userName, bankBalances, expenses, income, cashRec
   )
 }
 
-// ── Transfer Form ───────────────────────────────────────────────────────────
+// ── Transfer Form ────────────────────────────────────────────────────────────────
 function TransferForm({ profiles, user, initial, onClose, onSaved, title, submitLabel }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
   const [form, setForm] = useState(initial || {
@@ -335,10 +332,9 @@ function TransferForm({ profiles, user, initial, onClose, onSaved, title, submit
   )
 }
 
-// ── Main Page ───────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default function WalletPage() {
   const {
-    filteredExpenses, filteredIncome, filteredCashRecords,
     expenses, income, cashRecords, transfers,
     bankBalances,
     periodIdx, setPeriodIdx, periods,
