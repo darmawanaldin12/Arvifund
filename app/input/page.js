@@ -29,7 +29,6 @@ const BANK_BY_USER = {
 }
 const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
 
-// Nama cache harus selalu sinkron dengan SW_VERSION di sw.js
 const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
 const SHARE_CACHE_KEY  = '/share-image-pending'
 
@@ -186,6 +185,7 @@ export default function InputPage() {
   const imageFileRef     = useRef(null)
   const recognitionRef   = useRef(null)
   const autoExtractTimer = useRef(null)
+  const safetyTimer      = useRef(null)   // ← iOS safety: force-stop setelah 10 detik
 
   useEffect(() => { aiTextRef.current = aiText }, [aiText])
   useEffect(() => { imageFileRef.current = imageFile }, [imageFile])
@@ -214,50 +214,30 @@ export default function InputPage() {
   }
 
   // ── Web Share Target ──
-  // SW simpan gambar ke Cache API, halaman baca dari sana (bukan cookie)
   useEffect(() => {
     async function handleShareTarget() {
       if (typeof window === 'undefined') return
-
       const params = new URLSearchParams(window.location.search)
       const isShared = params.get('shared') === '1'
-
       if (isShared) {
         window.history.replaceState({}, '', '/input')
-
         try {
-          // Baca gambar dari Cache API yang disimpan SW
           const cache = await caches.open(SHARE_CACHE_NAME)
           const cached = await cache.match(SHARE_CACHE_KEY)
-
           if (cached) {
             const { dataUrl, timestamp } = await cached.json()
-
-            // Hapus dari cache agar tidak dipakai ulang
             await cache.delete(SHARE_CACHE_KEY)
-
-            // Tolak data lama (> 5 menit)
-            if (Date.now() - timestamp > 5 * 60 * 1000) {
-              console.warn('[Share] Data kedaluwarsa, diabaikan')
-              return
-            }
-
+            if (Date.now() - timestamp > 5 * 60 * 1000) return
             if (dataUrl && dataUrl.startsWith('data:')) {
               const res = await fetch(dataUrl)
               const blob = await res.blob()
               const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
-              setSharedFromApp(true)
-              setMode('ai')
-              handleImageFile(file)
-              return
+              setSharedFromApp(true); setMode('ai')
+              handleImageFile(file); return
             }
           }
-        } catch (err) {
-          console.error('[Share] Gagal baca cache:', err)
-        }
+        } catch (err) { console.error('[Share] Gagal baca cache:', err) }
       }
-
-      // Fallback: teks/url dari query string (share teks bukan gambar)
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
@@ -359,7 +339,23 @@ export default function InputPage() {
     finally { setSaving(false) }
   }
 
-  // ── Speech Recognition ──
+  // ── Speech Recognition ──────────────────────────────────────────────────
+  // Helper: clear semua timer terkait recording
+  function clearRecordingTimers() {
+    if (autoExtractTimer.current) clearTimeout(autoExtractTimer.current)
+    if (safetyTimer.current)      clearTimeout(safetyTimer.current)
+  }
+
+  // Helper: trigger auto-extract setelah recording selesai
+  function triggerAutoExtract() {
+    clearRecordingTimers()
+    autoExtractTimer.current = setTimeout(() => {
+      const t = aiTextRef.current
+      const f = imageFileRef.current
+      if (t.trim() || f) handleAIExtractRef.current(f, t)
+    }, 400)
+  }
+
   useEffect(() => {
     const ios = isIOS(); setIosDevice(ios)
     if (typeof window === 'undefined') return
@@ -367,10 +363,11 @@ export default function InputPage() {
     if (!SR) { setVoiceSupported(false); return }
     setVoiceSupported(true)
     return () => {
-      if (autoExtractTimer.current) clearTimeout(autoExtractTimer.current)
+      clearRecordingTimers()
       if (toastTimer.current) clearTimeout(toastTimer.current)
       try { recognitionRef.current?.abort() } catch (_) {}
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function toggleRecording() {
@@ -379,33 +376,64 @@ export default function InputPage() {
       setError(iosDevice ? 'Pastikan Safari terbaru (iOS 14.5+) dan izinkan mikrofon.' : 'Browser tidak mendukung voice. Gunakan Chrome atau Safari.')
       return
     }
-    if (isRecording) { try { recognitionRef.current?.stop() } catch (e) {}; setIsRecording(false); return }
+
+    // Stop manual
+    if (isRecording) {
+      clearRecordingTimers()
+      try { recognitionRef.current?.stop() } catch (e) {}
+      return
+    }
+
     setError('')
     try {
       const rec = new SR()
-      rec.continuous = false; rec.interimResults = false; rec.lang = 'id-ID'; rec.maxAlternatives = 1
-      rec.onstart  = () => { setIsRecording(true); setError('') }
+      rec.continuous      = false
+      rec.interimResults  = false
+      rec.lang            = 'id-ID'
+      rec.maxAlternatives = 1
+
+      rec.onstart = () => {
+        setIsRecording(true)
+        setError('')
+        // Safety timeout: iOS kadang stuck recording → force stop setelah 10 detik
+        safetyTimer.current = setTimeout(() => {
+          try { recognitionRef.current?.stop() } catch (_) {}
+        }, 10_000)
+      }
+
       rec.onresult = (e) => {
-        let t = ''; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + ' '
+        let t = ''
+        for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + ' '
         t = t.trim()
         setAiText(prev => { const next = prev ? `${prev} ${t}` : t; aiTextRef.current = next; return next })
       }
+
+      // onspeechend: dipanggil iOS saat speech berhenti terdeteksi
+      // lebih reliabel daripada onend untuk trigger extract di iOS
+      rec.onspeechend = () => {
+        try { recognitionRef.current?.stop() } catch (_) {}
+      }
+
       rec.onerror = (e) => {
         setIsRecording(false)
-        if (autoExtractTimer.current) clearTimeout(autoExtractTimer.current)
-        if (e.error === 'not-allowed') setError('Akses mikrofon ditolak.')
+        clearRecordingTimers()
+        if (e.error === 'not-allowed')  setError('Akses mikrofon ditolak.')
         else if (e.error === 'no-speech') setError('Tidak ada suara. Coba lagi.')
-        else if (e.error !== 'aborted') setError('Error: ' + e.error)
+        else if (e.error !== 'aborted')   setError('Error: ' + e.error)
       }
+
       rec.onend = () => {
         setIsRecording(false)
-        autoExtractTimer.current = setTimeout(() => {
-          const t = aiTextRef.current; const f = imageFileRef.current
-          if (t.trim() || f) handleAIExtractRef.current(f, t)
-        }, 300)
+        clearRecordingTimers()  // clear safety timer jika onend terpanggil normal
+        triggerAutoExtract()
       }
-      recognitionRef.current = rec; rec.start()
-    } catch (err) { setError('Gagal mulai rekam: ' + err.message); setIsRecording(false) }
+
+      recognitionRef.current = rec
+      rec.start()
+    } catch (err) {
+      setError('Gagal mulai rekam: ' + err.message)
+      setIsRecording(false)
+    }
   }
 
   function fileToBase64(file) {
@@ -566,31 +594,13 @@ export default function InputPage() {
               {row.isAmountInput ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <input
-                    type="text"
-                    inputMode="numeric"
+                    type="text" inputMode="numeric"
                     value={confirmAmt.display}
                     onChange={confirmAmt.onChange}
                     onKeyDown={confirmAmt.onKeyDown}
-                    style={{
-                      background: 'var(--surface)',
-                      color: tipeColorConfirm,
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      padding: '4px 8px',
-                      fontSize: 16,
-                      fontWeight: 800,
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      textAlign: 'right',
-                      width: 140,
-                      letterSpacing: '-0.01em',
-                    }}
+                    style={{ background: 'var(--surface)', color: tipeColorConfirm, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', outline: 'none', textAlign: 'right', width: 140, letterSpacing: '-0.01em' }}
                   />
-                  {confirmAmt.formatted && (
-                    <span style={{ fontSize: 10, color: tipeColorConfirm, opacity: 0.7 }}>
-                      {confirmAmt.formatted}
-                    </span>
-                  )}
+                  {confirmAmt.formatted && (<span style={{ fontSize: 10, color: tipeColorConfirm, opacity: 0.7 }}>{confirmAmt.formatted}</span>)}
                 </div>
               ) : row.isUserSelect ? (
                 <select value={parsedResult.user_id} onChange={e => setParsedResult(p => ({ ...p, user_id: e.target.value }))} style={{ background: 'var(--surface)', color: 'var(--text1)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}>
@@ -679,7 +689,7 @@ export default function InputPage() {
 
             {iosDevice && (
               <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-                📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses.
+                📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses. Rekaman berhenti otomatis setelah kamu diam atau maksimal 10 detik.
               </div>
             )}
 
@@ -723,7 +733,7 @@ export default function InputPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
               {TIPE_LIST.map(t => { const I = t.Icon; return (
                 <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{ padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`, background: tipe === t.id ? `${t.color}18` : 'var(--surface2)', color: tipe === t.id ? t.color : 'var(--text3)', fontWeight: 700, fontSize: 11, touchAction: 'manipulation', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><I size={22} />{t.label}</button>
-              )})}  
+              )})}
             </div>
             <form onSubmit={handleManualSubmit}>
               <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
@@ -731,23 +741,12 @@ export default function InputPage() {
               <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Keterangan' : 'Uraian / Items'}</label><input className="form-input" type="text" placeholder="Deskripsi transaksi" value={form.uraian} onChange={e => setF('uraian', e.target.value)} /></div>
               <div className="form-group">
                 <label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={manualAmt.display}
-                  onChange={manualAmt.onChange}
-                  onKeyDown={manualAmt.onKeyDown}
+                <input className="form-input" type="text" inputMode="numeric" placeholder="0"
+                  value={manualAmt.display} onChange={manualAmt.onChange} onKeyDown={manualAmt.onKeyDown}
                   style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
                 />
                 {manualAmt.formatted && (
-                  <div style={{
-                    marginTop: 6, fontSize: 20, fontWeight: 800,
-                    color: manualAmt.previewColor,
-                    textAlign: 'center', letterSpacing: '-0.02em',
-                    transition: 'color 0.2s',
-                  }}>
+                  <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: manualAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
                     {manualAmt.formatted}
                   </div>
                 )}
