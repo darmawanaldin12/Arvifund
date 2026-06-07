@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
 import { useAmountInput } from '../../hooks/useAmountInput'
+import TabTransition from '../../components/TabTransition'
 import {
   TrendingDown, TrendingUp, Landmark, Bot, PenLine,
   Mic, MicOff, Camera, Image, Trash2, X, Check,
@@ -163,6 +164,7 @@ function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, erro
 export default function InputPage() {
   const { user, profiles, loadData } = useData()
   const [mode, setMode]     = useState('ai')
+  const [prevMode, setPrevMode] = useState('ai')
   const [tipe, setTipe]     = useState('expense')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -185,7 +187,7 @@ export default function InputPage() {
   const imageFileRef     = useRef(null)
   const recognitionRef   = useRef(null)
   const autoExtractTimer = useRef(null)
-  const safetyTimer      = useRef(null)   // ← iOS safety: force-stop setelah 10 detik
+  const safetyTimer      = useRef(null)
 
   useEffect(() => { aiTextRef.current = aiText }, [aiText])
   useEffect(() => { imageFileRef.current = imageFile }, [imageFile])
@@ -206,6 +208,14 @@ export default function InputPage() {
     parsedResult?.total ?? '',
     v => setParsedResult(p => ({ ...p, total: v }))
   )
+
+  // Tab order untuk menentukan arah slide
+  const TAB_ORDER = { ai: 0, manual: 1 }
+  function handleModeChange(newMode) {
+    setPrevMode(mode)
+    setMode(newMode)
+  }
+  const tabDirection = TAB_ORDER[mode] > TAB_ORDER[prevMode] ? 'left' : 'right'
 
   function showToast(tipeVal, amount) {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -232,7 +242,7 @@ export default function InputPage() {
               const res = await fetch(dataUrl)
               const blob = await res.blob()
               const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
-              setSharedFromApp(true); setMode('ai')
+              setSharedFromApp(true); handleModeChange('ai')
               handleImageFile(file); return
             }
           }
@@ -241,7 +251,7 @@ export default function InputPage() {
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
-        setSharedFromApp(true); setMode('ai')
+        setSharedFromApp(true); handleModeChange('ai')
         const combined = [sharedText, sharedUrl].filter(Boolean).join(' ').trim()
         setAiText(combined); aiTextRef.current = combined
         window.history.replaceState({}, '', '/input')
@@ -340,13 +350,11 @@ export default function InputPage() {
   }
 
   // ── Speech Recognition ──────────────────────────────────────────────────
-  // Helper: clear semua timer terkait recording
   function clearRecordingTimers() {
     if (autoExtractTimer.current) clearTimeout(autoExtractTimer.current)
     if (safetyTimer.current)      clearTimeout(safetyTimer.current)
   }
 
-  // Helper: trigger auto-extract setelah recording selesai
   function triggerAutoExtract() {
     clearRecordingTimers()
     autoExtractTimer.current = setTimeout(() => {
@@ -376,14 +384,11 @@ export default function InputPage() {
       setError(iosDevice ? 'Pastikan Safari terbaru (iOS 14.5+) dan izinkan mikrofon.' : 'Browser tidak mendukung voice. Gunakan Chrome atau Safari.')
       return
     }
-
-    // Stop manual
     if (isRecording) {
       clearRecordingTimers()
       try { recognitionRef.current?.stop() } catch (e) {}
       return
     }
-
     setError('')
     try {
       const rec = new SR()
@@ -391,49 +396,29 @@ export default function InputPage() {
       rec.interimResults  = false
       rec.lang            = 'id-ID'
       rec.maxAlternatives = 1
-
       rec.onstart = () => {
-        setIsRecording(true)
-        setError('')
-        // Safety timeout: iOS kadang stuck recording → force stop setelah 10 detik
+        setIsRecording(true); setError('')
         safetyTimer.current = setTimeout(() => {
           try { recognitionRef.current?.stop() } catch (_) {}
         }, 10_000)
       }
-
       rec.onresult = (e) => {
         let t = ''
         for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + ' '
         t = t.trim()
         setAiText(prev => { const next = prev ? `${prev} ${t}` : t; aiTextRef.current = next; return next })
       }
-
-      // onspeechend: dipanggil iOS saat speech berhenti terdeteksi
-      // lebih reliabel daripada onend untuk trigger extract di iOS
-      rec.onspeechend = () => {
-        try { recognitionRef.current?.stop() } catch (_) {}
-      }
-
+      rec.onspeechend = () => { try { recognitionRef.current?.stop() } catch (_) {} }
       rec.onerror = (e) => {
-        setIsRecording(false)
-        clearRecordingTimers()
-        if (e.error === 'not-allowed')  setError('Akses mikrofon ditolak.')
+        setIsRecording(false); clearRecordingTimers()
+        if (e.error === 'not-allowed')    setError('Akses mikrofon ditolak.')
         else if (e.error === 'no-speech') setError('Tidak ada suara. Coba lagi.')
         else if (e.error !== 'aborted')   setError('Error: ' + e.error)
       }
-
-      rec.onend = () => {
-        setIsRecording(false)
-        clearRecordingTimers()  // clear safety timer jika onend terpanggil normal
-        triggerAutoExtract()
-      }
-
+      rec.onend = () => { setIsRecording(false); clearRecordingTimers(); triggerAutoExtract() }
       recognitionRef.current = rec
       rec.start()
-    } catch (err) {
-      setError('Gagal mulai rekam: ' + err.message)
-      setIsRecording(false)
-    }
+    } catch (err) { setError('Gagal mulai rekam: ' + err.message); setIsRecording(false) }
   }
 
   function fileToBase64(file) {
@@ -618,7 +603,7 @@ export default function InputPage() {
           <button type="button" className="btn btn-ghost" onClick={() => {
             setTipe(parsedResult.tipe || 'expense')
             setForm({ tanggal: parsedResult.tanggal || today, toko: parsedResult.toko || '', uraian: parsedResult.uraian || '', total: parsedResult.total ? String(parsedResult.total) : '', kategori: parsedResult.kategori || '', metode: parsedResult.metode || 'Cash', bank: parsedResult.bank || 'Cash', user_id: parsedResult.user_id || user?.id || '' })
-            setShowConfirm(false); setMode('manual')
+            setShowConfirm(false); handleModeChange('manual')
           }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <PenLine size={15} /> Edit Manual
           </button>
@@ -653,9 +638,10 @@ export default function InputPage() {
           </div>
         )}
 
+        {/* Tab switcher */}
         <div style={{ display: 'flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>
           {[{ id: 'ai', label: 'Input AI', Icon: Bot }, { id: 'manual', label: 'Manual', Icon: PenLine }].map(m => (
-            <button key={m.id} type="button" onClick={() => setMode(m.id)} style={{
+            <button key={m.id} type="button" onClick={() => handleModeChange(m.id)} style={{
               flex: 1, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: mode === m.id ? 'var(--accent)' : 'transparent',
               color: mode === m.id ? 'white' : 'var(--text3)',
@@ -665,103 +651,108 @@ export default function InputPage() {
           ))}
         </div>
 
-        {mode === 'ai' && (
-          <div className="card">
-            <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
-              <div style={{ fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>💡 Contoh perintah AI:</div>
-              <div>• <span style={{ color: 'var(--text1)' }}>Pengeluaran:</span> "beli bensin 50rb aldin BCA"</div>
-              <div>• <span style={{ color: 'var(--text1)' }}>Pemasukan:</span> "gaji 5jt mandiri aldin"</div>
-              <div>• <span style={{ color: 'var(--text1)' }}>Tarik tunai:</span> "tarik 200rb ATM BCA"</div>
-              <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Transfer ke Solikhatun/Aldin:</span> "transfer 500rb ke solikhatun"</div>
-              <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Pindah rekening:</span> "pindah 1jt BCA ke Mandiri"</div>
-              <div style={{ marginTop: 4, color: 'var(--text3)', fontSize: 11 }}>⚠️ Transfer ke orang lain (bukan Aldin/Solikhatun) otomatis dicatat sebagai pengeluaran</div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Ketik atau diktekan transaksi</label>
-              <textarea className="form-input" rows={4}
-                placeholder="Contoh: transfer 500rb ke solikhatun, atau beli bensin 50rb aldin BCA..."
-                value={aiText}
-                onChange={e => { setAiText(e.target.value); aiTextRef.current = e.target.value }}
-                style={{ resize: 'none', fontFamily: 'inherit', fontSize: 16 }}
-              />
-            </div>
-
-            {iosDevice && (
-              <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-                📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses. Rekaman berhenti otomatis setelah kamu diam atau maksimal 10 detik.
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-              <button type="button" onClick={toggleRecording} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: isRecording ? '2px solid var(--red)' : '1px solid var(--border)', background: isRecording ? 'rgba(244,63,94,0.1)' : 'var(--surface2)', color: isRecording ? 'var(--red)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation', animation: isRecording ? 'pulse-record 1.5s infinite' : 'none' }}>
-                {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
-                <span style={{ fontSize: 11, fontWeight: 700 }}>{isRecording ? 'Rekam...' : 'Suara'}</span>
-              </button>
-              <button type="button" onClick={() => document.getElementById('input-page-camera').click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: imageFile ? '2px solid var(--green)' : '1px solid var(--border)', background: imageFile ? 'rgba(16,185,129,0.1)' : 'var(--surface2)', color: imageFile ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
-                <Camera size={22} /><span style={{ fontSize: 11, fontWeight: 700 }}>Kamera</span>
-              </button>
-              <button type="button" onClick={() => document.getElementById('input-page-gallery').click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: imageFile ? '2px solid var(--green)' : '1px solid var(--border)', background: imageFile ? 'rgba(16,185,129,0.1)' : 'var(--surface2)', color: imageFile ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
-                <Image size={22} /><span style={{ fontSize: 11, fontWeight: 700 }}>Galeri</span>
-              </button>
-              <input id="input-page-camera" type="file" accept="image/*" capture="environment" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
-              <input id="input-page-gallery" type="file" accept="image/*" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
-            </div>
-
-            {imagePreview && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 16 }}>
-                <img src={imagePreview} alt="Struk" style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{imageFile?.name || 'Struk'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{imageFile ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB` : ''}</div>
+        {/* Tab content dengan animasi slide */}
+        <div style={{ overflow: 'hidden' }}>
+          <TabTransition tabKey={mode} direction={tabDirection}>
+            {mode === 'ai' && (
+              <div className="card">
+                <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>💡 Contoh perintah AI:</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Pengeluaran:</span> "beli bensin 50rb aldin BCA"</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Pemasukan:</span> "gaji 5jt mandiri aldin"</div>
+                  <div>• <span style={{ color: 'var(--text1)' }}>Tarik tunai:</span> "tarik 200rb ATM BCA"</div>
+                  <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Transfer ke Solikhatun/Aldin:</span> "transfer 500rb ke solikhatun"</div>
+                  <div>• <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Pindah rekening:</span> "pindah 1jt BCA ke Mandiri"</div>
+                  <div style={{ marginTop: 4, color: 'var(--text3)', fontSize: 11 }}>⚠️ Transfer ke orang lain (bukan Aldin/Solikhatun) otomatis dicatat sebagai pengeluaran</div>
                 </div>
-                <button type="button" onClick={() => { setImageFile(null); imageFileRef.current = null; setImagePreview('') }} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 4 }}><Trash2 size={20} /></button>
-              </div>
-            )}
 
-            {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+                <div className="form-group">
+                  <label className="form-label">Ketik atau diktekan transaksi</label>
+                  <textarea className="form-input" rows={4}
+                    placeholder="Contoh: transfer 500rb ke solikhatun, atau beli bensin 50rb aldin BCA..."
+                    value={aiText}
+                    onChange={e => { setAiText(e.target.value); aiTextRef.current = e.target.value }}
+                    style={{ resize: 'none', fontFamily: 'inherit', fontSize: 16 }}
+                  />
+                </div>
 
-            <button type="button" className="btn btn-primary btn-full" onClick={() => handleAIExtract()} disabled={aiLoading || (!aiText.trim() && !imageFile)}
-              style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Bot size={18} />{aiLoading ? 'Memproses...' : 'Ekstrak Data AI'}
-            </button>
-          </div>
-        )}
-
-        {mode === 'manual' && (
-          <div className="card">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
-              {TIPE_LIST.map(t => { const I = t.Icon; return (
-                <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{ padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`, background: tipe === t.id ? `${t.color}18` : 'var(--surface2)', color: tipe === t.id ? t.color : 'var(--text3)', fontWeight: 700, fontSize: 11, touchAction: 'manipulation', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><I size={22} />{t.label}</button>
-              )})}
-            </div>
-            <form onSubmit={handleManualSubmit}>
-              <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
-              <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Sumber' : tipe === 'cash' ? 'Lokasi ATM' : 'Toko / Merchant'}</label><input className="form-input" type="text" placeholder={tipe === 'income' ? 'Nama perusahaan' : tipe === 'cash' ? 'Nama ATM / lokasi' : 'Nama toko'} value={form.toko} onChange={e => setF('toko', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Keterangan' : 'Uraian / Items'}</label><input className="form-input" type="text" placeholder="Deskripsi transaksi" value={form.uraian} onChange={e => setF('uraian', e.target.value)} /></div>
-              <div className="form-group">
-                <label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label>
-                <input className="form-input" type="text" inputMode="numeric" placeholder="0"
-                  value={manualAmt.display} onChange={manualAmt.onChange} onKeyDown={manualAmt.onKeyDown}
-                  style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
-                />
-                {manualAmt.formatted && (
-                  <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: manualAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
-                    {manualAmt.formatted}
+                {iosDevice && (
+                  <div style={{ padding: '10px 12px', marginBottom: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                    📱 <strong>iPhone:</strong> Tap <Mic size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Suara → bicara → otomatis diproses. Rekaman berhenti otomatis setelah kamu diam atau maksimal 10 detik.
                   </div>
                 )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+                  <button type="button" onClick={toggleRecording} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: isRecording ? '2px solid var(--red)' : '1px solid var(--border)', background: isRecording ? 'rgba(244,63,94,0.1)' : 'var(--surface2)', color: isRecording ? 'var(--red)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation', animation: isRecording ? 'pulse-record 1.5s infinite' : 'none' }}>
+                    {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
+                    <span style={{ fontSize: 11, fontWeight: 700 }}>{isRecording ? 'Rekam...' : 'Suara'}</span>
+                  </button>
+                  <button type="button" onClick={() => document.getElementById('input-page-camera').click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: imageFile ? '2px solid var(--green)' : '1px solid var(--border)', background: imageFile ? 'rgba(16,185,129,0.1)' : 'var(--surface2)', color: imageFile ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
+                    <Camera size={22} /><span style={{ fontSize: 11, fontWeight: 700 }}>Kamera</span>
+                  </button>
+                  <button type="button" onClick={() => document.getElementById('input-page-gallery').click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 8px', borderRadius: 10, border: imageFile ? '2px solid var(--green)' : '1px solid var(--border)', background: imageFile ? 'rgba(16,185,129,0.1)' : 'var(--surface2)', color: imageFile ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' }}>
+                    <Image size={22} /><span style={{ fontSize: 11, fontWeight: 700 }}>Galeri</span>
+                  </button>
+                  <input id="input-page-camera" type="file" accept="image/*" capture="environment" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
+                  <input id="input-page-gallery" type="file" accept="image/*" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
+                </div>
+
+                {imagePreview && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 16 }}>
+                    <img src={imagePreview} alt="Struk" style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{imageFile?.name || 'Struk'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{imageFile ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB` : ''}</div>
+                    </div>
+                    <button type="button" onClick={() => { setImageFile(null); imageFileRef.current = null; setImagePreview('') }} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 4 }}><Trash2 size={20} /></button>
+                  </div>
+                )}
+
+                {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+
+                <button type="button" className="btn btn-primary btn-full" onClick={() => handleAIExtract()} disabled={aiLoading || (!aiText.trim() && !imageFile)}
+                  style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <Bot size={18} />{aiLoading ? 'Memproses...' : 'Ekstrak Data AI'}
+                </button>
               </div>
-              {tipe === 'expense' && (<div className="form-group"><label className="form-label">Kategori</label><select className="form-select" value={form.kategori} onChange={e => setF('kategori', e.target.value)}><option value="">Pilih Kategori</option>{KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}</select></div>)}
-              {tipe !== 'cash' && (<div className="form-group"><label className="form-label">Metode</label><select className="form-select" value={form.metode} onChange={e => setF('metode', e.target.value)}>{METODE_LIST.map(m => <option key={m}>{m}</option>)}</select></div>)}
-              <div className="form-group"><label className="form-label">Bank / Dompet</label><select className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)}>{BANK_LIST.map(b => <option key={b}>{b}</option>)}</select></div>
-              <div className="form-group"><label className="form-label">User</label><select className="form-select" value={form.user_id} onChange={e => setF('user_id', e.target.value)} required><option value="">Pilih User</option>{(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}</select></div>
-              {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
-              <button type="submit" className="btn btn-primary btn-full" disabled={saving} style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Check size={18} />{saving ? 'Menyimpan...' : 'Simpan Transaksi'}
-              </button>
-            </form>
-          </div>
-        )}
+            )}
+
+            {mode === 'manual' && (
+              <div className="card">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
+                  {TIPE_LIST.map(t => { const I = t.Icon; return (
+                    <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={{ padding: '12px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: `2px solid ${tipe === t.id ? t.color : 'var(--border)'}`, background: tipe === t.id ? `${t.color}18` : 'var(--surface2)', color: tipe === t.id ? t.color : 'var(--text3)', fontWeight: 700, fontSize: 11, touchAction: 'manipulation', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><I size={22} />{t.label}</button>
+                  )})}
+                </div>
+                <form onSubmit={handleManualSubmit}>
+                  <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} required /></div>
+                  <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Sumber' : tipe === 'cash' ? 'Lokasi ATM' : 'Toko / Merchant'}</label><input className="form-input" type="text" placeholder={tipe === 'income' ? 'Nama perusahaan' : tipe === 'cash' ? 'Nama ATM / lokasi' : 'Nama toko'} value={form.toko} onChange={e => setF('toko', e.target.value)} /></div>
+                  <div className="form-group"><label className="form-label">{tipe === 'income' ? 'Keterangan' : 'Uraian / Items'}</label><input className="form-input" type="text" placeholder="Deskripsi transaksi" value={form.uraian} onChange={e => setF('uraian', e.target.value)} /></div>
+                  <div className="form-group">
+                    <label className="form-label">{tipe === 'income' ? 'Jumlah' : 'Total'}</label>
+                    <input className="form-input" type="text" inputMode="numeric" placeholder="0"
+                      value={manualAmt.display} onChange={manualAmt.onChange} onKeyDown={manualAmt.onKeyDown}
+                      style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
+                    />
+                    {manualAmt.formatted && (
+                      <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: manualAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
+                        {manualAmt.formatted}
+                      </div>
+                    )}
+                  </div>
+                  {tipe === 'expense' && (<div className="form-group"><label className="form-label">Kategori</label><select className="form-select" value={form.kategori} onChange={e => setF('kategori', e.target.value)}><option value="">Pilih Kategori</option>{KATEGORI_LIST.filter(k => k !== 'Pemasukan').map(k => <option key={k}>{k}</option>)}</select></div>)}
+                  {tipe !== 'cash' && (<div className="form-group"><label className="form-label">Metode</label><select className="form-select" value={form.metode} onChange={e => setF('metode', e.target.value)}>{METODE_LIST.map(m => <option key={m}>{m}</option>)}</select></div>)}
+                  <div className="form-group"><label className="form-label">Bank / Dompet</label><select className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)}>{BANK_LIST.map(b => <option key={b}>{b}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">User</label><select className="form-select" value={form.user_id} onChange={e => setF('user_id', e.target.value)} required><option value="">Pilih User</option>{(profiles || []).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}</select></div>
+                  {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+                  <button type="submit" className="btn btn-primary btn-full" disabled={saving} style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <Check size={18} />{saving ? 'Menyimpan...' : 'Simpan Transaksi'}
+                  </button>
+                </form>
+              </div>
+            )}
+          </TabTransition>
+        </div>
       </div>
 
       <style>{`
