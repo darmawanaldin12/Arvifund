@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
@@ -15,18 +15,24 @@ import {
 } from '../../lib/biometric'
 import {
   ShieldCheck, Fingerprint, CalendarDays, Zap, KeyRound,
-  Info, Smartphone, LogOut, Trash2, CheckCircle2, X,
+  Info, Smartphone, LogOut, Trash2, CheckCircle2, X, Camera, User,
 } from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
   const { user, profile, loadData, overrides: currentOverrides } = useData()
   const { showToast, ToastContainer } = useToast()
+  const fileInputRef = useRef(null)
 
   const [savingPeriod, setSavingPeriod]     = useState(false)
   const [savingOverride, setSavingOverride] = useState(false)
   const [showLogout, setShowLogout]         = useState(false)
   const [periodDate, setPeriodDate]         = useState(profile?.pay_period_date || 25)
+
+  const [avatarUrl, setAvatarUrl]       = useState(profile?.avatar_url || null)
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarFile, setAvatarFile]     = useState(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const now = new Date()
   const [ovBulan, setOvBulan] = useState(BULAN_ORDER[now.getMonth()])
@@ -40,6 +46,10 @@ export default function SettingsPage() {
   const [bioCred, setBioCred]             = useState(null)
 
   useEffect(() => {
+    if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+  }, [profile])
+
+  useEffect(() => {
     async function checkBio() {
       const supported = await isBiometricSupported()
       setBioSupported(supported)
@@ -50,6 +60,64 @@ export default function SettingsPage() {
     }
     checkBio()
   }, [])
+
+  function handleAvatarChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('❌ Ukuran foto maksimal 5MB', 'error')
+      return
+    }
+    setAvatarFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setAvatarPreview(reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  async function handleUploadAvatar() {
+    if (!avatarFile || !user?.id) return
+    setUploadingAvatar(true)
+    try {
+      const ext = avatarFile.name.split('.').pop()
+      const path = `${user.id}/avatar.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path)
+
+      // Tambah cache-buster biar browser refresh foto
+      const urlWithTs = `${publicUrl}?t=${Date.now()}`
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithTs })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setAvatarUrl(urlWithTs)
+      setAvatarPreview(null)
+      setAvatarFile(null)
+      showToast('✅ Foto profil berhasil diperbarui')
+      await loadData()
+    } catch (err) {
+      showToast('❌ Gagal upload: ' + err.message, 'error')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  function handleCancelAvatar() {
+    setAvatarPreview(null)
+    setAvatarFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function handleSavePeriod() {
     setSavingPeriod(true)
@@ -138,6 +206,7 @@ export default function SettingsPage() {
   }
 
   const overrideEntries = Object.entries(currentOverrides || {}).sort()
+  const displayAvatar = avatarPreview || avatarUrl
 
   return (
     <>
@@ -146,15 +215,89 @@ export default function SettingsPage() {
 
         {/* Profile */}
         <div className="card" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #1F4E79, #38bdf8)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: 'white', flexShrink: 0 }}>
-            {profile?.username?.[0]?.toUpperCase() || '?'}
+          {/* Avatar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: 64, height: 64,
+                borderRadius: 18,
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, #1F4E79, #38bdf8)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                border: avatarPreview ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: 'border 0.2s',
+              }}
+            >
+              {displayAvatar ? (
+                <img
+                  src={displayAvatar}
+                  alt="avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: 26, fontWeight: 800, color: 'white' }}>
+                  {profile?.username?.[0]?.toUpperCase() || '?'}
+                </span>
+              )}
+            </div>
+            {/* Ikon kamera overlay */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                position: 'absolute', bottom: -4, right: -4,
+                width: 22, height: 22,
+                background: 'var(--accent)',
+                borderRadius: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                border: '2px solid var(--surface1)',
+              }}
+            >
+              <Camera size={11} color="white" />
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
           </div>
-          <div>
+
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 800 }}>{profile?.username || '—'}</div>
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{user?.email}</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
             {profile?.chat_id && <div style={{ fontSize: 12, color: 'var(--text3)' }}>Telegram ID: {profile.chat_id}</div>}
           </div>
         </div>
+
+        {/* Tombol konfirmasi upload foto (muncul kalau ada preview) */}
+        {avatarPreview && (
+          <div className="card" style={{ marginBottom: 16, background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.3)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>📸 Foto baru dipilih</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleUploadAvatar}
+                disabled={uploadingAvatar}
+                style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                {uploadingAvatar ? 'Mengupload...' : '✅ Simpan Foto'}
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={handleCancelAvatar}
+                disabled={uploadingAvatar}
+                style={{ flexShrink: 0, height: 42 }}
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Biometric */}
         {bioSupported && (
