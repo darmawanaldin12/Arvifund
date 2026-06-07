@@ -1,6 +1,17 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
+import BottomNav from '../components/layout/BottomNav'
+
+const AUTH_ROUTES = ['/login', '/reset-password', '/(auth)']
+
+function isAuthRoute(pathname) {
+  return (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/reset-password') ||
+    pathname === '/'
+  )
+}
 
 // Tentukan variant animasi berdasarkan pathname
 function getVariants(pathname) {
@@ -56,22 +67,28 @@ function getVariants(pathname) {
 export default function Template({ children }) {
   const pathname = usePathname()
   const variants = getVariants(pathname)
+  const showBottomNav = !isAuthRoute(pathname)
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial={variants.initial}
-        animate={variants.animate}
-        exit={variants.exit}
-        transition={{
-          duration: 0.25,
-          ease: 'easeOut',
-        }}
-        style={{ willChange: 'opacity, transform' }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={pathname}
+          initial={variants.initial}
+          animate={variants.animate}
+          exit={variants.exit}
+          transition={{
+            duration: 0.25,
+            ease: 'easeOut',
+          }}
+          style={{ willChange: 'opacity, transform' }}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* BottomNav di luar motion wrapper — tidak ikut animasi */}
+      {showBottomNav && <BottomNav />}
+    </>
   )
 }
