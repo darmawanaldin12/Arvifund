@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { setAccountBalance, insertTransfer, updateTransfer, deleteTransfer } from '../../lib/data'
@@ -7,7 +7,8 @@ import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered 
 import { fmtFull, fmtTanggalShort } from '../../lib/utils'
 import {
   ArrowLeftRight, Plus, Trash2, X, ChevronRight,
-  Pencil, ShieldCheck, Wallet2, Settings2, CheckCircle2, AlertCircle,
+  Pencil, ShieldCheck, Wallet2, Settings2, CheckCircle2,
+  AlertCircle, TrendingUp, TrendingDown, ArrowDownToLine,
 } from 'lucide-react'
 
 const CARD_THEME = {
@@ -27,21 +28,26 @@ async function requireBiometric() {
   return true
 }
 
-// ── ATM Card ─────────────────────────────────────────────────────────────────
-function AtmCard({ bankName, saldo, userName, needsSetup }) {
+// ── ATM Card ──────────────────────────────────────────────────────────────────
+function AtmCard({ bankName, saldo, userName, needsSetup, onClick }) {
   const theme = CARD_THEME[bankName] || CARD_THEME.default
   const isNeg = saldo < 0
   return (
-    <div style={{
-      width: '100%', aspectRatio: '1.586 / 1', borderRadius: 16,
-      background: theme.bg, padding: '18px 20px',
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.35)', position: 'relative',
-      overflow: 'hidden', flexShrink: 0, userSelect: 'none',
-      opacity: needsSetup ? 0.7 : 1,
-    }}>
-      <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -20, left: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+    <div
+      onClick={onClick}
+      style={{
+        width: '100%', aspectRatio: '1.586 / 1', borderRadius: 18,
+        background: theme.bg, padding: '18px 20px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.35)', position: 'relative',
+        overflow: 'hidden', flexShrink: 0, userSelect: 'none',
+        opacity: needsSetup ? 0.6 : 1,
+        cursor: needsSetup ? 'default' : 'pointer',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+      }}
+    >
+      <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -20, left: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '0.04em', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>{bankName}</div>
         <div style={{ width: 28, height: 22, borderRadius: 4, background: theme.chip, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -53,15 +59,292 @@ function AtmCard({ bankName, saldo, userName, needsSetup }) {
       <div>
         <div style={{ fontSize: 10, color: theme.label, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Saldo Rekening</div>
         {needsSetup ? (
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>Belum diatur</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic' }}>Belum diatur — tap Set</div>
         ) : (
-          <div style={{ fontSize: 20, fontWeight: 800, color: isNeg ? '#ff6b6b' : '#fff', letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: isNeg ? '#ff6b6b' : '#fff', letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
             {fmtFull(saldo)}
           </div>
         )}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{userName}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{userName}</div>
+        {!needsSetup && (
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span>Tap lihat riwayat</span>
+            <ChevronRight size={10} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Account Slider per user ───────────────────────────────────────────────────
+function AccountSlider({ userId, userName, bankBalances, accounts, onSetSaldo, onViewHistory }) {
+  const isAldin  = userName?.toLowerCase().includes('ald')
+  const color    = isAldin ? 'var(--accent)' : '#db2777'
+  const initial  = userName?.[0]?.toUpperCase() || '?'
+  const sliderRef = useRef(null)
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  const userAccounts = accounts.filter(a => a.user_id === userId)
+  const allItems = userAccounts.map(acc => ({
+    ...acc,
+    ...(bankBalances[userId]?.[acc.name] || { saldo: 0, needsSetup: true, account_id: acc.id }),
+  }))
+
+  const totalSaldo = allItems.filter(a => !a.needsSetup).reduce((s, a) => s + a.saldo, 0)
+  const needsSetupCount = allItems.filter(a => a.needsSetup).length
+  const activeAcc = allItems[activeIdx]
+
+  const handleScroll = () => {
+    if (!sliderRef.current) return
+    const el = sliderRef.current
+    setActiveIdx(Math.round(el.scrollLeft / el.offsetWidth))
+  }
+
+  const scrollTo = (idx) => {
+    if (!sliderRef.current) return
+    sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'smooth' })
+    setActiveIdx(idx)
+  }
+
+  if (allItems.length === 0) return null
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: `color-mix(in srgb, ${color} 5%, var(--surface))`, borderBottom: '1px solid var(--border)' }}>
+        <div style={{ width: 36, height: 36, borderRadius: 11, background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color, flexShrink: 0 }}>
+          {initial}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text1)' }}>{userName}</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+            {needsSetupCount > 0 ? `${needsSetupCount} belum diatur` : `${allItems.length} rekening aktif`}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 1 }}>Total aset</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: totalSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            {needsSetupCount === allItems.length ? '—' : fmtFull(totalSaldo)}
+          </div>
+        </div>
+      </div>
+
+      {/* Card Slider */}
+      <div style={{ padding: '14px 0 6px' }}>
+        <div
+          ref={sliderRef}
+          onScroll={handleScroll}
+          style={{
+            display: 'flex', overflowX: 'auto',
+            scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
+            paddingLeft: 14, paddingRight: 14,
+          }}
+        >
+          {allItems.map((acc, i) => (
+            <div
+              key={acc.id}
+              style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 'calc(100% - 28px)', marginRight: i < allItems.length - 1 ? 10 : 0 }}
+            >
+              <AtmCard
+                bankName={acc.name}
+                saldo={acc.saldo}
+                userName={userName}
+                needsSetup={acc.needsSetup}
+                onClick={() => !acc.needsSetup && onViewHistory(acc)}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Dots */}
+        {allItems.length > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+            {allItems.map((_, i) => (
+              <div
+                key={i}
+                onClick={() => scrollTo(i)}
+                style={{
+                  width: i === activeIdx ? 20 : 6, height: 6, borderRadius: 3,
+                  background: i === activeIdx ? color : 'var(--border)',
+                  cursor: 'pointer', transition: 'width 0.25s ease, background 0.25s ease',
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Active account actions */}
+      {activeAcc && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 14px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+            {activeAcc.needsSetup ? (
+              <span style={{ color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertCircle size={12} /> Belum ada baseline
+              </span>
+            ) : (
+              `Baseline ${new Date(activeAcc.balance_set_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!activeAcc.needsSetup && (
+              <button
+                onClick={() => onViewHistory(activeAcc)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text2)', fontFamily: 'inherit' }}>
+                Riwayat
+              </button>
+            )}
+            <button
+              onClick={() => onSetSaldo({ account_id: activeAcc.id, name: activeAcc.name })}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: 'none', background: activeAcc.needsSetup ? color : 'var(--surface2)', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: activeAcc.needsSetup ? '#fff' : 'var(--text2)', fontFamily: 'inherit' }}>
+              <Settings2 size={12} />
+              {activeAcc.needsSetup ? 'Set Saldo' : 'Ubah'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Riwayat Drawer ────────────────────────────────────────────────────────────
+function RiwayatDrawer({ account, userName, expenses, income, cashRecords, transfers, getUserName, periodIdx, periods, onClose }) {
+  const theme = CARD_THEME[account.name] || CARD_THEME.default
+
+  // Filter transaksi sesuai periode & baseline akun ini
+  const baselineDate = account.balance_set_at ? (() => {
+    const d = new Date(account.balance_set_at)
+    d.setHours(0, 0, 0, 0)
+    return d
+  })() : null
+
+  const inPeriod = (tanggal) => {
+    if (periodIdx === '' || periodIdx === null) return true
+    const idx = parseInt(periodIdx)
+    if (isNaN(idx)) return true
+    const p = periods[idx]
+    if (!p) return true
+    const d = new Date(tanggal + 'T00:00:00')
+    return d >= p.start && d <= p.end
+  }
+
+  const afterBaseline = (tanggal) => {
+    if (!baselineDate) return false
+    return new Date(tanggal + 'T00:00:00') >= baselineDate
+  }
+
+  const rows = []
+
+  // Income masuk ke akun ini
+  income.forEach(r => {
+    if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal)) {
+      rows.push({ id: r.id, tanggal: r.tanggal, label: r.sumber || 'Pemasukan', sub: r.kategori || '', amount: r.jumlah, type: 'in' })
+    }
+  })
+
+  // Expenses dari akun ini
+  expenses.forEach(r => {
+    if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal)) {
+      rows.push({ id: r.id, tanggal: r.tanggal, label: r.toko || 'Pengeluaran', sub: r.kategori || '', amount: r.nilai, type: 'out' })
+    }
+  })
+
+  // Cash records: kurangi bank asal atau tambah Cash
+  cashRecords.forEach(r => {
+    if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
+    // Jika akun ini adalah bank asal tarik tunai
+    if (r.bank === account.name && r.user_id === account.user_id) {
+      rows.push({ id: r.id + '_out', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `ke Cash`, amount: r.nilai, type: 'out' })
+    }
+    // Jika akun ini adalah Cash, tarik tunai masuk
+    if (account.name === 'Cash' && r.user_id === account.user_id) {
+      rows.push({ id: r.id + '_in', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `dari ${r.bank}`, amount: r.nilai, type: 'in' })
+    }
+  })
+
+  // Transfers
+  transfers.forEach(r => {
+    if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
+    if (r.from_user === account.user_id && r.from_bank === account.name) {
+      const toName = getUserName(r.to_user)
+      rows.push({ id: r.id + '_out', tanggal: r.tanggal, label: `Transfer ke ${r.from_user === r.to_user ? r.to_bank : toName}`, sub: r.catatan || '', amount: r.jumlah, type: 'out' })
+    }
+    if (r.to_user === account.user_id && r.to_bank === account.name) {
+      const fromName = getUserName(r.from_user)
+      rows.push({ id: r.id + '_in', tanggal: r.tanggal, label: `Transfer dari ${r.from_user === r.to_user ? r.from_bank : fromName}`, sub: r.catatan || '', amount: r.jumlah, type: 'in' })
+    }
+  })
+
+  rows.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+
+  const totalIn  = rows.filter(r => r.type === 'in').reduce((s, r)  => s + r.amount, 0)
+  const totalOut = rows.filter(r => r.type === 'out').reduce((s, r) => s + r.amount, 0)
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
+        {/* Drawer header — ATM card mini */}
+        <div style={{ background: theme.bg, borderRadius: '20px 20px 0 0', padding: '16px 20px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>{account.name}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{userName}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Saldo</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: account.saldo < 0 ? '#ff6b6b' : '#fff' }}>{fmtFull(account.saldo)}</div>
+            </div>
+          </div>
+          {/* In/Out summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 10px' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Masuk</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#6ee7b7' }}>{fmtFull(totalIn)}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 10px' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Keluar</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fca5a5' }}>{fmtFull(totalOut)}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#fff', padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Transaction list */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
+          {rows.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>
+              Belum ada transaksi di periode ini
+            </div>
+          ) : rows.map(r => (
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                background: r.type === 'in' ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {r.type === 'in'
+                  ? <TrendingUp size={15} color="var(--green)" />
+                  : <TrendingDown size={15} color="var(--red)" />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{fmtTanggalShort(r.tanggal)}{r.sub ? ` · ${r.sub}` : ''}</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: r.type === 'in' ? 'var(--green)' : 'var(--red)', flexShrink: 0 }}>
+                {r.type === 'in' ? '+' : '-'}{fmtFull(r.amount)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -82,13 +365,11 @@ function SetSaldoModal({ account, userName, onClose, onSaved }) {
       onClose()
     } catch (e) {
       setError('Gagal simpan: ' + e.message)
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px', paddingBottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -99,24 +380,14 @@ function SetSaldoModal({ account, userName, onClose, onSaved }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={20} /></button>
         </div>
         <div style={{ padding: '12px 14px', marginBottom: 16, background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
-          Masukkan saldo rekening <strong>{account.name}</strong> sekarang sesuai yang tertera di m-banking. Transaksi ke depan akan dihitung dari angka ini.
+          Masukkan saldo <strong>{account.name}</strong> sesuai m-banking sekarang. Transaksi ke depan dihitung dari angka ini.
         </div>
         <div className="form-group">
           <label className="form-label">Saldo saat ini (Rp)</label>
-          <input
-            className="form-input"
-            type="number"
-            inputMode="numeric"
-            placeholder="Contoh: 2450000"
-            value={nilai}
-            onChange={e => setNilai(e.target.value)}
-            autoFocus
-          />
+          <input className="form-input" type="number" inputMode="numeric" placeholder="Contoh: 2450000" value={nilai} onChange={e => setNilai(e.target.value)} autoFocus />
         </div>
         {nilai && !isNaN(parseFloat(nilai)) && (
-          <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--accent)', textAlign: 'center' }}>
-            {fmtFull(parseFloat(nilai))}
-          </div>
+          <div style={{ marginBottom: 12, fontSize: 15, fontWeight: 700, color: 'var(--accent)', textAlign: 'center' }}>{fmtFull(parseFloat(nilai))}</div>
         )}
         {error && <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13 }}>{error}</div>}
         <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-full"
@@ -140,19 +411,11 @@ function TransferForm({ profiles, accounts, user, initial, onClose, onSaved, tit
   const [error, setError]   = useState('')
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const getBanksForUser = (uid) => accounts.filter(a => a.user_id === uid).map(a => a.name)
+  const getBanksForUser = uid => accounts.filter(a => a.user_id === uid).map(a => a.name)
   const fromBanks = form.from_user ? getBanksForUser(form.from_user) : []
   const toBanks   = form.to_user   ? getBanksForUser(form.to_user)   : []
-
-  const handleFromUser = uid => {
-    const banks = getBanksForUser(uid)
-    setForm(f => ({ ...f, from_user: uid, from_bank: banks[0] || '' }))
-  }
-  const handleToUser = uid => {
-    const banks = getBanksForUser(uid)
-    setForm(f => ({ ...f, to_user: uid, to_bank: banks[0] || '' }))
-  }
-
+  const handleFromUser = uid => { const b = getBanksForUser(uid); setForm(f => ({ ...f, from_user: uid, from_bank: b[0] || '' })) }
+  const handleToUser   = uid => { const b = getBanksForUser(uid); setForm(f => ({ ...f, to_user: uid, to_bank: b[0] || '' })) }
   const isInternal = form.from_user === form.to_user && form.from_user !== ''
   const fromName   = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName     = profiles.find(p => p.id === form.to_user)?.username   || ''
@@ -166,10 +429,8 @@ function TransferForm({ profiles, accounts, user, initial, onClose, onSaved, tit
     if (isInternal && form.from_bank === form.to_bank) return setError('Rekening asal dan tujuan tidak boleh sama')
     if (!form.jumlah || isNaN(parseFloat(form.jumlah)) || parseFloat(form.jumlah) <= 0) return setError('Jumlah harus lebih dari 0')
     setSaving(true)
-    try {
-      await onSaved(form)
-      onClose()
-    } catch (err) { setError('Gagal simpan: ' + err.message) }
+    try { await onSaved(form); onClose() }
+    catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
 
@@ -249,145 +510,23 @@ function TransferForm({ profiles, accounts, user, initial, onClose, onSaved, tit
   )
 }
 
-// ── User Wallet Card ──────────────────────────────────────────────────────────
-function UserWalletCard({ userId, userName, bankBalances, accounts, onSetSaldo }) {
-  const isAldin = userName?.toLowerCase().includes('ald')
-  const color   = isAldin ? 'var(--accent)' : '#db2777'
-  const initial = userName?.[0]?.toUpperCase() || '?'
-
-  const userAccounts = accounts.filter(a => a.user_id === userId)
-  const userBanks    = userAccounts.filter(a => a.type !== 'cash')
-  const cashAcc      = userAccounts.find(a => a.type === 'cash')
-
-  const bankItems = userBanks.map(acc => ({
-    ...acc,
-    ...(bankBalances[userId]?.[acc.name] || { saldo: 0, needsSetup: true, account_id: acc.id }),
-  }))
-  const cashItem = cashAcc ? {
-    ...cashAcc,
-    ...(bankBalances[userId]?.[cashAcc.name] || { saldo: 0, needsSetup: true, account_id: cashAcc.id }),
-  } : null
-
-  const totalSaldo = [...bankItems, ...(cashItem ? [cashItem] : [])]
-    .filter(a => !a.needsSetup)
-    .reduce((s, a) => s + a.saldo, 0)
-
-  const needsSetupCount = [...bankItems, ...(cashItem ? [cashItem] : [])].filter(a => a.needsSetup).length
-
-  return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: `color-mix(in srgb, ${color} 5%, var(--surface))`, borderBottom: '1px solid var(--border)' }}>
-        <div style={{ width: 38, height: 38, borderRadius: 12, background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color, flexShrink: 0 }}>
-          {initial}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>{userName}</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-            {needsSetupCount > 0 ? `${needsSetupCount} rekening belum diatur` : 'Semua rekening aktif'}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>Total aset</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: totalSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-            {needsSetupCount === userAccounts.length ? '—' : fmtFull(totalSaldo)}
-          </div>
-        </div>
-      </div>
-
-      {/* Bank accounts */}
-      {bankItems.map((acc, i) => (
-        <div key={acc.id} style={{ borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>{acc.name}</div>
-              {acc.needsSetup ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <AlertCircle size={11} color="var(--yellow)" />
-                  <span style={{ fontSize: 11, color: 'var(--yellow)' }}>Belum diatur</span>
-                </div>
-              ) : (
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                  Baseline: {new Date(acc.balance_set_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: 'right', marginRight: 8 }}>
-              {acc.needsSetup ? (
-                <div style={{ fontSize: 13, color: 'var(--text3)', fontStyle: 'italic' }}>—</div>
-              ) : (
-                <div style={{ fontSize: 15, fontWeight: 800, color: acc.saldo < 0 ? 'var(--red)' : 'var(--text1)' }}>{fmtFull(acc.saldo)}</div>
-              )}
-            </div>
-            <button
-              onClick={() => onSetSaldo({ account_id: acc.id, name: acc.name })}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--text2)', fontFamily: 'inherit', flexShrink: 0 }}>
-              <Settings2 size={12} />
-              {acc.needsSetup ? 'Set' : 'Ubah'}
-            </button>
-          </div>
-          {/* Mini ATM card preview — hanya tampil kalau sudah di-set */}
-          {!acc.needsSetup && (
-            <div style={{ padding: '0 16px 14px' }}>
-              <AtmCard bankName={acc.name} saldo={acc.saldo} userName={userName} needsSetup={false} />
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Cash */}
-      {cashItem && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'color-mix(in srgb, var(--yellow) 15%, transparent)', border: '1.5px solid var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Wallet2 size={14} color="var(--yellow)" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>Cash</div>
-            {cashItem.needsSetup ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertCircle size={11} color="var(--yellow)" />
-                <span style={{ fontSize: 11, color: 'var(--yellow)' }}>Belum diatur</span>
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                Baseline: {new Date(cashItem.balance_set_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </div>
-            )}
-          </div>
-          <div style={{ textAlign: 'right', marginRight: 8 }}>
-            {cashItem.needsSetup ? (
-              <div style={{ fontSize: 13, color: 'var(--text3)', fontStyle: 'italic' }}>—</div>
-            ) : (
-              <div style={{ fontSize: 15, fontWeight: 800, color: cashItem.saldo < 0 ? 'var(--red)' : 'var(--yellow)' }}>{fmtFull(cashItem.saldo)}</div>
-            )}
-          </div>
-          <button
-            onClick={() => onSetSaldo({ account_id: cashItem.id, name: cashItem.name })}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--text2)', fontFamily: 'inherit', flexShrink: 0 }}>
-            <Settings2 size={12} />
-            {cashItem.needsSetup ? 'Set' : 'Ubah'}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WalletPage() {
   const {
-    transfers, bankBalances, accounts,
+    expenses, income, cashRecords, transfers,
+    bankBalances, accounts,
     periodIdx, setPeriodIdx, periods,
     loadData, loading, getUserName, profiles, user,
   } = useData()
 
-  const [tab, setTab]                 = useState('summary')
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editTransfer, setEditTransfer] = useState(null)
-  const [deletingId, setDeletingId]     = useState(null)
-  const [bioError, setBioError]         = useState('')
-  const [setSaldoTarget, setSetSaldoTarget] = useState(null) // { account_id, name }
+  const [tab, setTab]                       = useState('summary')
+  const [showAddModal, setShowAddModal]     = useState(false)
+  const [editTransfer, setEditTransfer]     = useState(null)
+  const [deletingId, setDeletingId]         = useState(null)
+  const [bioError, setBioError]             = useState('')
+  const [setSaldoTarget, setSetSaldoTarget] = useState(null)
   const [setSaldoUser, setSetSaldoUser]     = useState(null)
+  const [historyAcc, setHistoryAcc]         = useState(null) // { ...acc, user_id, userName }
 
   const users = profiles.filter(p => p.username)
 
@@ -403,11 +542,6 @@ export default function WalletPage() {
     })
   }, [transfers, periodIdx, periods])
 
-  function handleOpenSetSaldo(userId, accountInfo) {
-    setSetSaldoUser(userId)
-    setSetSaldoTarget(accountInfo)
-  }
-
   async function handleSaveSetSaldo(accountId, nilai) {
     await setAccountBalance(accountId, nilai, user?.id)
     await loadData()
@@ -421,41 +555,43 @@ export default function WalletPage() {
       await deleteTransfer(id)
       await loadData()
     } catch (e) {
-      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) {
-        setBioError('Autentikasi dibatalkan')
-      } else {
-        setBioError('Gagal hapus: ' + e.message)
-      }
+      setBioError(e?.name === 'NotAllowedError' || e?.message?.includes('cancelled') ? 'Autentikasi dibatalkan' : 'Gagal hapus: ' + e.message)
     } finally { setDeletingId(null) }
   }
 
   async function handleSaveAdd(form) {
-    await insertTransfer({
-      tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user,
-      from_bank: form.from_bank, to_bank: form.to_bank,
-      jumlah: parseFloat(form.jumlah), catatan: form.catatan || null,
-    }, user?.id)
+    await insertTransfer({ tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null }, user?.id)
     await loadData()
   }
 
   async function handleSaveEdit(form) {
-    await updateTransfer(editTransfer.id, {
-      tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user,
-      from_bank: form.from_bank, to_bank: form.to_bank,
-      jumlah: parseFloat(form.jumlah), catatan: form.catatan || null,
-    }, user?.id)
+    await updateTransfer(editTransfer.id, { tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null }, user?.id)
     await loadData()
   }
 
-  const setSaldoUserName = setSaldoUser ? getUserName(setSaldoUser) : ''
-
   return (
     <>
+      {/* Riwayat Drawer */}
+      {historyAcc && (
+        <RiwayatDrawer
+          account={historyAcc}
+          userName={historyAcc.userName}
+          expenses={expenses}
+          income={income}
+          cashRecords={cashRecords}
+          transfers={transfers}
+          getUserName={getUserName}
+          periodIdx={periodIdx}
+          periods={periods}
+          onClose={() => setHistoryAcc(null)}
+        />
+      )}
+
       {/* Set Saldo Modal */}
       {setSaldoTarget && (
         <SetSaldoModal
           account={setSaldoTarget}
-          userName={setSaldoUserName}
+          userName={setSaldoUser ? getUserName(setSaldoUser) : ''}
           onClose={() => { setSetSaldoTarget(null); setSetSaldoUser(null) }}
           onSaved={handleSaveSetSaldo}
         />
@@ -463,32 +599,20 @@ export default function WalletPage() {
 
       {/* Transfer Modals */}
       {showAddModal && (
-        <TransferForm
-          profiles={profiles} accounts={accounts} user={user}
-          onClose={() => setShowAddModal(false)}
-          onSaved={handleSaveAdd}
-          title="Catat Transfer" submitLabel="Simpan Transfer"
-        />
+        <TransferForm profiles={profiles} accounts={accounts} user={user}
+          onClose={() => setShowAddModal(false)} onSaved={handleSaveAdd}
+          title="Catat Transfer" submitLabel="Simpan Transfer" />
       )}
       {editTransfer && (
-        <TransferForm
-          profiles={profiles} accounts={accounts} user={user}
-          initial={{
-            tanggal: editTransfer.tanggal, from_user: editTransfer.from_user,
-            to_user: editTransfer.to_user, from_bank: editTransfer.from_bank,
-            to_bank: editTransfer.to_bank, jumlah: String(editTransfer.jumlah),
-            catatan: editTransfer.catatan || '',
-          }}
-          onClose={() => setEditTransfer(null)}
-          onSaved={handleSaveEdit}
-          title="Edit Transfer" submitLabel="Simpan Perubahan"
-        />
+        <TransferForm profiles={profiles} accounts={accounts} user={user}
+          initial={{ tanggal: editTransfer.tanggal, from_user: editTransfer.from_user, to_user: editTransfer.to_user, from_bank: editTransfer.from_bank, to_bank: editTransfer.to_bank, jumlah: String(editTransfer.jumlah), catatan: editTransfer.catatan || '' }}
+          onClose={() => setEditTransfer(null)} onSaved={handleSaveEdit}
+          title="Edit Transfer" submitLabel="Simpan Perubahan" />
       )}
 
       <AppHeader title="Wallet" onRefresh={loadData} loading={loading} />
       <div className="page-container">
 
-        {/* Period filter */}
         <div className="filter-bar" style={{ marginBottom: 14 }}>
           <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
           {periods.map((p, i) => (
@@ -496,12 +620,8 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {/* Tab switcher */}
         <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 }}>
-          {[
-            { id: 'summary',  label: 'Rekening' },
-            { id: 'transfer', label: `Transfer (${filteredTransfers.length})` },
-          ].map(t => (
+          {[{ id: 'summary', label: 'Rekening' }, { id: 'transfer', label: `Transfer (${filteredTransfers.length})` }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex: 1, padding: '9px 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontWeight: 700, fontSize: 13,
@@ -513,36 +633,33 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {/* Tab: Rekening */}
         {tab === 'summary' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {users.map(u => (
-              <UserWalletCard
+              <AccountSlider
                 key={u.id}
                 userId={u.id}
                 userName={u.username}
                 bankBalances={bankBalances}
                 accounts={accounts}
-                onSetSaldo={(accInfo) => handleOpenSetSaldo(u.id, accInfo)}
+                onSetSaldo={accInfo => { setSetSaldoUser(u.id); setSetSaldoTarget(accInfo) }}
+                onViewHistory={acc => setHistoryAcc({ ...acc, userName: u.username })}
               />
             ))}
           </div>
         )}
 
-        {/* Tab: Transfer */}
         {tab === 'transfer' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => setShowAddModal(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 12, border: '2px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               <Plus size={18} /> Catat Transfer Baru
             </button>
-
             {bioError && (
               <div style={{ padding: '10px 14px', background: 'var(--red-bg)', borderRadius: 10, color: 'var(--red)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ShieldCheck size={15} /> {bioError}
               </div>
             )}
-
             {filteredTransfers.length === 0 ? (
               <div className="empty-state"><div className="emoji">↔️</div><p>Belum ada transfer di periode ini</p></div>
             ) : filteredTransfers.map(t => {
@@ -565,10 +682,7 @@ export default function WalletPage() {
                     </div>
                   </div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--accent)', flexShrink: 0 }}>{fmtFull(t.jumlah)}</div>
-                  <button onClick={() => { setBioError(''); setEditTransfer(t) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, flexShrink: 0 }}>
-                    <Pencil size={14} />
-                  </button>
+                  <button onClick={() => { setBioError(''); setEditTransfer(t) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, flexShrink: 0 }}><Pencil size={14} /></button>
                   <button onClick={() => handleDeleteTransfer(t.id)} disabled={deletingId === t.id}
                     style={{ background: 'none', border: 'none', cursor: deletingId === t.id ? 'not-allowed' : 'pointer', color: deletingId === t.id ? 'var(--text3)' : 'var(--red)', padding: 4, flexShrink: 0, opacity: deletingId === t.id ? 0.5 : 1 }}>
                     {deletingId === t.id ? <ShieldCheck size={14} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} /> : <Trash2 size={14} />}
@@ -576,7 +690,6 @@ export default function WalletPage() {
                 </div>
               )
             })}
-
             {filteredTransfers.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 13 }}>
                 <span style={{ color: 'var(--text3)' }}>Total periode ini</span>
