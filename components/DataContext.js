@@ -10,11 +10,11 @@ const DataContext = createContext(null)
 // Formula per akun:
 //   saldo = account.balance (baseline manual)
 //           + income pada/setelah balance_set_at
-//           - expenses pada/setelah balance_set_at
+//           - expenses pada/setelah balance_set_at  (tanpa [AUDIT])
 //           - cash_records pada/setelah balance_set_at
 //           +/- transfers pada/setelah balance_set_at
 //
-// Kalau balance_set_at null (belum pernah di-set) → saldo = 0, tandai needsSetup
+// Kalau balance_set_at null → saldo = 0, tandai needsSetup
 export function buildBankBalances(expenses, income, cashRecords, transfers, accounts) {
   const result = {}
 
@@ -23,7 +23,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     if (!result[uid][bank]) result[uid][bank] = { saldo: 0, needsSetup: true, balance_set_at: null, account_id: null }
   }
 
-  // Inisialisasi dari tabel accounts
   accounts.forEach(acc => {
     ensure(acc.user_id, acc.name)
     const hasBaseline = !!acc.balance_set_at
@@ -35,17 +34,14 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Helper: apakah tanggal transaksi >= tanggal baseline?
-  // Pakai >= supaya transaksi di hari yang sama dengan set baseline ikut terhitung
   const onOrAfterBaseline = (tanggal, userId, bankName) => {
     const baseline = result[userId]?.[bankName]?.balance_set_at
     if (!baseline) return false
     const baselineDate = new Date(baseline)
-    baselineDate.setHours(0, 0, 0, 0) // bandingkan per hari
+    baselineDate.setHours(0, 0, 0, 0)
     return new Date(tanggal + 'T00:00:00') >= baselineDate
   }
 
-  // Income → tambah
   income.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -53,7 +49,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Expenses → kurangi
   expenses.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -61,7 +56,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Cash records → kurangi dari bank asal
   cashRecords.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -69,7 +63,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Transfers → kurangi from, tambah to
   transfers.forEach(r => {
     if (r.from_user && r.from_bank && onOrAfterBaseline(r.tanggal, r.from_user, r.from_bank)) {
       ensure(r.from_user, r.from_bank)
@@ -167,7 +160,8 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  const bankBalances = buildBankBalances(allExpenses, allIncome, cashRecords, transfers, accounts)
+  // Pakai expenses (tanpa AUDIT) — dengan sistem baseline, [AUDIT] lama tidak relevan lagi
+  const bankBalances = buildBankBalances(expenses, income, cashRecords, transfers, accounts)
 
   function getUserName(userId) {
     const p = profiles.find(p => p.id === userId)
