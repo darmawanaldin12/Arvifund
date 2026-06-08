@@ -434,7 +434,7 @@ export default function SettingsPage() {
             Tentang Arvifund
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text3)' }}>
-            {[['Versi', '2.0.0'], ['Platform', 'Next.js + Supabase'], ['Database', 'PostgreSQL'], ['Input', 'Telegram Bot + n8n']].map(([k, v]) => (
+            {[['Versi', '2.1.0'], ['Platform', 'Next.js + Supabase'], ['Database', 'PostgreSQL'], ['Input', 'Langsung di Aplikasi']].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{k}</span>
                 <span style={{ color: 'var(--text1)', fontWeight: 600 }}>{v}</span>
