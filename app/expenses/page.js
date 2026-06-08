@@ -11,8 +11,17 @@ import { supabase } from '../../lib/supabase'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 import { Pencil, Trash2, Download, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react'
 
+function fmtJam(isoString) {
+  if (!isoString) return null
+  try {
+    return new Date(isoString).toLocaleTimeString('id-ID', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'
+    })
+  } catch { return null }
+}
+
 function exportCSV(rows, getUserName) {
-  const headers = ['Tanggal','Bulan','Toko','Uraian','Kategori','Metode','Bank','User','Nilai']
+  const headers = ['Tanggal','Jam','Bulan','Toko','Uraian','Kategori','Metode','Bank','User','Nilai']
   const escape = v => {
     if (v == null) return ''
     const s = String(v)
@@ -22,7 +31,7 @@ function exportCSV(rows, getUserName) {
   const csvRows = [
     headers.join(','),
     ...rows.map(r => [
-      r.tanggal || '', r.bulan || '', r.toko || '', r.uraian || '',
+      r.tanggal || '', fmtJam(r.created_at) || '', r.bulan || '', r.toko || '', r.uraian || '',
       r.kategori || '', r.transaksi || '', r.bank || '',
       getUserName(r.user_id) || '', r.nilai || 0,
     ].map(escape).join(','))
@@ -46,7 +55,7 @@ export default function ExpensesPage() {
   const [search, setSearch]         = useState('')
   const [editData, setEditData]     = useState(null)
   const [saving, setSaving]         = useState(false)
-  const [sortKey, setSortKey]       = useState('tanggal')
+  const [sortKey, setSortKey]       = useState('created_at')
   const [sortDir, setSortDir]       = useState('desc')
   const [exporting, setExporting]   = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -58,9 +67,17 @@ export default function ExpensesPage() {
       (!search     || (r.toko + ' ' + r.uraian).toLowerCase().includes(search.toLowerCase()))
     )
     r = [...r].sort((a, b) => {
-      let va = a[sortKey], vb = b[sortKey]
-      if (sortKey === 'tanggal') { va = a.tanggal || ''; vb = b.tanggal || '' }
-      if (sortKey === 'nilai')   { va = a.nilai || 0;    vb = b.nilai || 0 }
+      let va, vb
+      if (sortKey === 'tanggal') {
+        // Sort by tanggal dulu, lalu created_at sebagai tiebreaker
+        const dateCompare = (a.tanggal || '').localeCompare(b.tanggal || '')
+        if (dateCompare !== 0) return sortDir === 'asc' ? dateCompare : -dateCompare
+        va = a.created_at || ''; vb = b.created_at || ''
+      } else if (sortKey === 'nilai') {
+        va = a.nilai || 0; vb = b.nilai || 0
+      } else {
+        va = a[sortKey] || ''; vb = b[sortKey] || ''
+      }
       if (va < vb) return sortDir === 'asc' ? -1 : 1
       if (va > vb) return sortDir === 'asc' ? 1 : -1
       return 0
@@ -113,7 +130,6 @@ export default function ExpensesPage() {
       if (supported && registered) {
         await authenticateWithBiometric(supabase)
       } else {
-        // fallback jika biometrik tidak tersedia
         if (!window.confirm('Hapus transaksi ini? Tindakan tidak bisa dibatalkan.')) {
           setDeletingId(null)
           return
@@ -249,10 +265,18 @@ export default function ExpensesPage() {
                 ) : rows.map(r => {
                   const isAnom = r.nilai >= anomaliThreshold && r.nilai > 100000
                   const color  = KATEGORI_COLOR[r.kategori] || 'var(--text3)'
+                  const jam    = fmtJam(r.created_at)
                   return (
                     <tr key={r.id} style={isAnom ? { background: 'rgba(244,63,94,0.04)', borderLeft: '3px solid var(--red)' } : {}}>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtTanggalShort(r.tanggal)}
+                      <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
+                          {fmtTanggalShort(r.tanggal)}
+                        </div>
+                        {jam && (
+                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                            {jam} WIB
+                          </div>
+                        )}
                       </td>
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
