@@ -3,8 +3,6 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import BottomNav from '../components/layout/BottomNav'
 
-const AUTH_ROUTES = ['/login', '/reset-password', '/(auth)']
-
 function isAuthRoute(pathname) {
   return (
     pathname.startsWith('/login') ||
@@ -15,16 +13,27 @@ function isAuthRoute(pathname) {
 
 // Tentukan variant animasi berdasarkan pathname
 function getVariants(pathname) {
-  // Fade + Scale — Auth pages & profile
+  // Fade + Scale — Auth pages
   if (
     pathname.startsWith('/login') ||
-    pathname.startsWith('/reset-password') ||
-    pathname.startsWith('/arpijan')
+    pathname.startsWith('/reset-password')
   ) {
     return {
       initial:  { opacity: 0, scale: 0.97 },
       animate:  { opacity: 1, scale: 1 },
       exit:     { opacity: 0, scale: 1.02 },
+    }
+  }
+
+  // Fade + Scale (halus) — Dashboard & Arpijan (halaman utama / profil)
+  if (
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/arpijan')
+  ) {
+    return {
+      initial:  { opacity: 0, scale: 0.98 },
+      animate:  { opacity: 1, scale: 1 },
+      exit:     { opacity: 0, scale: 1.01 },
     }
   }
 
@@ -57,7 +66,7 @@ function getVariants(pathname) {
     }
   }
 
-  // Fade — Dashboard (default)
+  // Fade — fallback
   return {
     initial:  { opacity: 0 },
     animate:  { opacity: 1 },
