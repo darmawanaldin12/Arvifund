@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase, getUser } from '../lib/supabase'
 import { getAllDashboardData, getProfile } from '../lib/data'
 import { buildSummary, buildPeriods, getCurrentPeriodIndex, filterByPeriod } from '../lib/utils'
@@ -33,7 +33,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     return new Date(tanggal + 'T00:00:00') >= baselineDate
   }
 
-  // Income → tambah saldo bank tujuan
   income.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -41,7 +40,6 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Expenses → kurangi saldo bank
   expenses.forEach(r => {
     if (r.user_id && r.bank && onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
@@ -49,27 +47,19 @@ export function buildBankBalances(expenses, income, cashRecords, transfers, acco
     }
   })
 
-  // Cash records (tarik tunai):
-  //   - Kurangi saldo bank asal (kolom `bank`)
-  //   - Tambah saldo Cash user yang sama
   cashRecords.forEach(r => {
     if (!r.user_id || !r.bank) return
     const jumlah = Number(r.nilai) || 0
-
-    // Kurangi bank asal
     if (onOrAfterBaseline(r.tanggal, r.user_id, r.bank)) {
       ensure(r.user_id, r.bank)
       result[r.user_id][r.bank].saldo -= jumlah
     }
-
-    // Tambah Cash — cek baseline Cash user ini
     if (onOrAfterBaseline(r.tanggal, r.user_id, 'Cash')) {
       ensure(r.user_id, 'Cash')
       result[r.user_id]['Cash'].saldo += jumlah
     }
   })
 
-  // Transfers → kurangi from, tambah to
   transfers.forEach(r => {
     if (r.from_user && r.from_bank && onOrAfterBaseline(r.tanggal, r.from_user, r.from_bank)) {
       ensure(r.from_user, r.from_bank)
@@ -90,8 +80,6 @@ export function DataProvider({ children }) {
   const [profiles, setProfiles]       = useState([])
   const [expenses, setExpenses]       = useState([])
   const [income, setIncome]           = useState([])
-  const [allExpenses, setAllExpenses] = useState([])
-  const [allIncome, setAllIncome]     = useState([])
   const [cashRecords, setCashRecords] = useState([])
   const [budgetPlans, setBudgetPlans] = useState([])
   const [transfers, setTransfers]     = useState([])
@@ -129,8 +117,6 @@ export function DataProvider({ children }) {
       setProfiles(dashData.profiles || [])
       setExpenses(dashData.expenses || [])
       setIncome(dashData.income || [])
-      setAllExpenses(dashData.allExpenses || [])
-      setAllIncome(dashData.allIncome || [])
       setCashRecords(dashData.cashRecords || [])
       setBudgetPlans(dashData.budgetPlans || [])
       setTransfers(dashData.transfers || [])
@@ -150,7 +136,6 @@ export function DataProvider({ children }) {
       if (event === 'SIGNED_OUT') {
         setUser(null); setProfile(null)
         setExpenses([]); setIncome([])
-        setAllExpenses([]); setAllIncome([])
         setCashRecords([]); setBudgetPlans([])
         setTransfers([]); setAccounts([])
       }
@@ -167,7 +152,11 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  const bankBalances = buildBankBalances(expenses, income, cashRecords, transfers, accounts)
+  // Memoize bankBalances — hanya hitung ulang saat data master berubah, bukan saat periodIdx berubah
+  const bankBalances = useMemo(
+    () => buildBankBalances(expenses, income, cashRecords, transfers, accounts),
+    [expenses, income, cashRecords, transfers, accounts]
+  )
 
   function getUserName(userId) {
     const p = profiles.find(p => p.id === userId)
