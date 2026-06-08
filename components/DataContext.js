@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase, getUser } from '../lib/supabase'
 import { getAllDashboardData, getProfile } from '../lib/data'
 import { buildSummary, buildPeriods, getCurrentPeriodIndex, filterByPeriod } from '../lib/utils'
@@ -84,9 +84,12 @@ export function DataProvider({ children }) {
   const [budgetPlans, setBudgetPlans] = useState([])
   const [transfers, setTransfers]     = useState([])
   const [accounts, setAccounts]       = useState([])
+  // loading = true hanya saat PERTAMA KALI (belum ada data sama sekali)
   const [loading, setLoading]         = useState(true)
+  const [refreshing, setRefreshing]   = useState(false) // background refresh
   const [error, setError]             = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
+  const hasDataRef                    = useRef(false)
 
   const payPeriodDate = profile?.pay_period_date || 25
   const overrides     = profile?.pay_period_overrides || {}
@@ -102,10 +105,17 @@ export function DataProvider({ children }) {
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true)
+      // Kalau sudah punya data → background refresh (tidak flash skeleton)
+      // Kalau belum punya data → full loading screen
+      if (hasDataRef.current) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
       setError(null)
+
       const u = await getUser()
-      if (!u) return
+      if (!u) { setLoading(false); setRefreshing(false); return }
       setUser(u)
 
       const [profileData, dashData] = await Promise.all([
@@ -122,11 +132,13 @@ export function DataProvider({ children }) {
       setTransfers(dashData.transfers || [])
       setAccounts(dashData.accounts || [])
       setLastRefresh(new Date())
+      hasDataRef.current = true
     } catch (err) {
       setError(err.message)
       console.error('loadData error:', err)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
@@ -134,6 +146,7 @@ export function DataProvider({ children }) {
     loadData()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
+        hasDataRef.current = false
         setUser(null); setProfile(null)
         setExpenses([]); setIncome([])
         setCashRecords([]); setBudgetPlans([])
@@ -152,7 +165,6 @@ export function DataProvider({ children }) {
   const summaryPeriode = buildSummary(filteredExpenses, filteredIncome, filteredCashRecords, budgetPlans)
   const summaryAll     = buildSummary(expenses, income, cashRecords, budgetPlans)
 
-  // Memoize bankBalances — hanya hitung ulang saat data master berubah, bukan saat periodIdx berubah
   const bankBalances = useMemo(
     () => buildBankBalances(expenses, income, cashRecords, transfers, accounts),
     [expenses, income, cashRecords, transfers, accounts]
@@ -170,7 +182,7 @@ export function DataProvider({ children }) {
       filteredExpenses, filteredIncome, filteredCashRecords,
       summaryPeriode, summaryAll,
       bankBalances,
-      loading, error, lastRefresh,
+      loading, refreshing, error, lastRefresh,
       periodIdx, setPeriodIdx,
       periods, payPeriodDate, overrides,
       loadData, getUserName,

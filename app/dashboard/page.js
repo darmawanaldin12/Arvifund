@@ -10,7 +10,6 @@ import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
-import { Skeleton } from '../../components/ui/skeleton'
 import { Progress } from '../../components/ui/progress'
 import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark } from 'lucide-react'
 
@@ -47,14 +46,12 @@ export default function DashboardPage() {
   const anomali      = filteredExpenses.filter(r => r.nilai > avgNilai * 3 && r.nilai > 100000).slice(0, 3)
   const recent       = [...filteredExpenses].sort((a, b) => (parseTanggal(b.tanggal)?.getTime() || 0) - (parseTanggal(a.tanggal)?.getTime() || 0)).slice(0, 10)
 
-  // Weekly
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay())
   const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
   const weeklyTotal = filteredExpenses
     .filter(r => { const dt = parseTanggal(r.tanggal); return dt && dt >= weekStart && dt <= weekEnd })
     .reduce((s, r) => s + r.nilai, 0)
 
-  // Heatmap
   function buildHeatmap() {
     const cells = [], todayLocal = getLocalDate(), start = new Date(todayLocal)
     start.setDate(todayLocal.getDate() - 41)
@@ -491,18 +488,90 @@ export default function DashboardPage() {
   )
 }
 
+function SkeletonBox({ className = '', style = {} }) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: 'linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.6s ease-in-out infinite',
+        borderRadius: 10,
+        ...style,
+      }}
+    />
+  )
+}
+
 function LoadingState() {
   return (
     <>
-      <div className="h-14 bg-[var(--surface)] border-b border-[var(--border)]" />
+      {/* Header */}
+      <div style={{ height: 56, background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', paddingInline: 16, gap: 10 }}>
+        <SkeletonBox style={{ width: 120, height: 18, borderRadius: 6 }} />
+      </div>
+
       <div className="page-container">
-        <div className="grid grid-cols-4 gap-3 mb-5">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl bg-[var(--surface2)]" />)}
+        {/* Period filter chips */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflow: 'hidden' }}>
+          {[80, 100, 90, 110].map((w, i) => (
+            <SkeletonBox key={i} style={{ width: w, height: 30, borderRadius: 20, flexShrink: 0 }} />
+          ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-40 rounded-xl bg-[var(--surface2)]" />)}
+
+        {/* KPI Cards 2x2 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <SkeletonBox style={{ width: '60%', height: 11 }} />
+              <SkeletonBox style={{ width: '80%', height: 22 }} />
+              <SkeletonBox style={{ width: '50%', height: 11 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Scorecard 4 items */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 12, marginBottom: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 4px' }}>
+              <SkeletonBox style={{ width: 22, height: 22, borderRadius: 8 }} />
+              <SkeletonBox style={{ width: '70%', height: 10 }} />
+              <SkeletonBox style={{ width: '90%', height: 16 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* 3 card rows */}
+        {[160, 140, 140].map((h, i) => (
+          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <SkeletonBox style={{ width: '40%', height: 13, marginBottom: 14 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[0,1,2].map(j => (
+                <div key={j} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <SkeletonBox style={{ width: '35%', height: 11 }} />
+                    <SkeletonBox style={{ width: '20%', height: 11 }} />
+                  </div>
+                  <SkeletonBox style={{ width: '100%', height: 7, borderRadius: 99 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Chart placeholder */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <SkeletonBox style={{ width: '30%', height: 13, marginBottom: 14 }} />
+          <SkeletonBox style={{ width: '100%', height: 160, borderRadius: 8 }} />
         </div>
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </>
   )
 }
