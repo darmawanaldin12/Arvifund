@@ -11,7 +11,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Progress } from '../../components/ui/progress'
-import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark } from 'lucide-react'
+import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark, TrendingUp, TrendingDown } from 'lucide-react'
 
 export default function DashboardPage() {
   const { summaryPeriode, summaryAll, loading, loadData, periodIdx, setPeriodIdx,
@@ -95,82 +95,80 @@ export default function DashboardPage() {
       <div className="page-container">
 
         {/* ── Period Filter ── */}
-        <div className="mb-5 overflow-x-auto pb-1 hide-scrollbar">
-          <div className="flex gap-2 min-w-max">
+        <div className="period-filter-bar">
+          <button
+            onClick={() => setPeriodIdx('')}
+            className={cn('filter-chip', periodIdx === '' && 'active')}
+          >
+            Semua
+          </button>
+          {periods.map((p, i) => (
             <button
-              onClick={() => setPeriodIdx('')}
-              className={cn('filter-chip', periodIdx === '' && 'active')}
+              key={i}
+              onClick={() => setPeriodIdx(String(i))}
+              className={cn('filter-chip', periodIdx === String(i) && 'active')}
             >
-              Semua
+              {p.label}
             </button>
-            {periods.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => setPeriodIdx(String(i))}
-                className={cn('filter-chip', periodIdx === String(i) && 'active')}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
         {/* ── KPI Grid ── */}
-        <div className="kpi-grid mb-5">
+        <div className="kpi-grid">
           {[
             {
               href: '/income',
               cls: 'income',
               label: 'Total Pemasukan',
               value: fmt(s.totalIncome),
-              valueColor: 'text-[var(--green)]',
+              valueColor: 'kpi-value-green',
               mom: momIncome,
+              icon: <TrendingUp size={16} />,
             },
             {
               href: '/expenses',
               cls: 'expense',
               label: 'Total Pengeluaran',
               value: fmt(s.totalExpenses),
-              valueColor: 'text-[var(--red)]',
+              valueColor: 'kpi-value-red',
               sub: `${s.expensesCount} transaksi`,
               mom: momExpense,
+              icon: <TrendingDown size={16} />,
             },
             {
               href: '/record',
               cls: 'saldo',
               label: 'Saldo Periode',
               value: fmt(s.saldo),
-              valueColor: s.saldo >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]',
+              valueColor: s.saldo >= 0 ? 'kpi-value-accent' : 'kpi-value-red',
               sub: 'income − pengeluaran',
+              icon: <BarChart2 size={16} />,
             },
             {
               href: '/record',
               cls: 'saldo-tahun',
               label: 'Saldo Tahun Ini',
               value: fmt(saldoTahun),
-              valueColor: saldoTahun >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]',
+              valueColor: saldoTahun >= 0 ? 'kpi-value-accent' : 'kpi-value-red',
               sub: 'total semua data',
+              icon: <Landmark size={16} />,
             },
           ].map(item => (
             <Link key={item.href + item.label} href={item.href} className="no-underline block">
-              <div className={cn(
-                'kpi-card', item.cls,
-                'transition-all duration-200 hover:-translate-y-0.5',
-                'hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)]',
-                'cursor-pointer',
-              )}>
-                <div className="kpi-label">{item.label}</div>
+              <div className={cn('kpi-card', item.cls)}>
+                <div className="kpi-card-top">
+                  <span className="kpi-label">{item.label}</span>
+                  <span className={cn('kpi-icon', item.cls)}>{item.icon}</span>
+                </div>
                 <div className={cn('kpi-value', item.valueColor)}>{item.value}</div>
-                {item.sub && <div className="text-[11px] text-[var(--text3)] mb-1">{item.sub}</div>}
+                {item.sub && <div className="kpi-sub">{item.sub}</div>}
                 {item.mom && (
-                  <Badge variant="outline" className={cn(
-                    'text-[10px] font-semibold border-0 px-2 py-0.5',
-                    item.mom.cls === 'good' || item.mom.cls === 'mom-good'
-                      ? 'bg-[var(--green-bg)] text-[var(--green)]'
-                      : 'bg-[var(--red-bg)] text-[var(--red)]',
+                  <div className={cn(
+                    'kpi-mom',
+                    item.mom.cls === 'good' || item.mom.cls === 'mom-good' ? 'good' : 'bad',
                   )}>
                     {item.mom.label} vs {bulanLaluMom}
-                  </Badge>
+                  </div>
                 )}
               </div>
             </Link>
@@ -182,231 +180,213 @@ export default function DashboardPage() {
 
           {/* Scorecard */}
           <div className="bento-4">
-            <div className="scorecard-grid">
-              {SCORECARD_ITEMS.map((item, i) => (
-                <div
-                  key={i}
-                  onClick={() => setModalType(item.modalType)}
-                  className={cn(
-                    'scorecard-item cursor-pointer',
-                    'transition-all duration-150',
-                    'hover:-translate-y-0.5 hover:shadow-md',
-                    'active:scale-[0.97]',
-                  )}
-                >
-                  <item.Icon size={20} color="var(--accent)" style={{ marginBottom: 6, display: 'block' }} />
-                  <div className="scorecard-label">{item.label}</div>
-                  <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
-                  <div className="text-[9px] text-[var(--text3)] mt-1 opacity-60">tap untuk grafik</div>
-                </div>
-              ))}
+            <div className="dash-card">
+              <div className="dash-card-header">Pengeluaran Bulan Ini</div>
+              <div className="scorecard-grid">
+                {SCORECARD_ITEMS.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setModalType(item.modalType)}
+                    className={cn('scorecard-item', 'scorecard-item-btn')}
+                    aria-label={`${item.label}: ${item.value}, tap untuk grafik`}
+                  >
+                    <div className="scorecard-item-icon">
+                      <item.Icon size={18} />
+                    </div>
+                    <div className="scorecard-label">{item.label}</div>
+                    <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
+                    <div className="scorecard-hint">tap untuk grafik</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Weekly Summary */}
           <div className="bento-4">
             <Link href="/expenses" className="no-underline block h-full">
-              <Card className={cn(
-                'h-full border-[var(--border)] bg-[var(--surface)]',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="section-title mb-0">Ringkasan Mingguan</div>
-                    <Badge className="text-[10px] bg-[var(--accent)] text-white border-0">LIVE</Badge>
-                  </div>
-                  <div className="text-[22px] font-extrabold text-[var(--text1)]">{fmt(weeklyTotal)}</div>
-                  <div className="text-[12px] text-[var(--text3)] mb-4">
-                    {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                  </div>
-                  <div className="flex gap-[3px] items-end h-12">
-                    {[0,1,2,3,4,5,6].map(d => {
-                      const day = new Date(weekStart); day.setDate(weekStart.getDate() + d)
-                      const key = getLocalDateStr(day)
-                      const val = filteredExpenses.filter(r => r.tanggal?.startsWith(key)).reduce((s, r) => s + r.nilai, 0)
-                      const maxDay = Math.max(...[0,1,2,3,4,5,6].map(x => {
-                        const dx = new Date(weekStart); dx.setDate(weekStart.getDate() + x)
-                        return filteredExpenses.filter(r => r.tanggal?.startsWith(getLocalDateStr(dx))).reduce((s,r) => s+r.nilai, 0)
-                      }), 1)
-                      const pct = (val / maxDay) * 100
-                      return (
-                        <div key={d} className="flex-1 flex flex-col items-center gap-0.5">
-                          <div style={{ width: '100%', height: `${Math.max(pct, 4)}%`, background: pct > 70 ? 'var(--red)' : 'var(--accent)', borderRadius: '3px 3px 0 0', transition: 'height 0.6s' }} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="dash-card dash-card-link">
+                <div className="dash-card-header-row">
+                  <span className="dash-card-header">Ringkasan Mingguan</span>
+                  <span className="dash-badge-live">LIVE</span>
+                </div>
+                <div className="weekly-amount">{fmt(weeklyTotal)}</div>
+                <div className="weekly-range">
+                  {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                </div>
+                <div className="weekly-bars">
+                  {[0,1,2,3,4,5,6].map(d => {
+                    const day = new Date(weekStart); day.setDate(weekStart.getDate() + d)
+                    const key = getLocalDateStr(day)
+                    const val = filteredExpenses.filter(r => r.tanggal?.startsWith(key)).reduce((s, r) => s + r.nilai, 0)
+                    const maxDay = Math.max(...[0,1,2,3,4,5,6].map(x => {
+                      const dx = new Date(weekStart); dx.setDate(weekStart.getDate() + x)
+                      return filteredExpenses.filter(r => r.tanggal?.startsWith(getLocalDateStr(dx))).reduce((s,r) => s+r.nilai, 0)
+                    }), 1)
+                    const pct = (val / maxDay) * 100
+                    const isToday = getLocalDateStr(day) === getLocalDateStr(now)
+                    const days = ['Min','Sen','Sel','Rab','Kam','Jum','Sab']
+                    return (
+                      <div key={d} className="weekly-bar-col">
+                        <div
+                          className="weekly-bar-fill"
+                          style={{
+                            height: `${Math.max(pct, 6)}%`,
+                            background: isToday ? 'var(--accent)' : pct > 70 ? 'var(--red)' : 'var(--surface3)',
+                          }}
+                        />
+                        <div className={cn('weekly-bar-label', isToday && 'today')}>{days[d]}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </Link>
           </div>
 
           {/* User Spending */}
           <div className="bento-4">
-            <Card className="h-full border-[var(--border)] bg-[var(--surface)]">
-              <CardContent className="p-4">
-                <div className="section-title">Pengeluaran per User</div>
-                {userSplit.length === 0 ? (
-                  <p className="text-[var(--text3)] text-[13px]">Belum ada data</p>
-                ) : (
-                  <div className="flex flex-col gap-3.5">
-                    {userSplit.map(u => (
-                      <div key={u.name}>
-                        <div className="flex justify-between mb-1.5">
-                          <span className="text-[13px] font-semibold">{u.name}</span>
-                          <span className="text-[12px] text-[var(--text3)]">{u.pct}%</span>
-                        </div>
-                        <Progress
-                          value={u.pct}
-                          className="h-2 bg-[var(--surface2)]"
-                          indicatorClassName={u.name === 'Aldin' ? 'bg-[var(--accent)]' : 'bg-[#db2777]'}
-                        />
+            <div className="dash-card">
+              <div className="dash-card-header">Pengeluaran per Anggota</div>
+              {userSplit.length === 0 ? (
+                <p className="dash-empty">Belum ada data</p>
+              ) : (
+                <div className="progress-list">
+                  {userSplit.map(u => (
+                    <div key={u.name} className="progress-row">
+                      <div className="progress-row-top">
+                        <span className="progress-label">{u.name}</span>
+                        <span className="progress-pct">{u.pct}%</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <Progress
+                        value={u.pct}
+                        className="h-2 bg-[var(--surface2)]"
+                        indicatorClassName={u.name === 'Aldin' ? 'bg-[var(--accent)]' : 'bg-[#db2777]'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Top 5 Kategori */}
           <div className="bento-4">
             <Link href="/expenses" className="no-underline block">
-              <Card className={cn(
-                'border-[var(--border)] bg-[var(--surface)]',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardContent className="p-4">
-                  <div className="section-title">Top 5 Kategori</div>
-                  <div className="flex flex-col gap-3.5">
-                    {top5.length === 0 ? (
-                      <p className="text-[var(--text3)] text-[13px]">Belum ada data</p>
-                    ) : top5.map(([kat, val]) => {
-                      const pct   = s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
-                      const color = KATEGORI_COLOR[kat] || 'var(--accent)'
-                      return (
-                        <div key={kat} className="flex items-center gap-3">
-                          <span className="shrink-0">
-                            <KategoriIcon kategori={kat} size={20} />
+              <div className="dash-card dash-card-link">
+                <div className="dash-card-header">Top 5 Kategori</div>
+                <div className="progress-list">
+                  {top5.length === 0 ? (
+                    <p className="dash-empty">Belum ada data</p>
+                  ) : top5.map(([kat, val]) => {
+                    const pct   = s.totalExpenses > 0 ? Math.round(val / s.totalExpenses * 100) : 0
+                    const color = KATEGORI_COLOR[kat] || 'var(--accent)'
+                    return (
+                      <div key={kat} className="progress-row">
+                        <div className="progress-row-top">
+                          <span className="progress-row-kat">
+                            <KategoriIcon kategori={kat} size={16} />
+                            <span className="progress-label">{kat}</span>
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between mb-1.5">
-                              <span className="text-[13px] font-semibold truncate">{kat}</span>
-                              <span className="text-[13px] font-bold shrink-0 ml-2">
-                                {fmt(val)} <span className="text-[var(--text3)] text-[11px]">({pct}%)</span>
-                              </span>
-                            </div>
-                            <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color }} />
-                          </div>
+                          <span className="progress-pct">
+                            {fmt(val)}
+                            <span className="progress-pct-sub"> ({pct}%)</span>
+                          </span>
                         </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color }} />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </Link>
           </div>
 
           {/* Budget vs Realisasi */}
           <div className="bento-4">
             <Link href="/budget" className="no-underline block">
-              <Card className={cn(
-                'border-[var(--border)] bg-[var(--surface)]',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardContent className="p-4">
-                  <div className="section-title">Budget vs Realisasi</div>
-                  {(s.budgetVsReal || []).filter(b => b.alokasi > 0).length === 0 ? (
-                    <p className="text-[var(--text3)] text-[13px]">Belum ada budget plan</p>
-                  ) : (
-                    <div className="flex flex-col gap-3.5">
-                      {(s.budgetVsReal || []).filter(b => b.alokasi > 0).slice(0, 5).map(b => (
-                        <div key={b.kategori}>
-                          <div className="flex justify-between mb-1.5">
-                            <span className="text-[13px] font-semibold">{b.kategori}</span>
-                            <span className={cn(
-                              'text-[13px] font-bold',
-                              b.pct >= 100 ? 'text-[var(--red)]' : b.pct >= 80 ? 'text-[var(--yellow)]' : 'text-[var(--green)]'
-                            )}>{b.pct}%</span>
-                          </div>
-                          <Progress
-                            value={Math.min(b.pct, 100)}
-                            className="h-2.5 bg-[var(--surface2)]"
-                            indicatorClassName={b.pct >= 100 ? 'bg-[var(--red)]' : b.pct >= 80 ? 'bg-[var(--yellow)]' : 'bg-[var(--green)]'}
-                          />
+              <div className="dash-card dash-card-link">
+                <div className="dash-card-header">Budget vs Realisasi</div>
+                {(s.budgetVsReal || []).filter(b => b.alokasi > 0).length === 0 ? (
+                  <p className="dash-empty">Belum ada budget plan</p>
+                ) : (
+                  <div className="progress-list">
+                    {(s.budgetVsReal || []).filter(b => b.alokasi > 0).slice(0, 5).map(b => (
+                      <div key={b.kategori} className="progress-row">
+                        <div className="progress-row-top">
+                          <span className="progress-label">{b.kategori}</span>
+                          <span className={cn(
+                            'progress-pct',
+                            b.pct >= 100 ? 'danger' : b.pct >= 80 ? 'warn' : 'ok',
+                          )}>{b.pct}%</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <Progress
+                          value={Math.min(b.pct, 100)}
+                          className="h-2 bg-[var(--surface2)]"
+                          indicatorClassName={b.pct >= 100 ? 'bg-[var(--red)]' : b.pct >= 80 ? 'bg-[var(--yellow)]' : 'bg-[var(--green)]'}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Link>
           </div>
 
           {/* Heatmap */}
           <div className="bento-4">
             <Link href="/expenses" className="no-underline block">
-              <Card className={cn(
-                'border-[var(--border)] bg-[var(--surface)]',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardContent className="p-4">
-                  <div className="section-title">Heatmap Aktivitas</div>
-                  <div className="flex gap-1 mb-2">
-                    {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
-                      <div key={d} className="flex-1 text-center text-[9px] text-[var(--text3)] font-semibold">{d}</div>
-                    ))}
-                  </div>
-                  <div className="heatmap-grid">
-                    {heatmap.map((cell, i) => (
-                      <div key={i} className={`heatmap-cell${cell.lv ? ' ' + cell.lv : ''}`}
-                        title={cell.val > 0 ? `${cell.key}: ${fmtFull(cell.val)}` : cell.key} />
-                    ))}
-                  </div>
-                  <div className="flex justify-between mt-2 text-[10px] text-[var(--text3)]">
-                    <span>Sedikit</span><span>Banyak</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="dash-card dash-card-link">
+                <div className="dash-card-header">Heatmap Aktivitas</div>
+                <div className="heatmap-days">
+                  {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
+                    <div key={d} className="heatmap-day-label">{d}</div>
+                  ))}
+                </div>
+                <div className="heatmap-grid">
+                  {heatmap.map((cell, i) => (
+                    <div
+                      key={i}
+                      className={`heatmap-cell${cell.lv ? ' ' + cell.lv : ''}`}
+                      title={cell.val > 0 ? `${cell.key}: ${fmtFull(cell.val)}` : cell.key}
+                    />
+                  ))}
+                </div>
+                <div className="heatmap-legend">
+                  <span>Sedikit</span><span>Banyak</span>
+                </div>
+              </div>
             </Link>
           </div>
 
           {/* Anomali */}
           <div className="bento-4">
             <Link href="/expenses" className="no-underline block">
-              <Card className={cn(
-                'border-[var(--border)] bg-[var(--surface)]',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardContent className="p-4">
-                  <div className="section-title" style={{ color: 'var(--red)' }}>
-                    <AlertTriangle size={16} style={{ color: 'var(--red)' }} />
-                    Transaksi Anomali
+              <div className="dash-card dash-card-link">
+                <div className="dash-card-header dash-card-header-danger">
+                  <AlertTriangle size={15} />
+                  Transaksi Anomali
+                </div>
+                {anomali.length === 0 ? (
+                  <div className="dash-empty-center">
+                    <div className="dash-empty-icon">✅</div>
+                    <p>Tidak ada anomali</p>
                   </div>
-                  {anomali.length === 0 ? (
-                    <div className="empty-state py-6">
-                      <div className="emoji">✅</div>
-                      <p>Tidak ada anomali</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2.5">
-                      {anomali.map(r => (
-                        <div key={r.id} className={cn(
-                          'flex items-center gap-2.5 p-2.5 rounded-lg',
-                          'bg-[var(--red-bg)] border border-[rgba(244,63,94,0.2)]',
-                        )}>
-                          <AlertTriangle size={20} style={{ color: 'var(--red)', flexShrink: 0 }} />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-[13px] text-[var(--text1)] truncate">{r.toko || '-'}</div>
-                            <div className="text-[11px] text-[var(--text3)] truncate">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
-                          </div>
-                          <span className="font-bold text-[var(--red)] text-[13px] shrink-0">{fmt(r.nilai)}</span>
+                ) : (
+                  <div className="anomali-list">
+                    {anomali.map(r => (
+                      <div key={r.id} className="anomali-item">
+                        <AlertTriangle size={18} className="anomali-icon" />
+                        <div className="anomali-info">
+                          <div className="anomali-toko">{r.toko || '-'}</div>
+                          <div className="anomali-uraian">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <span className="anomali-nilai">{fmt(r.nilai)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Link>
           </div>
 
@@ -422,55 +402,50 @@ export default function DashboardPage() {
 
           {/* Recent Transactions */}
           <div className="bento-12">
-            <Link href="/expenses" className="no-underline block">
-              <Card className={cn(
-                'border-[var(--border)] bg-[var(--surface)] overflow-hidden p-0',
-                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
-              )}>
-                <CardHeader className="px-5 py-4 border-b border-[var(--border)] flex-row items-center justify-between space-y-0">
-                  <CardTitle className="section-title mb-0 text-[13px]">10 Transaksi Terakhir</CardTitle>
-                  <span className="text-[12px] text-[var(--accent)] font-semibold">Lihat semua ↗</span>
-                </CardHeader>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Tanggal</th>
-                        <th>Deskripsi</th>
-                        <th>Kategori</th>
-                        <th>User</th>
-                        <th style={{ textAlign: 'right' }}>Jumlah</th>
+            <div className="dash-card dash-card-flush">
+              <div className="dash-table-header">
+                <span className="dash-card-header mb-0">10 Transaksi Terakhir</span>
+                <Link href="/expenses" className="dash-see-all">Lihat semua ↗</Link>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th>
+                      <th>Deskripsi</th>
+                      <th>Kategori</th>
+                      <th>User</th>
+                      <th style={{ textAlign: 'right' }}>Jumlah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.length === 0 ? (
+                      <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
+                    ) : recent.map(r => (
+                      <tr key={r.id}>
+                        <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
+                        <td>
+                          <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
+                          {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
+                        </td>
+                        <td>
+                          <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
+                            <KategoriIcon kategori={r.kategori} size={12} />
+                            {r.kategori}
+                          </Badge>
+                        </td>
+                        <td>
+                          <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
+                            {getUserName(r.user_id)}
+                          </span>
+                        </td>
+                        <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {recent.length === 0 ? (
-                        <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
-                      ) : recent.map(r => (
-                        <tr key={r.id}>
-                          <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
-                          <td>
-                            <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
-                            {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
-                          </td>
-                          <td>
-                            <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
-                              <KategoriIcon kategori={r.kategori} size={12} />
-                              {r.kategori}
-                            </Badge>
-                          </td>
-                          <td>
-                            <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
-                              {getUserName(r.user_id)}
-                            </span>
-                          </td>
-                          <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </Link>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -506,44 +481,35 @@ function SkeletonBox({ className = '', style = {} }) {
 function LoadingState() {
   return (
     <>
-      {/* Header */}
       <div style={{ height: 56, background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', paddingInline: 16, gap: 10 }}>
         <SkeletonBox style={{ width: 120, height: 18, borderRadius: 6 }} />
       </div>
-
       <div className="page-container">
-        {/* Period filter chips */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflow: 'hidden' }}>
           {[80, 100, 90, 110].map((w, i) => (
-            <SkeletonBox key={i} style={{ width: w, height: 30, borderRadius: 20, flexShrink: 0 }} />
+            <SkeletonBox key={i} style={{ width: w, height: 32, borderRadius: 20, flexShrink: 0 }} />
           ))}
         </div>
-
-        {/* KPI Cards 2x2 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <SkeletonBox style={{ width: '60%', height: 11 }} />
               <SkeletonBox style={{ width: '80%', height: 22 }} />
               <SkeletonBox style={{ width: '50%', height: 11 }} />
             </div>
           ))}
         </div>
-
-        {/* Scorecard 4 items */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 12, marginBottom: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 4px' }}>
-              <SkeletonBox style={{ width: 22, height: 22, borderRadius: 8 }} />
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 4px' }}>
+              <SkeletonBox style={{ width: 28, height: 28, borderRadius: 8 }} />
               <SkeletonBox style={{ width: '70%', height: 10 }} />
               <SkeletonBox style={{ width: '90%', height: 16 }} />
             </div>
           ))}
         </div>
-
-        {/* 3 card rows */}
         {[160, 140, 140].map((h, i) => (
-          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 12 }}>
             <SkeletonBox style={{ width: '40%', height: 13, marginBottom: 14 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[0,1,2].map(j => (
@@ -558,14 +524,11 @@ function LoadingState() {
             </div>
           </div>
         ))}
-
-        {/* Chart placeholder */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 12 }}>
           <SkeletonBox style={{ width: '30%', height: 13, marginBottom: 14 }} />
           <SkeletonBox style={{ width: '100%', height: 160, borderRadius: 8 }} />
         </div>
       </div>
-
       <style>{`
         @keyframes shimmer {
           0%   { background-position: 200% 0; }
