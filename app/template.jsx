@@ -28,11 +28,12 @@ function getVariants(pathname) {
     }
   }
 
-  // Slide Up — Action & input pages
+  // Slide Up — Action & input pages + Settings
   if (
     pathname.startsWith('/input') ||
     pathname.startsWith('/budget') ||
-    pathname.startsWith('/wallet')
+    pathname.startsWith('/wallet') ||
+    pathname.startsWith('/settings')
   ) {
     return {
       initial:  { opacity: 0, y: 28 },
@@ -56,7 +57,7 @@ function getVariants(pathname) {
     }
   }
 
-  // Fade — Dashboard & settings (default)
+  // Fade — Dashboard (default)
   return {
     initial:  { opacity: 0 },
     animate:  { opacity: 1 },
