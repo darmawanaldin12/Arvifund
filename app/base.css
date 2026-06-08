@@ -91,7 +91,7 @@ body {
 .app-shell {
   display: flex;
   min-height: 100dvh;
-  overflow: visible;
+  overflow: hidden; /* clip transform animasi */
 }
 
 .app-sidebar-wrap {
@@ -103,6 +103,15 @@ body {
 .app-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* overflow dihandle oleh motion.div di dalam, bukan di sini */
+  overflow: hidden;
+}
+
+/* motion wrapper — scroll ada di sini */
+.app-main > div {
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -247,10 +256,9 @@ body {
 /* ── RESPONSIVE ── */
 @media (max-width: 767px) {
   .bottom-nav { display: flex; }
-  .app-main { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); }
+  .app-main > div { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); }
   .page-container { padding: 12px; width: 100%; overflow-x: hidden; }
   .app-header { padding: 0 16px; }
-  .app-main { overflow-x: hidden; width: 100%; }
 }
 
 @media (min-width: 768px) {
