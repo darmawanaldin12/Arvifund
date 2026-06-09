@@ -1,32 +1,32 @@
 /* ── CSS VARIABLES ── */
 :root {
-  --bg:              #f9f9ff;
-  --bg2:             #f1f3ff;
-  --surface:         #ffffff;
-  --surface2:        #e8edff;
-  --surface3:        #d7e2ff;
-  --border:          #c3c6d6;
-  --border2:         #dfe1e6;
-  --text1:           #041b3c;
-  --text2:           #434654;
-  --text3:           #737685;
-  --accent:          #003d9b;
-  --accent-light:    #dae2ff;
-  --accent-dim:      #b2c5ff;
-  --green:           #1b6b3a;
-  --green-bg:        #d6f5e3;
-  --red:             #ba1a1a;
-  --red-bg:          #ffdad6;
-  --yellow:          #5e3c00;
-  --yellow-bg:       #ffddb3;
-  --shadow:          0 4px 12px rgba(0,0,0,0.08);
-  --shadow-sm:       0 1px 4px rgba(0,0,0,0.06);
+  --bg:              #EEF2FF;
+  --bg2:             #E0E7FF;
+  --surface:         #FFFFFF;
+  --surface2:        #EEF2FF;
+  --surface3:        #C7D2FE;
+  --border:          #C7D2FE;
+  --border2:         #DDE3FF;
+  --text1:           #0F172A;
+  --text2:           #1E293B;
+  --text3:           #64748B;
+  --accent:          #1E40AF;
+  --accent-light:    #DBEAFE;
+  --accent-dim:      #93C5FD;
+  --green:           #15803D;
+  --green-bg:        #DCFCE7;
+  --red:             #B91C1C;
+  --red-bg:          #FEE2E2;
+  --yellow:          #B45309;
+  --yellow-bg:       #FEF3C7;
+  --shadow:          0 4px 16px rgba(30,64,175,0.10);
+  --shadow-sm:       0 1px 4px rgba(30,64,175,0.06);
   --nav-h:           64px;
   --header-h:        56px;
   --sidebar-w:       256px;
-  --radius:          12px;
-  --radius-sm:       8px;
-  --radius-full:     24px;
+  --radius:          16px;
+  --radius-sm:       10px;
+  --radius-full:     99px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,7 +59,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text1);
   font-size: 14px;
@@ -91,7 +91,7 @@ body {
 .app-shell {
   display: flex;
   min-height: 100dvh;
-  overflow: hidden; /* clip transform animasi */
+  overflow: hidden;
 }
 
 .app-sidebar-wrap {
@@ -105,11 +105,9 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* overflow dihandle oleh motion.div di dalam, bukan di sini */
   overflow: hidden;
 }
 
-/* motion wrapper — scroll ada di sini */
 .app-main > div {
   flex: 1;
   display: flex;
