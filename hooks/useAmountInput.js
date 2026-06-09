@@ -50,3 +50,56 @@ export function useAmountInput(rawValue, onChange) {
 
   return { display, formatted, previewColor, onChange: handleChange, onKeyDown: handleKeyDown }
 }
+
+/**
+ * parseRupiahToInt
+ * Konversi nilai nominal dari AI/OCR ke integer bersih.
+ *
+ * Menangani format:
+ *   - "56.600"  → 56600   (titik sebagai pemisah ribuan Indonesia)
+ *   - "56,600"  → 56600   (koma sebagai pemisah ribuan)
+ *   - 56.6      → 56600   (float hasil salah parse — dikali 1000 jika < 10000 dan ada desimal)
+ *   - "56600"   → 56600   (sudah benar)
+ *   - 1500000   → 1500000 (number sudah benar)
+ */
+export function parseRupiahToInt(value) {
+  if (value === null || value === undefined || value === '') return ''
+
+  const str = String(value).trim()
+
+  // Jika ada titik DAN tidak ada koma: titik = pemisah ribuan (format Indonesia)
+  // Contoh: "56.600" → 56600, "1.500.000" → 1500000
+  if (str.includes('.') && !str.includes(',')) {
+    const parts = str.split('.')
+    // Jika semua bagian setelah titik pertama adalah 3 digit → pemisah ribuan
+    const allThreeDigits = parts.slice(1).every(p => p.length === 3 && /^\d+$/.test(p))
+    if (allThreeDigits && /^\d+$/.test(parts[0])) {
+      return str.replace(/\./g, '')
+    }
+    // Jika bagian desimal < 3 digit → kemungkinan float yang salah (56.6 harusnya 56600)
+    const lastPart = parts[parts.length - 1]
+    if (lastPart.length < 3 && /^\d+$/.test(parts[0]) && /^\d+$/.test(lastPart)) {
+      // Kalikan agar jadi ribuan: 56.6 → 56600
+      const factor = Math.pow(10, 3 - lastPart.length)
+      const intVal = Math.round(parseFloat(str) * factor * (lastPart.length === 1 ? 100 : lastPart.length === 2 ? 10 : 1))
+      // Lebih simpel: buang titik dan pad dengan nol sampai minimal 3 digit desimal
+      const cleaned = parts[0] + lastPart.padEnd(3, '0')
+      return cleaned
+    }
+  }
+
+  // Jika ada koma: koma = pemisah ribuan (format lain) atau desimal
+  if (str.includes(',')) {
+    const parts = str.split(',')
+    const lastPart = parts[parts.length - 1]
+    // Koma sebagai pemisah ribuan jika bagian terakhir 3 digit
+    if (lastPart.length === 3 && /^\d+$/.test(lastPart)) {
+      return str.replace(/,/g, '')
+    }
+    // Koma sebagai desimal → bulatkan
+    return String(Math.round(parseFloat(str.replace(',', '.'))))
+  }
+
+  // Tidak ada titik/koma: ambil digit saja
+  return str.replace(/\D/g, '')
+}
