@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { KATEGORI_LIST, BANK_LIST, METODE_LIST, BULAN_ORDER } from '../../lib/utils'
 import { buildSystemPrompt } from '../../lib/ai-prompt'
-import { useAmountInput } from '../../hooks/useAmountInput'
+import { useAmountInput, parseRupiahToInt } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
 import BottomSheet, { SavedToast } from '../../components/input/BottomSheet'
 import TransferConfirmPopup from '../../components/input/TransferConfirmPopup'
@@ -150,7 +150,7 @@ export default function InputPage() {
       const result = JSON.parse(textResult)
 
       if (result.tipe === 'transfer') {
-        setParsedResult({ ...result, tanggal: result.tanggal || today, jumlah: result.jumlah ? String(result.jumlah) : '', catatan: result.catatan || '' })
+        setParsedResult({ ...result, tanggal: result.tanggal || today, jumlah: result.jumlah ? parseRupiahToInt(result.jumlah) : '', catatan: result.catatan || '' })
         setShowTransferConfirm(true)
       } else {
         const aiLower = activeText.trim().toLowerCase()
@@ -166,7 +166,9 @@ export default function InputPage() {
         setParsedResult({
           tipe: result.tipe || 'expense', tanggal: result.tanggal || today,
           toko: result.toko || '', uraian: result.uraian || '',
-          total: result.total ? String(result.total) : '',
+          // parseRupiahToInt: handle format titik ribuan Indonesia (56.600 → "56600")
+          // dan float salah dari AI (56.6 → "56600")
+          total: result.total ? parseRupiahToInt(result.total) : '',
           kategori: result.kategori || '', metode: result.metode || 'Cash',
           bank: result.bank || 'Cash',
           user_id: result.user_id || matchedProfile?.id || user?.id || '',
@@ -464,7 +466,6 @@ export default function InputPage() {
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const S = {
-    // Tab bar
     tabBar: { display: 'flex', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: 4, marginBottom: 20, gap: 4 },
     tabBtn: (active) => ({
       flex: 1, padding: '11px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -474,13 +475,11 @@ export default function InputPage() {
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
       boxShadow: active ? '0 2px 8px rgba(0,61,155,0.25)' : 'none',
     }),
-    // Hint card
     hintCard: { background: 'var(--surface2)', borderRadius: 12, padding: '12px 14px', marginBottom: 16, borderLeft: '3px solid var(--accent)' },
     hintTitle: { fontWeight: 700, fontSize: 12, color: 'var(--accent)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, textTransform: 'uppercase', letterSpacing: '0.4px' },
     hintRow: { fontSize: 12, color: 'var(--text3)', marginBottom: 3, lineHeight: 1.6 },
     hintAccent: { color: 'var(--accent)', fontWeight: 700 },
     hintNote: { marginTop: 8, fontSize: 11, color: 'var(--text3)', paddingTop: 8, borderTop: '1px solid var(--border)' },
-    // Media buttons
     mediaGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 },
     mediaBtn: (active, activeColor) => ({
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -491,11 +490,8 @@ export default function InputPage() {
       cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation',
     }),
     mediaLabel: { fontSize: 11, fontWeight: 700 },
-    // Error box
     errorBox: { padding: '10px 14px', marginBottom: 14, background: 'var(--red-bg)', borderRadius: 10, color: 'var(--red)', fontSize: 13, fontWeight: 600 },
-    // CTA
     ctaBtn: (disabled) => ({ height: 50, fontSize: 15, fontWeight: 700, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.5 : 1 }),
-    // Type selector
     typeGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 },
     typeBtn: (selected, color) => ({
       padding: '14px 6px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
@@ -506,11 +502,8 @@ export default function InputPage() {
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
       transition: 'all 0.15s',
     }),
-    // Shared banner
     sharedBanner: { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent-light)', border: '1px solid var(--accent-dim)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--accent)', fontWeight: 600 },
-    // Image preview
     imgPreview: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16 },
-    // iOS tip
     iosTip: { padding: '10px 12px', marginBottom: 12, background: 'var(--accent-light)', border: '1px solid var(--accent-dim)', borderRadius: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 },
   }
 
@@ -531,7 +524,6 @@ export default function InputPage() {
 
       <div className="page-container" style={{ maxWidth: 560 }}>
 
-        {/* Shared from app banner */}
         {sharedFromApp && (
           <div style={S.sharedBanner}>
             <Share2 size={16} style={{ flexShrink: 0 }} />
@@ -539,7 +531,6 @@ export default function InputPage() {
           </div>
         )}
 
-        {/* Tab switcher */}
         <div style={S.tabBar}>
           {[{ id: 'ai', label: 'Input AI', Icon: Sparkles }, { id: 'manual', label: 'Manual', Icon: PenLine }].map(m => (
             <button key={m.id} type="button" onClick={() => handleModeChange(m.id)} style={S.tabBtn(mode === m.id)}>
@@ -548,15 +539,11 @@ export default function InputPage() {
           ))}
         </div>
 
-        {/* Tab content */}
         <div style={{ overflow: 'hidden' }}>
           <TabTransition tabKey={mode} direction={tabDirection}>
 
-            {/* ── AI Tab ── */}
             {mode === 'ai' && (
               <div className="card" style={{ padding: 18 }}>
-
-                {/* Hint card */}
                 <div style={S.hintCard}>
                   <div style={S.hintTitle}><Sparkles size={12} /> Contoh perintah</div>
                   <div style={S.hintRow}><span style={{ color: 'var(--text1)', fontWeight: 600 }}>Pengeluaran:</span> "beli bensin 50rb aldin BCA"</div>
@@ -567,7 +554,6 @@ export default function InputPage() {
                   <div style={S.hintNote}>⚠ Transfer ke selain Aldin/Solikhatun dicatat sebagai pengeluaran</div>
                 </div>
 
-                {/* Text input */}
                 <div className="form-group">
                   <label className="form-label">Ketik atau diktekan transaksi</label>
                   <textarea className="form-input" rows={4}
@@ -578,14 +564,12 @@ export default function InputPage() {
                   />
                 </div>
 
-                {/* iOS tip */}
                 {iosDevice && (
                   <div style={S.iosTip}>
                     📱 <strong>iPhone:</strong> Tap tombol Suara → bicara → otomatis diproses. Berhenti otomatis setelah diam atau 10 detik.
                   </div>
                 )}
 
-                {/* Media buttons */}
                 <div style={S.mediaGrid}>
                   <button type="button" onClick={toggleRecording} style={{ ...S.mediaBtn(isRecording, 'var(--red)'), animation: isRecording ? 'pulse-record 1.5s infinite' : 'none' }}>
                     {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
@@ -603,7 +587,6 @@ export default function InputPage() {
                   <input id="input-page-gallery" type="file" accept="image/*" onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
                 </div>
 
-                {/* Image preview */}
                 {imagePreview && (
                   <div style={S.imgPreview}>
                     <img src={imagePreview} alt="Struk" style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
@@ -626,11 +609,8 @@ export default function InputPage() {
               </div>
             )}
 
-            {/* ── Manual Tab ── */}
             {mode === 'manual' && (
               <div className="card" style={{ padding: 18 }}>
-
-                {/* Type selector */}
                 <div style={S.typeGrid}>
                   {TIPE_LIST.map(t => {
                     const I = t.Icon
