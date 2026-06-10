@@ -4,6 +4,7 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
+import ExportPDFDashboard from '../../components/ExportPDFDashboard'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, KATEGORI_COLOR, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
 import { cn } from '../../lib/utils-cn'
@@ -94,23 +95,28 @@ export default function DashboardPage() {
       <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
       <div className="page-container">
 
-        {/* ── Period Filter ── */}
-        <div className="period-filter-bar">
-          <button
-            onClick={() => setPeriodIdx('')}
-            className={cn('filter-chip', periodIdx === '' && 'active')}
-          >
-            Semua
-          </button>
-          {periods.map((p, i) => (
+        {/* ── Period Filter + Export PDF ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+          <div className="period-filter-bar" style={{ marginBottom: 0, flex: 1, overflow: 'auto' }}>
             <button
-              key={i}
-              onClick={() => setPeriodIdx(String(i))}
-              className={cn('filter-chip', periodIdx === String(i) && 'active')}
+              onClick={() => setPeriodIdx('')}
+              className={cn('filter-chip', periodIdx === '' && 'active')}
             >
-              {p.label}
+              Semua
             </button>
-          ))}
+            {periods.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setPeriodIdx(String(i))}
+                className={cn('filter-chip', periodIdx === String(i) && 'active')}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flexShrink: 0 }}>
+            <ExportPDFDashboard />
+          </div>
         </div>
 
         {/* ── KPI Grid ── */}
