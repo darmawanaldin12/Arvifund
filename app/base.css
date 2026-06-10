@@ -1,5 +1,6 @@
 /* ── CSS VARIABLES ── */
 :root {
+  /* ── Hex tokens (dipakai langsung di CSS) ── */
   --bg:              #EEF2FF;
   --bg2:             #E0E7FF;
   --surface:         #FFFFFF;
@@ -27,6 +28,18 @@
   --radius:          16px;
   --radius-sm:       10px;
   --radius-full:     99px;
+
+  /* ── HSL tokens (dipakai Tailwind via tailwind.config.js) ── */
+  --bg-hsl:          231 100% 97%;   /* #EEF2FF */
+  --surface-hsl:     0 0% 100%;      /* #FFFFFF */
+  --surface2-hsl:    231 100% 97%;   /* #EEF2FF */
+  --border-hsl:      226 73% 85%;    /* #C7D2FE */
+  --fg-hsl:          222 47% 6%;     /* #0F172A */
+  --text3-hsl:       215 16% 47%;    /* #64748B */
+  --accent-hsl:      224 80% 40%;    /* #1E40AF */
+  --accent-fg-hsl:   0 0% 100%;      /* white */
+  --ring:            224 80% 40%;
+  --red-hsl:         0 69% 42%;      /* #B91C1C */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,6 +65,18 @@
     --yellow-bg:       rgba(245,158,11,0.12);
     --shadow:          0 4px 24px rgba(0,0,0,0.3);
     --shadow-sm:       0 1px 4px rgba(0,0,0,0.2);
+
+    /* HSL dark */
+    --bg-hsl:          222 47% 8%;
+    --surface-hsl:     222 47% 12%;
+    --surface2-hsl:    215 32% 18%;
+    --border-hsl:      215 20% 25%;
+    --fg-hsl:          210 40% 96%;
+    --text3-hsl:       215 16% 47%;
+    --accent-hsl:      199 89% 60%;
+    --accent-fg-hsl:   222 47% 6%;
+    --ring:            199 89% 60%;
+    --red-hsl:         351 84% 60%;
   }
 }
 
@@ -59,7 +84,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   background: var(--bg);
   color: var(--text1);
   font-size: 14px;
@@ -68,12 +93,18 @@ html {
 }
 
 body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   min-height: 100vh;
   min-height: 100dvh;
   overscroll-behavior: none;
   background: var(--bg);
   overflow-x: clip;
   -webkit-overflow-scrolling: touch;
+}
+
+/* paksa semua elemen pakai font yang sama */
+*, input, textarea, select, button {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 @media (prefers-color-scheme: dark) {
