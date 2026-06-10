@@ -98,17 +98,17 @@ export default function TransaksiPage() {
     })
   }, [filteredIncome, filterUser, search, sortKey, sortDir, getUserName])
 
-  const rows       = tab === 'expense' ? expenseRows : incomeRows
-  const totalExp   = expenseRows.reduce((s, r) => s + (r.nilai || 0), 0)
-  const totalInc   = incomeRows.reduce((s, r) => s + (r.jumlah || 0), 0)
+  const rows        = tab === 'expense' ? expenseRows : incomeRows
+  const totalExp    = expenseRows.reduce((s, r) => s + (r.nilai || 0), 0)
+  const totalInc    = incomeRows.reduce((s, r) => s + (r.jumlah || 0), 0)
   const activeTotal = tab === 'expense' ? totalExp : totalInc
 
-  const avgNilai          = filteredExpenses.length > 0 ? filteredExpenses.reduce((s, r) => s + r.nilai, 0) / filteredExpenses.length : 0
-  const anomaliThreshold  = avgNilai * 3
+  const avgNilai         = filteredExpenses.length > 0 ? filteredExpenses.reduce((s, r) => s + r.nilai, 0) / filteredExpenses.length : 0
+  const anomaliThreshold = avgNilai * 3
 
-  const userNamesExp  = [...new Set(filteredExpenses.map(r => getUserName(r.user_id)).filter(Boolean))]
-  const userNamesInc  = [...new Set(filteredIncome.map(r => getUserName(r.user_id)).filter(Boolean))]
-  const userNames     = tab === 'expense' ? userNamesExp : userNamesInc
+  const userNamesExp = [...new Set(filteredExpenses.map(r => getUserName(r.user_id)).filter(Boolean))]
+  const userNamesInc = [...new Set(filteredIncome.map(r => getUserName(r.user_id)).filter(Boolean))]
+  const userNames    = tab === 'expense' ? userNamesExp : userNamesInc
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -271,31 +271,44 @@ export default function TransaksiPage() {
           />
         </div>
 
-        {/* Summary + Export */}
+        {/* Summary + Export — 2 baris agar muat di mobile */}
         <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '10px 14px', background: 'var(--surface)',
+          background: 'var(--surface)',
           borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
-          marginBottom: 12, fontSize: 13, gap: 8,
+          marginBottom: 12, fontSize: 13,
+          overflow: 'hidden',
         }}>
-          <span><strong style={{ color: 'var(--text1)' }}>{rows.length}</strong> transaksi</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>Total: <strong style={{ color: tab === 'expense' ? 'var(--red)' : 'var(--green)' }}>{fmt(activeTotal)}</strong></span>
-            <button onClick={handleExport} disabled={exporting || rows.length === 0} style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6,
-              border: '1px solid var(--border)', background: 'var(--surface2)',
-              color: rows.length === 0 ? 'var(--text3)' : 'var(--accent)',
-              fontSize: 12, fontWeight: 700, cursor: rows.length === 0 ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', opacity: rows.length === 0 ? 0.5 : 1,
-            }}>
-              {exporting
-                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.8s linear infinite' }}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              }
-              CSV
-            </button>
-            <ExportPDF />
-          </span>
+          {/* Baris 1: info transaksi + tombol CSV */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '10px 14px', gap: 8,
+          }}>
+            <span><strong style={{ color: 'var(--text1)' }}>{rows.length}</strong> transaksi</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Total: <strong style={{ color: tab === 'expense' ? 'var(--red)' : 'var(--green)' }}>{fmt(activeTotal)}</strong></span>
+              <button onClick={handleExport} disabled={exporting || rows.length === 0} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6,
+                border: '1px solid var(--border)', background: 'var(--surface2)',
+                color: rows.length === 0 ? 'var(--text3)' : 'var(--accent)',
+                fontSize: 12, fontWeight: 700, cursor: rows.length === 0 ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', opacity: rows.length === 0 ? 0.5 : 1,
+              }}>
+                {exporting
+                  ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.8s linear infinite' }}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                  : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                }
+                CSV
+              </button>
+            </span>
+          </div>
+          {/* Baris 2: tombol Export PDF full width */}
+          <div style={{
+            padding: '0 14px 10px',
+          }}>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              <ExportPDF />
+            </div>
+          </div>
         </div>
 
         {/* ── Tabel Pengeluaran ── */}
