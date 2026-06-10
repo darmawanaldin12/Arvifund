@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -22,8 +23,6 @@ const C = {
 }
 
 const DONUT_COLORS = [C.accent, C.orange, C.pink, C.green, C.purple, C.teal, C.yellow]
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtTick = (v) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`
@@ -83,8 +82,6 @@ function useSwipe(onLeft, onRight) {
   return { onTouchStart, onTouchEnd }
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-
 export default function ChartCarousel({ expenses, income, budgetPlans, summaryPeriode }) {
   const [idx, setIdx] = useState(0)
   const [animDir, setAnimDir] = useState(null)
@@ -101,8 +98,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
   }, [])
 
   const swipe = useSwipe(() => go('left'), () => go('right'))
-
-  // ── 1. Income vs Expense 12 bulan ─────────────────────────────────────────
 
   const last12 = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -130,8 +125,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
     Pengeluaran: expMap[`${m.year}-${m.month}`] || 0,
   }))
 
-  // ── 2. Saldo kumulatif ────────────────────────────────────────────────────
-
   let running = 0
   const dataSaldo = last12.map(m => {
     const inc = incMap[`${m.year}-${m.month}`] || 0
@@ -141,20 +134,16 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
   })
   const lastSaldo = dataSaldo[dataSaldo.length - 1]?.Saldo || 0
 
-  // ── 3. Donut kategori ─────────────────────────────────────────────────────
-
   const byKat = summaryPeriode.byKategori || {}
   const katEntries = Object.entries(byKat).sort((a, b) => b[1] - a[1]).slice(0, 7)
   const totalKat = katEntries.reduce((s, [, v]) => s + v, 0)
   const pieData = katEntries.map(([name, value], i) => ({
-    name: name.length > 10 ? name.slice(0, 9) + '…' : name,
+    name: name.length > 10 ? name.slice(0, 9) + '\u2026' : name,
     fullName: name,
     value,
     fill: DONUT_COLORS[i],
     percent: totalKat > 0 ? value / totalKat : 0,
   }))
-
-  // ── 4. Budget vs Realisasi ────────────────────────────────────────────────
 
   const now = new Date()
   const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
@@ -168,13 +157,11 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
   }).forEach(r => { realisasiMap[r.kategori] = (realisasiMap[r.kategori] || 0) + r.nilai })
 
   const dataBudget = budgetBulanIni.map(p => ({
-    label: p.kategori?.length > 7 ? p.kategori.slice(0, 6) + '…' : (p.kategori || '?'),
+    label: p.kategori?.length > 7 ? p.kategori.slice(0, 6) + '\u2026' : (p.kategori || '?'),
     fullLabel: p.kategori,
     Alokasi: p.alokasi || 0,
     Realisasi: realisasiMap[p.kategori] || 0,
   }))
-
-  // ── 5. Hari paling boros ──────────────────────────────────────────────────
 
   const byDow = [0,0,0,0,0,0,0]
   const cntDow = [0,0,0,0,0,0,0]
@@ -190,8 +177,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
     value: cntDow[i] > 0 ? Math.round(byDow[i] / cntDow[i]) : 0,
     isPeak: cntDow[i] > 0 && (byDow[i] / cntDow[i]) === maxDow,
   }))
-
-  // ── 6. Metode bayar stacked 6 bulan ──────────────────────────────────────
 
   const last6 = last12.slice(6)
   const metodeKeys = ['Cash', 'Transfer', 'QRIS']
@@ -209,10 +194,7 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
     return row
   })
 
-  // ── Chart definitions ─────────────────────────────────────────────────────
-
   const charts = [
-    // 1. Income vs Expense
     {
       title: 'Income vs Pengeluaran',
       subtitle: '12 bulan terakhir',
@@ -241,8 +223,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         </ResponsiveContainer>
       )
     },
-
-    // 2. Saldo kumulatif
     {
       title: 'Saldo Kumulatif',
       subtitle: '12 bulan terakhir',
@@ -270,8 +250,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         )
       }
     },
-
-    // 3. Donut kategori
     {
       title: 'Top Kategori',
       subtitle: 'Periode aktif',
@@ -304,8 +282,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         </ResponsiveContainer>
       )
     },
-
-    // 4. Budget vs Realisasi
     {
       title: 'Budget vs Realisasi',
       subtitle: `Bulan ${bulanNow}`,
@@ -355,8 +331,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         </ResponsiveContainer>
       )
     },
-
-    // 5. Hari paling boros
     {
       title: 'Hari Paling Boros',
       subtitle: 'Rata-rata pengeluaran per hari',
@@ -377,8 +351,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         </ResponsiveContainer>
       )
     },
-
-    // 6. Metode bayar stacked
     {
       title: 'Metode Pembayaran',
       subtitle: '6 bulan terakhir',
@@ -442,16 +414,40 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
         {current.render()}
       </div>
 
-      {/* Arrow nav */}
+      {/* Arrow nav — pakai lucide-react bukan material symbols */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px 12px' }}>
-        <button onClick={() => go('right')} disabled={idx === 0}
-          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: idx === 0 ? 'var(--surface2)' : 'var(--surface)', cursor: idx === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: idx === 0 ? 'var(--border)' : 'var(--accent)', transition: 'all 0.15s', touchAction: 'manipulation' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
+        <button
+          onClick={() => go('right')}
+          disabled={idx === 0}
+          aria-label="Sebelumnya"
+          style={{
+            width: 32, height: 32, borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: idx === 0 ? 'var(--surface2)' : 'var(--surface)',
+            cursor: idx === 0 ? 'default' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: idx === 0 ? 'var(--border)' : 'var(--accent)',
+            transition: 'all 0.15s', touchAction: 'manipulation',
+          }}
+        >
+          <ChevronLeft size={18} strokeWidth={2.5} />
         </button>
         <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>{idx + 1} / {charts.length}</span>
-        <button onClick={() => go('left')} disabled={idx === charts.length - 1}
-          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: idx === charts.length - 1 ? 'var(--surface2)' : 'var(--surface)', cursor: idx === charts.length - 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: idx === charts.length - 1 ? 'var(--border)' : 'var(--accent)', transition: 'all 0.15s', touchAction: 'manipulation' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
+        <button
+          onClick={() => go('left')}
+          disabled={idx === charts.length - 1}
+          aria-label="Berikutnya"
+          style={{
+            width: 32, height: 32, borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: idx === charts.length - 1 ? 'var(--surface2)' : 'var(--surface)',
+            cursor: idx === charts.length - 1 ? 'default' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: idx === charts.length - 1 ? 'var(--border)' : 'var(--accent)',
+            transition: 'all 0.15s', touchAction: 'manipulation',
+          }}
+        >
+          <ChevronRight size={18} strokeWidth={2.5} />
         </button>
       </div>
     </div>
