@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import EditModal from '../../components/modals/EditModal'
+import ExportPDF from '../../components/ExportPDF'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, KATEGORI_COLOR, KATEGORI_ICON, BULAN_ORDER } from '../../lib/utils'
 import { updateExpense, updateIncome } from '../../lib/data'
@@ -278,7 +279,7 @@ export default function TransaksiPage() {
           marginBottom: 12, fontSize: 13, gap: 8,
         }}>
           <span><strong style={{ color: 'var(--text1)' }}>{rows.length}</strong> transaksi</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>Total: <strong style={{ color: tab === 'expense' ? 'var(--red)' : 'var(--green)' }}>{fmt(activeTotal)}</strong></span>
             <button onClick={handleExport} disabled={exporting || rows.length === 0} style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6,
@@ -293,6 +294,7 @@ export default function TransaksiPage() {
               }
               CSV
             </button>
+            <ExportPDF />
           </span>
         </div>
 
