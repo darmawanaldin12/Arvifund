@@ -10,8 +10,9 @@ import { useAmountInput, parseRupiahToInt } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
 import BottomSheet, { SavedToast } from '../../components/input/BottomSheet'
 import TransferConfirmPopup from '../../components/input/TransferConfirmPopup'
+import GeminiIcon from '../../components/GeminiIcon'
 import {
-  TrendingDown, TrendingUp, Landmark, Bot, PenLine,
+  TrendingDown, TrendingUp, Landmark, PenLine,
   Mic, MicOff, Camera, Image, Trash2, X, Check,
   Share2, ArrowLeftRight, Sparkles,
 } from 'lucide-react'
@@ -166,8 +167,6 @@ export default function InputPage() {
         setParsedResult({
           tipe: result.tipe || 'expense', tanggal: result.tanggal || today,
           toko: result.toko || '', uraian: result.uraian || '',
-          // parseRupiahToInt: handle format titik ribuan Indonesia (56.600 → "56600")
-          // dan float salah dari AI (56.6 → "56600")
           total: result.total ? parseRupiahToInt(result.total) : '',
           kategori: result.kategori || '', metode: result.metode || 'Cash',
           bank: result.bank || 'Cash',
@@ -357,6 +356,9 @@ export default function InputPage() {
     finally { setSaving(false) }
   }
 
+  const TipeIconConfirm  = parsedResult?.tipe === 'income' ? TrendingUp : parsedResult?.tipe === 'cash' ? Landmark : TrendingDown
+  const tipeColorConfirm = parsedResult?.tipe === 'expense' ? 'var(--red)' : parsedResult?.tipe === 'income' ? 'var(--green)' : 'var(--yellow)'
+
   // ── Loading Overlay ───────────────────────────────────────────────────────
   const loadingOverlay = aiLoading && !showConfirm && !showTransferConfirm ? (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
@@ -367,7 +369,10 @@ export default function InputPage() {
             <div style={{ position: 'absolute', left: 0, right: 0, height: 3, top: 0, zIndex: 2, background: 'linear-gradient(90deg, transparent 0%, var(--accent) 30%, var(--accent) 70%, transparent 100%)', animation: 'scanLineMove 1.8s ease-in-out infinite' }} />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Bot size={16} color="var(--accent)" /> Membaca Struk...</div>
+            {/* Gemini icon saat scan struk */}
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <GeminiIcon size={18} /> Membaca Struk...
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>{[0, 0.2, 0.4].map((d, i) => <span key={i} style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />)}</div>
           </div>
         </div>
@@ -376,8 +381,9 @@ export default function InputPage() {
           <div style={{ position: 'relative', width: 72, height: 72 }}>
             <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid transparent', borderTopColor: 'var(--accent)', borderRightColor: 'var(--accent)', animation: 'spin 1.2s linear infinite' }} />
             <div style={{ position: 'absolute', inset: 10, borderRadius: '50%', border: '2px solid transparent', borderBottomColor: 'var(--accent-dim)', borderLeftColor: 'var(--accent-dim)', animation: 'spin 0.9s linear infinite reverse' }} />
+            {/* Gemini icon di tengah loading spinner */}
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bot size={22} color="var(--accent)" />
+              <GeminiIcon size={26} />
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -393,16 +399,14 @@ export default function InputPage() {
     </div>
   ) : null
 
-  const TipeIconConfirm  = parsedResult?.tipe === 'income' ? TrendingUp : parsedResult?.tipe === 'cash' ? Landmark : TrendingDown
-  const tipeColorConfirm = parsedResult?.tipe === 'expense' ? 'var(--red)' : parsedResult?.tipe === 'income' ? 'var(--green)' : 'var(--yellow)'
-
   const confirmPopup = showConfirm && parsedResult ? (
     <BottomSheet onBackdropClick={() => setShowConfirm(false)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Gemini icon di header popup konfirmasi */}
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Bot size={18} color="var(--accent)" />
+            <GeminiIcon size={20} />
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Hasil Ekstraksi AI</div>
@@ -603,8 +607,10 @@ export default function InputPage() {
 
                 {error && <div style={S.errorBox}>{error}</div>}
 
+                {/* Tombol Ekstrak — icon Gemini */}
                 <button type="button" className="btn btn-primary btn-full" onClick={() => handleAIExtract()} disabled={aiLoading || (!aiText.trim() && !imageFile)} style={S.ctaBtn(aiLoading || (!aiText.trim() && !imageFile))}>
-                  <Bot size={18} />{aiLoading ? 'Memproses...' : 'Ekstrak Data AI'}
+                  <GeminiIcon size={20} style={{ flexShrink: 0 }} />
+                  {aiLoading ? 'Memproses...' : 'Ekstrak Data AI'}
                 </button>
               </div>
             )}
