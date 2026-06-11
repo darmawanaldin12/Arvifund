@@ -3,7 +3,6 @@ import { useState, useMemo } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import EditModal from '../../components/modals/EditModal'
-import ExportPDF from '../../components/ExportPDF'
 import { useToast } from '../../hooks/useToast'
 import { fmt, fmtTanggalShort, KATEGORI_LIST, KATEGORI_COLOR, KATEGORI_ICON, BULAN_ORDER } from '../../lib/utils'
 import { updateExpense, updateIncome } from '../../lib/data'
@@ -271,14 +270,13 @@ export default function TransaksiPage() {
           />
         </div>
 
-        {/* Summary + Export — 2 baris agar muat di mobile */}
+        {/* Summary + Export */}
         <div style={{
           background: 'var(--surface)',
           borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
           marginBottom: 12, fontSize: 13,
           overflow: 'hidden',
         }}>
-          {/* Baris 1: info transaksi + tombol CSV */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '10px 14px', gap: 8,
@@ -300,14 +298,6 @@ export default function TransaksiPage() {
                 CSV
               </button>
             </span>
-          </div>
-          {/* Baris 2: tombol Export PDF full width */}
-          <div style={{
-            padding: '0 14px 10px',
-          }}>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              <ExportPDF />
-            </div>
           </div>
         </div>
 
