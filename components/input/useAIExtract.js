@@ -11,6 +11,41 @@ function isIOS() {
 const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
 const SHARE_CACHE_KEY  = '/share-image-pending'
 
+// Simulasi progress bertahap — cepat di awal, lambat di tengah, stuck di 90% sampai selesai
+function useExtractProgress(aiLoading) {
+  const [progress, setProgress] = useState(0)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (aiLoading) {
+      setProgress(0)
+      let current = 0
+      function step() {
+        setProgress(prev => {
+          // Naik cepat sampai 30, sedang sampai 60, lambat sampai 90, berhenti di 90
+          let increment
+          if (prev < 30)      increment = 6 + Math.random() * 4
+          else if (prev < 60) increment = 3 + Math.random() * 3
+          else if (prev < 85) increment = 1 + Math.random() * 2
+          else                return prev // stuck di ~85-90 sampai selesai
+          current = Math.min(90, prev + increment)
+          return current
+        })
+        const delay = current < 30 ? 200 : current < 60 ? 350 : 600
+        timerRef.current = setTimeout(step, delay)
+      }
+      timerRef.current = setTimeout(step, 150)
+    } else {
+      // Saat selesai, langsung ke 100% lalu reset
+      setProgress(100)
+      timerRef.current = setTimeout(() => setProgress(0), 600)
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [aiLoading])
+
+  return progress
+}
+
 export function useAIExtract({ user, profiles, today, onResult, onTransferResult, onModeChange }) {
   const [aiText, setAiText]               = useState('')
   const [aiLoading, setAiLoading]         = useState(false)
@@ -21,6 +56,8 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
   const [iosDevice, setIosDevice]         = useState(false)
   const [error, setError]                 = useState('')
   const [sharedFromApp, setSharedFromApp] = useState(false)
+
+  const extractProgress = useExtractProgress(aiLoading)
 
   const aiTextRef        = useRef('')
   const imageFileRef     = useRef(null)
@@ -234,6 +271,7 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
   return {
     aiText, setAiText, aiTextRef,
     aiLoading,
+    extractProgress,
     imageFile, setImageFile,
     imagePreview, setImagePreview,
     isRecording, voiceSupported, iosDevice,
