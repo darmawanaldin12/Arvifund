@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import EditModal from '../../components/modals/EditModal'
@@ -11,48 +11,48 @@ import { supabase } from '../../lib/supabase'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 import { Pencil, Trash2, Download, AlertTriangle, Loader2, ShieldCheck, Clock } from 'lucide-react'
 
-function fmtJam(isoString) {
+// ── Pure helpers (tidak ada side effect, aman dipanggil di useMemo) ──────────
+function _fmtJam(isoString) {
   if (!isoString) return null
   try {
     return new Date(isoString).toLocaleTimeString('id-ID', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'
+      hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta',
     })
   } catch { return null }
 }
 
-// Cek apakah tanggal transaksi berbeda dengan tanggal input (created_at)
-function isCatatTelat(tanggal, createdAt) {
+function _isCatatTelat(tanggal, createdAt) {
   if (!tanggal || !createdAt) return false
   try {
-    const tTrx    = tanggal.split('T')[0]                                          // '2025-06-08'
-    const tInput  = new Date(createdAt)
-      .toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })                   // '2025-06-11'
+    const tTrx   = tanggal.split('T')[0]
+    const tInput = new Date(createdAt).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })
     return tTrx !== tInput
   } catch { return false }
 }
 
 function exportCSV(rows, getUserName) {
   const headers = ['Tanggal','Jam','Bulan','Toko','Uraian','Kategori','Metode','Bank','User','Nilai']
-  const escape = v => {
+  const escape  = v => {
     if (v == null) return ''
     const s = String(v)
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"'
-    return s
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s
   }
   const csvRows = [
     headers.join(','),
     ...rows.map(r => [
-      r.tanggal || '', fmtJam(r.created_at) || '', r.bulan || '', r.toko || '', r.uraian || '',
+      r.tanggal || '', r._jam || '', r.bulan || '', r.toko || '', r.uraian || '',
       r.kategori || '', r.transaksi || '', r.bank || '',
       getUserName(r.user_id) || '', r.nilai || 0,
-    ].map(escape).join(','))
+    ].map(escape).join(',')),
   ]
-  const csv   = '\uFEFF' + csvRows.join('\r\n')
-  const blob  = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url   = URL.createObjectURL(blob)
-  const a     = document.createElement('a')
-  a.href      = url
-  a.download  = 'arvifund-expenses-' + new Date().toISOString().split('T')[0] + '.csv'
+  const csv  = '\uFEFF' + csvRows.join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = 'arvifund-expenses-' + new Date().toISOString().split('T')[0] + '.csv'
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -61,27 +61,46 @@ export default function ExpensesPage() {
   const { filteredExpenses, loadData, loading, periodIdx, setPeriodIdx, periods, getUserName, user } = useData()
   const { showToast, ToastContainer } = useToast()
 
-  const [filterKat, setFilterKat]   = useState('')
+  const [filterKat,  setFilterKat]  = useState('')
   const [filterUser, setFilterUser] = useState('')
-  const [search, setSearch]         = useState('')
-  const [editData, setEditData]     = useState(null)
-  const [saving, setSaving]         = useState(false)
-  const [sortKey, setSortKey]       = useState('created_at')
-  const [sortDir, setSortDir]       = useState('desc')
-  const [exporting, setExporting]   = useState(false)
+  const [search,     setSearch]     = useState('')
+  const [editData,   setEditData]   = useState(null)
+  const [saving,     setSaving]     = useState(false)
+  const [sortKey,    setSortKey]    = useState('created_at')
+  const [sortDir,    setSortDir]    = useState('desc')
+  const [exporting,  setExporting]  = useState(false)
   const [deletingId, setDeletingId] = useState(null)
 
-  const rows = useMemo(() => {
-    let r = filteredExpenses.filter(r =>
+  // ── 1. Anomali threshold — hanya hitung ulang saat filteredExpenses berubah ──
+  const anomaliThreshold = useMemo(() => {
+    if (!filteredExpenses.length) return 0
+    const avg = filteredExpenses.reduce((s, r) => s + (r.nilai || 0), 0) / filteredExpenses.length
+    return avg * 3
+  }, [filteredExpenses])
+
+  // ── 2. User names untuk filter dropdown ──────────────────────────────────────
+  const userNames = useMemo(
+    () => [...new Set(filteredExpenses.map(r => getUserName(r.user_id)).filter(Boolean))],
+    [filteredExpenses, getUserName],
+  )
+
+  // ── 3. Rows — filter + sort + computed per-row (jam, telat, anomali, color) ──
+  //    Semua operasi Date sekarang hanya jalan sekali saat dependensi berubah,
+  //    bukan setiap render. Hasilnya disimpan sebagai _jam, _telat, _isAnom, _color.
+  const { rows, total } = useMemo(() => {
+    // Filter
+    const filtered = filteredExpenses.filter(r =>
       (!filterKat  || r.kategori === filterKat) &&
       (!filterUser || getUserName(r.user_id) === filterUser) &&
-      (!search     || (r.toko + ' ' + r.uraian).toLowerCase().includes(search.toLowerCase()))
+      (!search     || (r.toko + ' ' + (r.uraian || '')).toLowerCase().includes(search.toLowerCase()))
     )
-    r = [...r].sort((a, b) => {
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
       let va, vb
       if (sortKey === 'tanggal') {
-        const dateCompare = (a.tanggal || '').localeCompare(b.tanggal || '')
-        if (dateCompare !== 0) return sortDir === 'asc' ? dateCompare : -dateCompare
+        const dc = (a.tanggal || '').localeCompare(b.tanggal || '')
+        if (dc !== 0) return sortDir === 'asc' ? dc : -dc
         va = a.created_at || ''; vb = b.created_at || ''
       } else if (sortKey === 'nilai') {
         va = a.nilai || 0; vb = b.nilai || 0
@@ -92,19 +111,25 @@ export default function ExpensesPage() {
       if (va > vb) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-    return r
-  }, [filteredExpenses, filterKat, filterUser, search, sortKey, sortDir, getUserName])
 
-  const total = rows.reduce((s, r) => s + (r.nilai || 0), 0)
+    // Computed per-row: hitung sekali di sini, bukan di render loop
+    const enriched = sorted.map(r => ({
+      ...r,
+      _jam:    _fmtJam(r.created_at),
+      _telat:  _isCatatTelat(r.tanggal, r.created_at),
+      _isAnom: r.nilai >= anomaliThreshold && r.nilai > 100_000,
+      _color:  KATEGORI_COLOR[r.kategori] || 'var(--text3)',
+    }))
 
-  const avgNilai = filteredExpenses.length > 0
-    ? filteredExpenses.reduce((s, r) => s + r.nilai, 0) / filteredExpenses.length : 0
-  const anomaliThreshold = avgNilai * 3
+    const total = enriched.reduce((s, r) => s + (r.nilai || 0), 0)
+    return { rows: enriched, total }
+  }, [filteredExpenses, filterKat, filterUser, search, sortKey, sortDir, getUserName, anomaliThreshold])
 
-  function toggleSort(key) {
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const toggleSort = useCallback((key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('desc') }
-  }
+  }, [sortKey])
 
   async function handleSave(form) {
     setSaving(true)
@@ -112,24 +137,17 @@ export default function ExpensesPage() {
       const [, m] = (form.tanggal || '').split('-')
       const bulan = m ? BULAN_ORDER[parseInt(m) - 1] : form.bulan
       await updateExpense(form.id, {
-        toko: form.toko,
-        tanggal: form.tanggal?.split('T')[0],
-        bulan,
-        transaksi: form.transaksi,
-        uraian: form.uraian,
-        kategori: form.kategori,
-        bank: form.bank,
-        nilai: form.nilai,
-        edited_note: form.edited_note,
+        toko: form.toko, tanggal: form.tanggal?.split('T')[0], bulan,
+        transaksi: form.transaksi, uraian: form.uraian,
+        kategori: form.kategori, bank: form.bank,
+        nilai: form.nilai, edited_note: form.edited_note,
       }, user?.id)
-      showToast('\u2705 Berhasil disimpan')
+      showToast('✅ Berhasil disimpan')
       setEditData(null)
       await loadData()
     } catch (err) {
-      showToast('\u274C Gagal menyimpan: ' + err.message, 'error')
-    } finally {
-      setSaving(false)
-    }
+      showToast('❌ Gagal menyimpan: ' + err.message, 'error')
+    } finally { setSaving(false) }
   }
 
   async function handleDelete(id) {
@@ -141,39 +159,32 @@ export default function ExpensesPage() {
         await authenticateWithBiometric(supabase)
       } else {
         if (!window.confirm('Hapus transaksi ini? Tindakan tidak bisa dibatalkan.')) {
-          setDeletingId(null)
-          return
+          setDeletingId(null); return
         }
       }
       await deleteExpense(id)
-      showToast('\uD83D\uDDD1\uFE0F Transaksi dihapus')
+      showToast('🗑️ Transaksi dihapus')
       await loadData()
     } catch (e) {
-      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) {
+      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled'))
         showToast('Autentikasi dibatalkan', 'error')
-      } else {
-        showToast('\u274C Gagal hapus: ' + e.message, 'error')
-      }
-    } finally {
-      setDeletingId(null)
-    }
+      else
+        showToast('❌ Gagal hapus: ' + e.message, 'error')
+    } finally { setDeletingId(null) }
   }
 
   function handleExport() {
-    if (rows.length === 0) { showToast('Tidak ada data untuk diekspor', 'error'); return }
+    if (!rows.length) { showToast('Tidak ada data untuk diekspor', 'error'); return }
     setExporting(true)
     try {
       exportCSV(rows, getUserName)
-      showToast('CSV berhasil diunduh (' + rows.length + ' baris)')
+      showToast(`CSV berhasil diunduh (${rows.length} baris)`)
     } catch (e) {
       showToast('Gagal export: ' + e.message, 'error')
-    } finally {
-      setExporting(false)
-    }
+    } finally { setExporting(false) }
   }
 
-  const userNames = [...new Set(filteredExpenses.map(r => getUserName(r.user_id)).filter(Boolean))]
-
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
       <AppHeader title="Pengeluaran" onRefresh={loadData} loading={loading} />
@@ -183,7 +194,11 @@ export default function ExpensesPage() {
         <div className="filter-bar">
           <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
           {periods.map((p, i) => (
-            <div key={i} className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`} onClick={() => setPeriodIdx(String(i))}>{p.label}</div>
+            <div
+              key={i}
+              className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`}
+              onClick={() => setPeriodIdx(String(i))}
+            >{p.label}</div>
           ))}
         </div>
 
@@ -191,13 +206,14 @@ export default function ExpensesPage() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
             className="form-input"
-            placeholder="\uD83D\uDD0D Cari toko / uraian..."
+            placeholder="🔍 Cari toko / uraian..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{ paddingLeft: 12 }}
           />
         </div>
 
+        {/* Filter Kategori + User */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <select className="form-select" value={filterKat} onChange={e => setFilterKat(e.target.value)} style={{ flex: 1 }}>
             <option value="">Semua Kategori</option>
@@ -223,22 +239,21 @@ export default function ExpensesPage() {
             <span>Total: <strong style={{ color: 'var(--red)' }}>{fmt(total)}</strong></span>
             <button
               onClick={handleExport}
-              disabled={exporting || rows.length === 0}
+              disabled={exporting || !rows.length}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 11px', borderRadius: 6,
-                border: '1px solid var(--border)',
-                background: 'var(--surface2)',
-                color: rows.length === 0 ? 'var(--text3)' : 'var(--accent)',
-                fontSize: 12, fontWeight: 700, cursor: rows.length === 0 ? 'not-allowed' : 'pointer',
+                border: '1px solid var(--border)', background: 'var(--surface2)',
+                color: !rows.length ? 'var(--text3)' : 'var(--accent)',
+                fontSize: 12, fontWeight: 700,
+                cursor: !rows.length ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', transition: 'background 0.15s',
-                opacity: rows.length === 0 ? 0.5 : 1,
+                opacity: !rows.length ? 0.5 : 1,
               }}
             >
               {exporting
                 ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
-                : <Download size={13} />
-              }
+                : <Download size={13} />}
               CSV
             </button>
           </span>
@@ -251,7 +266,7 @@ export default function ExpensesPage() {
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('tanggal')} style={{ cursor: 'pointer' }}>
-                    Tanggal {sortKey === 'tanggal' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+                    Tanggal {sortKey === 'tanggal' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
                   </th>
                   <th>Toko / Uraian</th>
                   <th>Kategori</th>
@@ -259,106 +274,92 @@ export default function ExpensesPage() {
                   <th>Bank</th>
                   <th>User</th>
                   <th onClick={() => toggleSort('nilai')} style={{ cursor: 'pointer', textAlign: 'right' }}>
-                    Nilai {sortKey === 'nilai' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+                    Nilai {sortKey === 'nilai' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
                   </th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 ? (
+                {!rows.length ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="emoji">\uD83D\uDD0D</div>
+                      <div className="emoji">🔍</div>
                       <p>Tidak ada data</p>
                     </div>
                   </td></tr>
-                ) : rows.map(r => {
-                  const isAnom   = r.nilai >= anomaliThreshold && r.nilai > 100000
-                  const isTelat  = isCatatTelat(r.tanggal, r.created_at)
-                  const color    = KATEGORI_COLOR[r.kategori] || 'var(--text3)'
-                  const jam      = fmtJam(r.created_at)
-
-                  return (
-                    <tr
-                      key={r.id}
-                      style={isAnom ? { background: 'rgba(244,63,94,0.04)', borderLeft: '3px solid var(--red)' } : {}}
-                    >
-                      {/* ── Kolom Tanggal ── */}
-                      <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', padding: isTelat ? '10px 14px' : undefined }}>
-                        <div style={{
-                          display: 'inline-flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                          padding: isTelat ? '4px 8px' : 0,
-                          borderRadius: isTelat ? 8 : 0,
-                          background: isTelat ? 'var(--yellow-bg)' : 'transparent',
-                          border: isTelat ? '1px solid rgba(180,83,9,0.2)' : 'none',
-                        }}>
-                          <div style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: isTelat ? 'var(--yellow)' : 'var(--text2)',
-                          }}>
-                            {fmtTanggalShort(r.tanggal)}
+                ) : rows.map(r => (
+                  <tr
+                    key={r.id}
+                    style={r._isAnom ? { background: 'rgba(244,63,94,0.04)', borderLeft: '3px solid var(--red)' } : {}}
+                  >
+                    {/* Kolom Tanggal */}
+                    <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', padding: r._telat ? '10px 14px' : undefined }}>
+                      <div style={{
+                        display: 'inline-flex', flexDirection: 'column', gap: 2,
+                        padding: r._telat ? '4px 8px' : 0,
+                        borderRadius: r._telat ? 8 : 0,
+                        background: r._telat ? 'var(--yellow-bg)' : 'transparent',
+                        border: r._telat ? '1px solid rgba(180,83,9,0.2)' : 'none',
+                      }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: r._telat ? 'var(--yellow)' : 'var(--text2)' }}>
+                          {fmtTanggalShort(r.tanggal)}
+                        </div>
+                        {r._telat ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--yellow)', opacity: 0.85 }}>
+                            <Clock size={9} />
+                            dicatat {r._jam} WIB
                           </div>
-                          {isTelat ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--yellow)', opacity: 0.85 }}>
-                              <Clock size={9} />
-                              dicatat {jam} WIB
-                            </div>
-                          ) : jam ? (
-                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
-                              {jam} WIB
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
+                        ) : r._jam ? (
+                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{r._jam} WIB</div>
+                        ) : null}
+                      </div>
+                    </td>
 
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {r.toko || '\u2014'}
-                          {isAnom && <AlertTriangle size={12} style={{ color: 'var(--red)', flexShrink: 0 }} />}
-                          {r.edited_at && <Pencil size={10} style={{ color: 'var(--yellow)', flexShrink: 0 }} />}
-                        </div>
-                        {r.uraian && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{r.uraian}</div>}
-                      </td>
-                      <td>
-                        <span className="badge" style={{ background: `${color}22`, color, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                          <KategoriIcon kategori={r.kategori} size={12} color={color} />
-                          {r.kategori}
-                        </span>
-                      </td>
-                      <td><span className="badge badge-gray">{r.transaksi || '\u2014'}</span></td>
-                      <td><span className="badge badge-blue">{r.bank || '\u2014'}</span></td>
-                      <td>
-                        <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
-                          {getUserName(r.user_id)}
-                        </span>
-                      </td>
-                      <td className="amount" style={{ color: isAnom ? 'var(--orange)' : 'var(--red)' }}>
-                        {fmt(r.nilai)}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                          <button className="edit-btn" onClick={() => setEditData(r)} title="Edit">
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            className="edit-btn"
-                            onClick={() => handleDelete(r.id)}
-                            disabled={deletingId === r.id}
-                            title="Hapus (perlu biometrik)"
-                            style={{ color: deletingId === r.id ? 'var(--text3)' : 'var(--red)', opacity: deletingId === r.id ? 0.5 : 1 }}
-                          >
-                            {deletingId === r.id
-                              ? <ShieldCheck size={13} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
-                              : <Trash2 size={13} />}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {r.toko || '—'}
+                        {r._isAnom && <AlertTriangle size={12} style={{ color: 'var(--red)', flexShrink: 0 }} />}
+                        {r.edited_at && <Pencil size={10} style={{ color: 'var(--yellow)', flexShrink: 0 }} />}
+                      </div>
+                      {r.uraian && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{r.uraian}</div>}
+                    </td>
+
+                    <td>
+                      <span className="badge" style={{ background: `${r._color}22`, color: r._color, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <KategoriIcon kategori={r.kategori} size={12} color={r._color} />
+                        {r.kategori}
+                      </span>
+                    </td>
+                    <td><span className="badge badge-gray">{r.transaksi || '—'}</span></td>
+                    <td><span className="badge badge-blue">{r.bank || '—'}</span></td>
+                    <td>
+                      <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
+                        {getUserName(r.user_id)}
+                      </span>
+                    </td>
+                    <td className="amount" style={{ color: r._isAnom ? 'var(--orange)' : 'var(--red)' }}>
+                      {fmt(r.nilai)}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <button className="edit-btn" onClick={() => setEditData(r)} title="Edit">
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          className="edit-btn"
+                          onClick={() => handleDelete(r.id)}
+                          disabled={deletingId === r.id}
+                          title="Hapus (perlu biometrik)"
+                          style={{ color: deletingId === r.id ? 'var(--text3)' : 'var(--red)', opacity: deletingId === r.id ? 0.5 : 1 }}
+                        >
+                          {deletingId === r.id
+                            ? <ShieldCheck size={13} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
+                            : <Trash2 size={13} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -378,7 +379,7 @@ export default function ExpensesPage() {
 
       <ToastContainer />
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin  { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
       `}</style>
     </>
