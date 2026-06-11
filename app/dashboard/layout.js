@@ -3,22 +3,15 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
-import Sidebar from '../../components/layout/Sidebar'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
 
 function AppShell({ children }) {
   useSessionTimeout()
   return (
     <div className="app-shell">
-      {/* Sidebar - desktop only */}
-      <div className="app-sidebar-wrap">
-        <Sidebar />
-      </div>
-      {/* Main */}
       <div className="app-main">
         {children}
       </div>
-      {/* BottomNav dipindah ke template.jsx agar tidak ikut animasi */}
     </div>
   )
 }
