@@ -1,7 +1,9 @@
 'use client'
 import GeminiIcon from '../GeminiIcon'
 
-export default function LoadingOverlay({ imagePreview }) {
+export default function LoadingOverlay({ imagePreview, progress = 0 }) {
+  const pct = Math.min(100, Math.max(0, Math.round(progress)))
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
       {imagePreview ? (
@@ -10,14 +12,18 @@ export default function LoadingOverlay({ imagePreview }) {
             <img src={imagePreview} alt="Scanning" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
             <div style={{ position: 'absolute', left: 0, right: 0, height: 3, top: 0, zIndex: 2, background: 'linear-gradient(90deg, transparent 0%, var(--accent) 30%, var(--accent) 70%, transparent 100%)', animation: 'scanLineMove 1.8s ease-in-out infinite' }} />
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <GeminiIcon size={18} /> Membaca Struk...
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <GeminiIcon size={18} /> Membaca Struk...
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>{pct}%</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              {[0, 0.2, 0.4].map((d, i) => (
-                <span key={i} style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />
-              ))}
+            <div style={{ width: '100%', height: 5, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 3, background: 'var(--accent)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
+              {pct < 30 ? 'Menyiapkan gambar...' : pct < 60 ? 'Menganalisa struk...' : pct < 90 ? 'Membaca data transaksi...' : 'Hampir selesai...'}
             </div>
           </div>
         </div>
@@ -30,18 +36,18 @@ export default function LoadingOverlay({ imagePreview }) {
               <GeminiIcon size={26} />
             </div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)', marginBottom: 6 }}>AI Memproses...</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              {[0, 0.15, 0.3].map((d, i) => (
-                <span key={i} style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1.4s ease-in-out ${d}s infinite` }} />
-              ))}
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)' }}>AI Memproses...</div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>{pct}%</span>
+            </div>
+            <div style={{ width: '100%', height: 5, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 3, background: 'var(--accent)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
+              {pct < 30 ? 'Menyiapkan data...' : pct < 60 ? 'Mengirim ke AI...' : pct < 90 ? 'Menganalisa transaksi...' : 'Hampir selesai...'}
             </div>
           </div>
-          <div style={{ width: '100%', height: 3, background: 'var(--surface2)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 2, background: 'var(--accent)', animation: 'progressSlide 1.4s ease-in-out infinite' }} />
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)' }}>Menganalisa data transaksi...</div>
         </div>
       )}
     </div>
