@@ -142,7 +142,7 @@ export default function InputPage() {
   return (
     <>
       {ai.aiLoading && !showConfirm && !showTransferConfirm && (
-        <LoadingOverlay imagePreview={ai.imagePreview} />
+        <LoadingOverlay imagePreview={ai.imagePreview} progress={ai.extractProgress} />
       )}
 
       {showConfirm && parsedResult && (
