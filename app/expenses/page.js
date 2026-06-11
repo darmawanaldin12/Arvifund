@@ -9,7 +9,7 @@ import { updateExpense, deleteExpense } from '../../lib/data'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 import { supabase } from '../../lib/supabase'
 import KategoriIcon from '../../components/ui/KategoriIcon'
-import { Pencil, Trash2, Download, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react'
+import { Pencil, Trash2, Download, AlertTriangle, Loader2, ShieldCheck, Clock } from 'lucide-react'
 
 function fmtJam(isoString) {
   if (!isoString) return null
@@ -18,6 +18,17 @@ function fmtJam(isoString) {
       hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta'
     })
   } catch { return null }
+}
+
+// Cek apakah tanggal transaksi berbeda dengan tanggal input (created_at)
+function isCatatTelat(tanggal, createdAt) {
+  if (!tanggal || !createdAt) return false
+  try {
+    const tTrx    = tanggal.split('T')[0]                                          // '2025-06-08'
+    const tInput  = new Date(createdAt)
+      .toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })                   // '2025-06-11'
+    return tTrx !== tInput
+  } catch { return false }
 }
 
 function exportCSV(rows, getUserName) {
@@ -69,7 +80,6 @@ export default function ExpensesPage() {
     r = [...r].sort((a, b) => {
       let va, vb
       if (sortKey === 'tanggal') {
-        // Sort by tanggal dulu, lalu created_at sebagai tiebreaker
         const dateCompare = (a.tanggal || '').localeCompare(b.tanggal || '')
         if (dateCompare !== 0) return sortDir === 'asc' ? dateCompare : -dateCompare
         va = a.created_at || ''; vb = b.created_at || ''
@@ -112,11 +122,11 @@ export default function ExpensesPage() {
         nilai: form.nilai,
         edited_note: form.edited_note,
       }, user?.id)
-      showToast('✅ Berhasil disimpan')
+      showToast('\u2705 Berhasil disimpan')
       setEditData(null)
       await loadData()
     } catch (err) {
-      showToast('❌ Gagal menyimpan: ' + err.message, 'error')
+      showToast('\u274C Gagal menyimpan: ' + err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -136,13 +146,13 @@ export default function ExpensesPage() {
         }
       }
       await deleteExpense(id)
-      showToast('🗑️ Transaksi dihapus')
+      showToast('\uD83D\uDDD1\uFE0F Transaksi dihapus')
       await loadData()
     } catch (e) {
       if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) {
         showToast('Autentikasi dibatalkan', 'error')
       } else {
-        showToast('❌ Gagal hapus: ' + e.message, 'error')
+        showToast('\u274C Gagal hapus: ' + e.message, 'error')
       }
     } finally {
       setDeletingId(null)
@@ -181,7 +191,7 @@ export default function ExpensesPage() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
             className="form-input"
-            placeholder="🔍 Cari toko / uraian..."
+            placeholder="\uD83D\uDD0D Cari toko / uraian..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{ paddingLeft: 12 }}
@@ -241,7 +251,7 @@ export default function ExpensesPage() {
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('tanggal')} style={{ cursor: 'pointer' }}>
-                    Tanggal {sortKey === 'tanggal' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                    Tanggal {sortKey === 'tanggal' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
                   </th>
                   <th>Toko / Uraian</th>
                   <th>Kategori</th>
@@ -249,7 +259,7 @@ export default function ExpensesPage() {
                   <th>Bank</th>
                   <th>User</th>
                   <th onClick={() => toggleSort('nilai')} style={{ cursor: 'pointer', textAlign: 'right' }}>
-                    Nilai {sortKey === 'nilai' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                    Nilai {sortKey === 'nilai' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
                   </th>
                   <th></th>
                 </tr>
@@ -258,29 +268,55 @@ export default function ExpensesPage() {
                 {rows.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="emoji">🔍</div>
+                      <div className="emoji">\uD83D\uDD0D</div>
                       <p>Tidak ada data</p>
                     </div>
                   </td></tr>
                 ) : rows.map(r => {
-                  const isAnom = r.nilai >= anomaliThreshold && r.nilai > 100000
-                  const color  = KATEGORI_COLOR[r.kategori] || 'var(--text3)'
-                  const jam    = fmtJam(r.created_at)
+                  const isAnom   = r.nilai >= anomaliThreshold && r.nilai > 100000
+                  const isTelat  = isCatatTelat(r.tanggal, r.created_at)
+                  const color    = KATEGORI_COLOR[r.kategori] || 'var(--text3)'
+                  const jam      = fmtJam(r.created_at)
+
                   return (
-                    <tr key={r.id} style={isAnom ? { background: 'rgba(244,63,94,0.04)', borderLeft: '3px solid var(--red)' } : {}}>
-                      <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                        <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
-                          {fmtTanggalShort(r.tanggal)}
-                        </div>
-                        {jam && (
-                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
-                            {jam} WIB
+                    <tr
+                      key={r.id}
+                      style={isAnom ? { background: 'rgba(244,63,94,0.04)', borderLeft: '3px solid var(--red)' } : {}}
+                    >
+                      {/* ── Kolom Tanggal ── */}
+                      <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', padding: isTelat ? '10px 14px' : undefined }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          padding: isTelat ? '4px 8px' : 0,
+                          borderRadius: isTelat ? 8 : 0,
+                          background: isTelat ? 'var(--yellow-bg)' : 'transparent',
+                          border: isTelat ? '1px solid rgba(180,83,9,0.2)' : 'none',
+                        }}>
+                          <div style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: isTelat ? 'var(--yellow)' : 'var(--text2)',
+                          }}>
+                            {fmtTanggalShort(r.tanggal)}
                           </div>
-                        )}
+                          {isTelat ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--yellow)', opacity: 0.85 }}>
+                              <Clock size={9} />
+                              dicatat {jam} WIB
+                            </div>
+                          ) : jam ? (
+                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                              {jam} WIB
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
+
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {r.toko || '—'}
+                          {r.toko || '\u2014'}
                           {isAnom && <AlertTriangle size={12} style={{ color: 'var(--red)', flexShrink: 0 }} />}
                           {r.edited_at && <Pencil size={10} style={{ color: 'var(--yellow)', flexShrink: 0 }} />}
                         </div>
@@ -292,8 +328,8 @@ export default function ExpensesPage() {
                           {r.kategori}
                         </span>
                       </td>
-                      <td><span className="badge badge-gray">{r.transaksi || '—'}</span></td>
-                      <td><span className="badge badge-blue">{r.bank || '—'}</span></td>
+                      <td><span className="badge badge-gray">{r.transaksi || '\u2014'}</span></td>
+                      <td><span className="badge badge-blue">{r.bank || '\u2014'}</span></td>
                       <td>
                         <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>
                           {getUserName(r.user_id)}
