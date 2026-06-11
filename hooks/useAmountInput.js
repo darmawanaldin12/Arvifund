@@ -79,10 +79,7 @@ export function parseRupiahToInt(value) {
     // Jika bagian desimal < 3 digit → kemungkinan float yang salah (56.6 harusnya 56600)
     const lastPart = parts[parts.length - 1]
     if (lastPart.length < 3 && /^\d+$/.test(parts[0]) && /^\d+$/.test(lastPart)) {
-      // Kalikan agar jadi ribuan: 56.6 → 56600
-      const factor = Math.pow(10, 3 - lastPart.length)
-      const intVal = Math.round(parseFloat(str) * factor * (lastPart.length === 1 ? 100 : lastPart.length === 2 ? 10 : 1))
-      // Lebih simpel: buang titik dan pad dengan nol sampai minimal 3 digit desimal
+      // Buang titik dan pad dengan nol sampai minimal 3 digit desimal
       const cleaned = parts[0] + lastPart.padEnd(3, '0')
       return cleaned
     }
@@ -102,4 +99,31 @@ export function parseRupiahToInt(value) {
 
   // Tidak ada titik/koma: ambil digit saja
   return str.replace(/\D/g, '')
+}
+
+/**
+ * sanitizeBankField
+ * Pastikan field "bank"/"from_bank"/"to_bank" hanya berisi nama rekening valid:
+ * BCA, Mandiri, BRI, Cash.
+ *
+ * Kadang AI salah mengisi field ini dengan METODE pembayaran (QRIS, Card,
+ * Cardless, Transfer, E-Wallet, Debit, dll) padahal seharusnya nama rekening.
+ * Fungsi ini jadi safety-net terakhir di sisi client sebelum data disimpan:
+ *   - "Cash" / "Tunai"            → "Cash"
+ *   - "BCA" / "Mandiri" / "BRI"    → dipertahankan (case-insensitive → proper case)
+ *   - selain itu (QRIS, Card,
+ *     Cardless, Transfer, dll)     → default "BCA"
+ */
+export function sanitizeBankField(bank) {
+  const VALID_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
+  if (!bank) return 'BCA'
+  const b = String(bank).trim()
+  if (VALID_BANKS.includes(b)) return b
+  const lower = b.toLowerCase()
+  if (lower === 'cash' || lower === 'tunai') return 'Cash'
+  if (lower === 'bca') return 'BCA'
+  if (lower === 'mandiri') return 'Mandiri'
+  if (lower === 'bri') return 'BRI'
+  // QRIS, Card, Cardless, Transfer, E-Wallet, Debit, dll → default BCA
+  return 'BCA'
 }
