@@ -50,21 +50,6 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)', fontVariationSettings: "'FILL' 1" }}>{current.icon}</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{current.title}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{current.subtitle}</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-          {charts.map((_, i) => (
-            <div key={i} onClick={() => { setAnimDir(i > idx ? 'left' : 'right'); setTimeout(() => { setIdx(i); setAnimDir(null) }, 180) }}
-              style={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 3, background: i === idx ? 'var(--accent)' : 'var(--border)', transition: 'all 0.3s', cursor: 'pointer' }} />
-          ))}
-        </div>
-      </div>
       <div {...swipe} style={{ padding: '12px 12px 4px', height: 240, overflow: 'hidden', transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)', opacity: animDir ? 0 : 1, transition: 'transform 0.18s ease, opacity 0.18s ease', userSelect: 'none' }}>
         {current.render()}
       </div>
