@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { setAccountBalance, insertTransfer, updateTransfer, deleteTransfer } from '../../lib/data'
@@ -69,12 +70,14 @@ export default function WalletPage() {
 
   return (
     <>
-      {historyAcc && (
-        <RiwayatDrawer account={historyAcc} userName={historyAcc.userName}
-          expenses={expenses} income={income} cashRecords={cashRecords} transfers={transfers}
-          getUserName={getUserName} periodIdx={periodIdx} periods={periods}
-          onClose={() => setHistoryAcc(null)} />
-      )}
+      <AnimatePresence>
+        {historyAcc && (
+          <RiwayatDrawer key="riwayat-drawer" account={historyAcc} userName={historyAcc.userName}
+            expenses={expenses} income={income} cashRecords={cashRecords} transfers={transfers}
+            getUserName={getUserName} periodIdx={periodIdx} periods={periods}
+            onClose={() => setHistoryAcc(null)} />
+        )}
+      </AnimatePresence>
 
       {setSaldoTarget && (
         <SetSaldoModal account={setSaldoTarget}
