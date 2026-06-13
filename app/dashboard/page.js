@@ -11,7 +11,7 @@ import { TrendingUp, TrendingDown, BarChart2, Landmark, CalendarDays, Lightbulb 
 import DashboardLoadingState from '../../components/dashboard/DashboardLoadingState'
 import {
   ScorecardCard, WeeklySummaryCard, UserSpendingCard,
-  Top5KategoriCard, BudgetCard, HeatmapCard,
+  Top5KategoriCard, BudgetCard,
   AnomaliCard, RecentTransactionsCard,
 } from '../../components/dashboard/DashboardCards'
 
@@ -55,26 +55,6 @@ export default function DashboardPage() {
   const weeklyTotal = filteredExpenses
     .filter(r => { const dt = parseTanggal(r.tanggal); return dt && dt >= weekStart && dt <= weekEnd })
     .reduce((s,r) => s+r.nilai, 0)
-
-  const heatmap = (() => {
-    const cells = [], todayLocal = getLocalDate(), start = new Date(todayLocal)
-    start.setDate(todayLocal.getDate() - 41)
-    const expMap = {}
-    filteredExpenses.forEach(r => {
-      const dt = parseTanggal(r.tanggal); if (!dt) return
-      const key = getLocalDateStr(dt)
-      expMap[key] = (expMap[key] || 0) + r.nilai
-    })
-    const maxVal = Math.max(...Object.values(expMap), 1)
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start); d.setDate(start.getDate() + i)
-      const key = getLocalDateStr(d); const val = expMap[key] || 0
-      const ratio = val / maxVal
-      const lv = ratio > 0.75 ? 'lv4' : ratio > 0.5 ? 'lv3' : ratio > 0.25 ? 'lv2' : ratio > 0 ? 'lv1' : ''
-      cells.push({ key, lv, val })
-    }
-    return cells
-  })()
 
   const userSplit = Object.entries(s.byUser).map(([uid, val]) => ({
     name: getUserName(uid), val,
@@ -134,7 +114,6 @@ export default function DashboardPage() {
           <UserSpendingCard userSplit={userSplit} />
           <Top5KategoriCard top5={top5} totalExpenses={s.totalExpenses} />
           <BudgetCard budgetVsReal={s.budgetVsReal} />
-          <HeatmapCard heatmap={heatmap} />
           <AnomaliCard anomali={anomali} />
           <div className="bento-12">
             <ChartCarousel expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode} />

@@ -1,6 +1,8 @@
 'use client'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark } from 'lucide-react'
+import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark, ChevronDown } from 'lucide-react'
 import { Progress } from '../ui/progress'
 import { Badge } from '../ui/badge'
 import KategoriIcon from '../ui/KategoriIcon'
@@ -153,103 +155,130 @@ export function BudgetCard({ budgetVsReal }) {
   )
 }
 
-export function HeatmapCard({ heatmap }) {
-  return (
-    <div className="bento-4">
-      <Link href="/expenses" className="no-underline block">
-        <div className="dash-card dash-card-link">
-          <div className="dash-card-header">Heatmap Aktivitas</div>
-          <div className="heatmap-days">
-            {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
-              <div key={d} className="heatmap-day-label">{d}</div>
-            ))}
-          </div>
-          <div className="heatmap-grid">
-            {heatmap.map((cell, i) => (
-              <div key={i} className={`heatmap-cell${cell.lv ? ' '+cell.lv : ''}`}
-                title={cell.val > 0 ? `${cell.key}: ${fmtFull(cell.val)}` : cell.key} />
-            ))}
-          </div>
-          <div className="heatmap-legend"><span>Sedikit</span><span>Banyak</span></div>
-        </div>
-      </Link>
-    </div>
-  )
-}
-
 export function AnomaliCard({ anomali }) {
+  const [open, setOpen] = useState(false)
+  const hasItems = anomali.length > 0
   return (
     <div className="bento-4">
-      <Link href="/expenses" className="no-underline block">
-        <div className="dash-card dash-card-link">
-          <div className="dash-card-header dash-card-header-danger">
+      <div
+        className={cn('dash-card', hasItems && 'dash-card-link')}
+        onClick={() => hasItems && setOpen(o => !o)}
+        role={hasItems ? 'button' : undefined}
+        tabIndex={hasItems ? 0 : undefined}
+        aria-expanded={hasItems ? open : undefined}
+      >
+        <div className="dash-card-header-row">
+          <span className="dash-card-header dash-card-header-danger mb-0">
             <AlertTriangle size={15} /> Transaksi Anomali
-          </div>
-          {anomali.length === 0 ? (
-            <div className="dash-empty-center">
-              <div className="dash-empty-icon">✅</div>
-              <p>Tidak ada anomali</p>
-            </div>
-          ) : (
-            <div className="anomali-list">
-              {anomali.map(r => (
-                <div key={r.id} className="anomali-item">
-                  <AlertTriangle size={18} className="anomali-icon" />
-                  <div className="anomali-info">
-                    <div className="anomali-toko">{r.toko || '-'}</div>
-                    <div className="anomali-uraian">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
-                  </div>
-                  <span className="anomali-nilai">{fmt(r.nilai)}</span>
-                </div>
-              ))}
-            </div>
+          </span>
+          {hasItems && (
+            <ChevronDown size={16} className={cn('anomali-chevron', open && 'open')} />
           )}
         </div>
-      </Link>
+
+        {!hasItems ? (
+          <div className="dash-empty-center">
+            <div className="dash-empty-icon">✅</div>
+            <p>Tidak ada anomali</p>
+          </div>
+        ) : (
+          <>
+            <p className="anomali-summary">
+              {anomali.length} transaksi nilainya jauh di atas rata-rata
+            </p>
+            <AnimatePresence initial={false}>
+              {open && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div className="anomali-list">
+                    {anomali.map(r => (
+                      <div key={r.id} className="anomali-item">
+                        <AlertTriangle size={18} className="anomali-icon" />
+                        <div className="anomali-info">
+                          <div className="anomali-toko">{r.toko || '-'}</div>
+                          <div className="anomali-uraian">{r.uraian || fmtTanggalShort(r.tanggal)}</div>
+                        </div>
+                        <span className="anomali-nilai">{fmt(r.nilai)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 export function RecentTransactionsCard({ recent, getUserName }) {
+  const [open, setOpen] = useState(false)
   return (
     <div className="bento-12">
       <div className="dash-card dash-card-flush">
-        <div className="dash-table-header">
+        <div
+          className="dash-table-header"
+          onClick={() => setOpen(o => !o)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={open}
+        >
           <span className="dash-card-header mb-0">10 Transaksi Terakhir</span>
-          <Link href="/expenses" className="dash-see-all">Lihat semua ↗</Link>
+          <div className="dash-table-header-actions">
+            <Link href="/expenses" className="dash-see-all" onClick={(e) => e.stopPropagation()}>Lihat semua ↗</Link>
+            <ChevronDown size={16} className={cn('anomali-chevron', open && 'open')} />
+          </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tanggal</th><th>Deskripsi</th><th>Kategori</th><th>User</th>
-                <th style={{ textAlign: 'right' }}>Jumlah</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
-              ) : recent.map(r => (
-                <tr key={r.id}>
-                  <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
-                  <td>
-                    <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
-                    {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
-                  </td>
-                  <td>
-                    <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
-                      <KategoriIcon kategori={r.kategori} size={12} />{r.kategori}
-                    </Badge>
-                  </td>
-                  <td>
-                    <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span>
-                  </td>
-                  <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th><th>Deskripsi</th><th>Kategori</th><th>User</th>
+                      <th style={{ textAlign: 'right' }}>Jumlah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.length === 0 ? (
+                      <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
+                    ) : recent.map(r => (
+                      <tr key={r.id}>
+                        <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
+                        <td>
+                          <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
+                          {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
+                        </td>
+                        <td>
+                          <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
+                            <KategoriIcon kategori={r.kategori} size={12} />{r.kategori}
+                          </Badge>
+                        </td>
+                        <td>
+                          <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span>
+                        </td>
+                        <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
