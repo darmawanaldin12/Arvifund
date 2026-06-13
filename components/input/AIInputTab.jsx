@@ -32,6 +32,7 @@ export default function AIInputTab({
     ctaBtn:     (disabled) => ({ height: 50, fontSize: 15, fontWeight: 700, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.5 : 1 }),
     sharedBanner: { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent-light)', border: '1px solid var(--accent-dim)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--accent)', fontWeight: 600 },
     imgPreview: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16 },
+    imgHint:    { fontSize: 12, color: 'var(--text3)', marginTop: -8, marginBottom: 16, lineHeight: 1.5 },
     iosTip:     { padding: '10px 12px', marginBottom: 12, background: 'var(--accent-light)', border: '1px solid var(--accent-dim)', borderRadius: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 },
   }
 
@@ -40,7 +41,7 @@ export default function AIInputTab({
       {sharedFromApp && (
         <div style={S.sharedBanner}>
           <Share2 size={16} style={{ flexShrink: 0 }} />
-          Foto diterima — AI sedang membaca struk...
+          Foto diterima — tambahkan catatan (opsional) lalu tekan Ekstrak Data AI
         </div>
       )}
 
@@ -55,10 +56,10 @@ export default function AIInputTab({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Ketik atau diktekan transaksi</label>
+        <label className="form-label">{imageFile ? 'Catatan tambahan (opsional)' : 'Ketik atau diktekan transaksi'}</label>
         <textarea
           className="form-input" rows={4}
-          placeholder="Contoh: beli bensin 50rb aldin BCA..."
+          placeholder={imageFile ? 'Misal: beli baju, beli jajan... (boleh dikosongkan)' : 'Contoh: beli bensin 50rb aldin BCA...'}
           value={aiText}
           onChange={e => { setAiText(e.target.value); aiTextRef.current = e.target.value }}
           style={{ resize: 'none', fontFamily: 'inherit', fontSize: 15, lineHeight: 1.6 }}
@@ -105,6 +106,12 @@ export default function AIInputTab({
             style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--red-bg)', border: 'none', color: 'var(--red)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Trash2 size={15} />
           </button>
+        </div>
+      )}
+
+      {imageFile && (
+        <div style={S.imgHint}>
+          💡 Gambar siap. Isi catatan di atas kalau perlu (misal "beli baju"), atau langsung tekan Ekstrak Data AI.
         </div>
       )}
 
