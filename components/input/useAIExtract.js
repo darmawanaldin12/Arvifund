@@ -176,10 +176,11 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
 
   function handleImageFile(file) {
     if (!file) return
-    setAiLoading(true)
+    // Hanya tampilkan preview gambar dulu — biar user bisa nambahin catatan
+    // (opsional) di kotak teks sebelum menekan tombol "Ekstrak Data AI".
     compressImage(file)
-      .then(c  => { setImageFile(c); imageFileRef.current = c; setImagePreview(URL.createObjectURL(c)); handleAIExtract(c, aiTextRef.current) })
-      .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)); handleAIExtract(file, aiTextRef.current) })
+      .then(c  => { setImageFile(c); imageFileRef.current = c; setImagePreview(URL.createObjectURL(c)) })
+      .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)) })
   }
 
   function toggleRecording() {
