@@ -57,7 +57,7 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
       <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: theme.bg, borderRadius: '20px 20px 0 0', padding: '16px 20px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 36 }}>
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>{account.name}</div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{userName}</div>
