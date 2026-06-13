@@ -44,39 +44,40 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:              #0f172a;
-    --bg2:             #1e293b;
-    --surface:         #1e293b;
-    --surface2:        #253348;
-    --surface3:        #2d3f57;
-    --border:          rgba(148,163,184,0.15);
-    --border2:         rgba(148,163,184,0.25);
-    --text1:           #f1f5f9;
-    --text2:           #94a3b8;
-    --text3:           #64748b;
-    --accent:          #38bdf8;
-    --accent-light:    rgba(56,189,248,0.12);
-    --accent-dim:      rgba(56,189,248,0.35);
-    --green:           #10b981;
-    --green-bg:        rgba(16,185,129,0.12);
-    --red:             #f43f5e;
-    --red-bg:          rgba(244,63,94,0.12);
-    --yellow:          #f59e0b;
-    --yellow-bg:       rgba(245,158,11,0.12);
-    --shadow:          0 4px 24px rgba(0,0,0,0.3);
-    --shadow-sm:       0 1px 4px rgba(0,0,0,0.2);
+    /* ── Pure Black (iOS / Apple style) ── */
+    --bg:              #000000;
+    --bg2:             #000000;
+    --surface:         #1C1C1E;
+    --surface2:        #2C2C2E;
+    --surface3:        #3A3A3C;
+    --border:          #2C2C2E;
+    --border2:         #3A3A3C;
+    --text1:           #FFFFFF;
+    --text2:           #98989D;
+    --text3:           #8E8E93;
+    --accent:          #0A84FF;
+    --accent-light:    rgba(10,132,255,0.16);
+    --accent-dim:      rgba(10,132,255,0.35);
+    --green:           #30D158;
+    --green-bg:        rgba(48,209,88,0.14);
+    --red:             #FF453A;
+    --red-bg:          rgba(255,69,58,0.14);
+    --yellow:          #FF9F0A;
+    --yellow-bg:       rgba(255,159,10,0.14);
+    --shadow:          0 4px 24px rgba(0,0,0,0.6);
+    --shadow-sm:       0 1px 4px rgba(0,0,0,0.4);
 
-    /* HSL dark */
-    --bg-hsl:          222 47% 8%;
-    --surface-hsl:     222 47% 12%;
-    --surface2-hsl:    215 32% 18%;
-    --border-hsl:      215 20% 25%;
-    --fg-hsl:          210 40% 96%;
-    --text3-hsl:       215 16% 47%;
-    --accent-hsl:      199 89% 60%;
-    --accent-fg-hsl:   222 47% 6%;
-    --ring:            199 89% 60%;
-    --red-hsl:         351 84% 60%;
+    /* HSL dark — pure black */
+    --bg-hsl:          0 0% 0%;
+    --surface-hsl:     0 0% 11%;
+    --surface2-hsl:    0 0% 17%;
+    --border-hsl:      0 0% 17%;
+    --fg-hsl:          0 0% 100%;
+    --text3-hsl:       0 0% 56%;
+    --accent-hsl:      212 100% 53%;
+    --accent-fg-hsl:   0 0% 100%;
+    --ring:            212 100% 53%;
+    --red-hsl:         5 100% 62%;
   }
 }
 
@@ -108,7 +109,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  body { background: #0f172a; }
+  body { background: #000000; }
 }
 
 /* ── SCROLLBAR ── */
