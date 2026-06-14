@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
+import BottomNav from '../../components/layout/BottomNav'
 
 const BARS = [
   { color: '#3b82f6', delay: '0s'    },
@@ -13,11 +15,38 @@ const BARS = [
   { color: '#c4b5fd', delay: '0.4s'  },
 ]
 
+const pageVariants = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -4 },
+}
+
+const pageTransition = {
+  duration: 0.2,
+  ease: [0.4, 0, 0.2, 1],
+}
+
 function AppShell({ children }) {
   useSessionTimeout()
+  const pathname = usePathname()
+
   return (
     <div className="app-shell">
-      <div className="app-main">{children}</div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.main
+          key={pathname}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransition}
+          className="app-main"
+          style={{ willChange: 'opacity, transform' }}
+        >
+          {children}
+        </motion.main>
+      </AnimatePresence>
+      <BottomNav />
     </div>
   )
 }
