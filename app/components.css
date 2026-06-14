@@ -249,3 +249,84 @@
 .empty-state { text-align: center; padding: 48px 16px; color: var(--text3); }
 .empty-state .emoji { font-size: 36px; margin-bottom: 12px; }
 .empty-state p { font-size: 14px; font-weight: 600; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+
+/* ─────────────────────────────────────────
+   MICRO-INTERACTIONS
+   scale(0.97) active state + 100ms ease
+   berlaku di semua tombol, chip, card klik
+───────────────────────────────────────── */
+
+/* 1. Extend transition ke semua elemen interaktif */
+.btn,
+.edit-btn,
+.filter-chip,
+button,
+[role="button"] {
+  transition:
+    transform     100ms cubic-bezier(0.4, 0, 0.2, 1),
+    filter        150ms ease,
+    background    150ms ease,
+    border-color  150ms ease,
+    box-shadow    150ms ease,
+    opacity       150ms ease;
+}
+
+/* 2. Active press → scale turun, terasa "ditekan" */
+.btn:active,
+.edit-btn:active,
+button:active:not(:disabled),
+[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* 3. Filter chip lebih kecil karena bentuk pill */
+.filter-chip:active {
+  transform: scale(0.95);
+}
+
+/* 4. Card yang bisa diklik — tambah class .card-clickable di JSX */
+.card-clickable {
+  cursor: pointer;
+  transition:
+    transform     100ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow    150ms ease,
+    border-color  150ms ease;
+}
+.card-clickable:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* 5. Hover lift di desktop (pointer: fine = mouse/trackpad) */
+@media (hover: hover) and (pointer: fine) {
+  .card-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    border-color: var(--accent);
+  }
+  .card-clickable:active {
+    transform: scale(0.97) translateY(0);
+    box-shadow: none;
+    border-color: var(--border);
+  }
+}
+
+/* 6. Tombol disabled — jangan scale sama sekali */
+.btn:disabled,
+button:disabled {
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+/* 7. Respek prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .edit-btn,
+  .filter-chip,
+  button,
+  [role="button"],
+  .card-clickable {
+    transition: background 150ms ease, opacity 150ms ease !important;
+    transform: none !important;
+  }
+}
