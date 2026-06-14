@@ -8,7 +8,9 @@ import { Badge } from '../ui/badge'
 import KategoriIcon from '../ui/KategoriIcon'
 import { fmt, fmtFull, fmtTanggalShort, KATEGORI_COLOR, getLocalDateStr } from '../../lib/utils'
 import { cn } from '../../lib/utils-cn'
+import { AnimatedAmount } from '../../hooks/useCountUp'
 
+/* ── ScorecardCard ─────────────────────────────────────── */
 export function ScorecardCard({ items, onItemClick }) {
   return (
     <div className="bento-4">
@@ -21,7 +23,12 @@ export function ScorecardCard({ items, onItemClick }) {
               aria-label={`${item.label}: ${item.value}, tap untuk grafik`}>
               <div className="scorecard-item-icon"><item.Icon size={18} /></div>
               <div className="scorecard-label">{item.label}</div>
-              <div className={`scorecard-value ${item.cls}`}>{item.value}</div>
+              <div className={`scorecard-value ${item.cls}`}>
+                {/* Gunakan AnimatedAmount jika rawValue tersedia, fallback ke value string */}
+                {item.rawValue !== undefined
+                  ? <AnimatedAmount value={item.rawValue} formatter={fmt} duration={600} />
+                  : item.value}
+              </div>
               <div className="scorecard-hint">tap untuk grafik</div>
             </button>
           ))}
@@ -31,6 +38,7 @@ export function ScorecardCard({ items, onItemClick }) {
   )
 }
 
+/* ── WeeklySummaryCard ─────────────────────────────────── */
 export function WeeklySummaryCard({ weekStart, weekEnd, weeklyTotal, filteredExpenses, now }) {
   const days = ['Min','Sen','Sel','Rab','Kam','Jum','Sab']
   const dayTotals = [0,1,2,3,4,5,6].map(d => {
@@ -47,7 +55,9 @@ export function WeeklySummaryCard({ weekStart, weekEnd, weeklyTotal, filteredExp
             <span className="dash-card-header">Ringkasan Mingguan</span>
             <span className="dash-badge-live">LIVE</span>
           </div>
-          <div className="weekly-amount">{fmt(weeklyTotal)}</div>
+          <div className="weekly-amount">
+            <AnimatedAmount value={weeklyTotal} formatter={fmt} duration={600} />
+          </div>
           <div className="weekly-range">
             {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
           </div>
@@ -72,6 +82,7 @@ export function WeeklySummaryCard({ weekStart, weekEnd, weeklyTotal, filteredExp
   )
 }
 
+/* ── UserSpendingCard ──────────────────────────────────── */
 export function UserSpendingCard({ userSplit }) {
   return (
     <div className="bento-4">
@@ -96,6 +107,7 @@ export function UserSpendingCard({ userSplit }) {
   )
 }
 
+/* ── Top5KategoriCard ──────────────────────────────────── */
 export function Top5KategoriCard({ top5, totalExpenses }) {
   return (
     <div className="bento-4">
@@ -128,6 +140,7 @@ export function Top5KategoriCard({ top5, totalExpenses }) {
   )
 }
 
+/* ── BudgetCard ────────────────────────────────────────── */
 export function BudgetCard({ budgetVsReal }) {
   const items = (budgetVsReal || []).filter(b => b.alokasi > 0).slice(0, 5)
   return (
@@ -155,6 +168,7 @@ export function BudgetCard({ budgetVsReal }) {
   )
 }
 
+/* ── AnomaliCard ───────────────────────────────────────── */
 export function AnomaliCard({ anomali }) {
   const [open, setOpen] = useState(false)
   const hasItems = anomali.length > 0
@@ -217,6 +231,7 @@ export function AnomaliCard({ anomali }) {
   )
 }
 
+/* ── RecentTransactionsCard ────────────────────────────── */
 export function RecentTransactionsCard({ recent, getUserName }) {
   const [open, setOpen] = useState(false)
   return (
