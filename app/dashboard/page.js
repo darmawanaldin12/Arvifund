@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, BarChart2, Landmark, CalendarDays, Lightbulb } from 'lucide-react'
 import DashboardLoadingState from '../../components/dashboard/DashboardLoadingState'
+import { AnimatedAmount } from '../../hooks/useCountUp'
 import {
   ScorecardCard, WeeklySummaryCard, UserSpendingCard,
   Top5KategoriCard, BudgetCard,
@@ -62,17 +63,23 @@ export default function DashboardPage() {
   }))
 
   const scorecardItems = [
-    { label: 'Bulan Ini',        value: fmt(expBulanIni), cls: 'red',    Icon: CalendarDays, modalType: 'bulanIni' },
-    { label: 'Rata-rata Harian', value: fmt(rataHarian),  cls: 'yellow', Icon: BarChart2,    modalType: 'rataHarian' },
-    { label: 'Proyeksi Akhir',   value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
-    { label: 'Sisa Budget',      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—', cls: sisaBudget < 0 ? 'red' : 'green', Icon: Landmark, modalType: 'sisaBudget' },
+    { label: 'Bulan Ini',        rawValue: expBulanIni, value: fmt(expBulanIni), cls: 'red',    Icon: CalendarDays, modalType: 'bulanIni' },
+    { label: 'Rata-rata Harian', rawValue: rataHarian,  value: fmt(rataHarian),  cls: 'yellow', Icon: BarChart2,    modalType: 'rataHarian' },
+    { label: 'Proyeksi Akhir',   rawValue: proyeksi,    value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
+    {
+      label: 'Sisa Budget',
+      rawValue: budgetBulan > 0 ? Math.abs(sisaBudget) : undefined,
+      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—',
+      cls: sisaBudget < 0 ? 'red' : 'green',
+      Icon: Landmark, modalType: 'sisaBudget',
+    },
   ]
 
   const kpiItems = [
-    { href: '/income',   cls: 'income',      label: 'Total Pemasukan',   value: fmt(s.totalIncome),   valueColor: 'kpi-value-green',  mom: momIncome,  icon: <TrendingUp size={16} /> },
-    { href: '/expenses', cls: 'expense',     label: 'Total Pengeluaran', value: fmt(s.totalExpenses), valueColor: 'kpi-value-red',    sub: `${s.expensesCount} transaksi`, mom: momExpense, icon: <TrendingDown size={16} /> },
-    { href: '/record',   cls: 'saldo',       label: 'Saldo Periode',     value: fmt(s.saldo),         valueColor: s.saldo >= 0 ? 'kpi-value-accent' : 'kpi-value-red', sub: 'income − pengeluaran', icon: <BarChart2 size={16} /> },
-    { href: '/record',   cls: 'saldo-tahun', label: 'Saldo Tahun Ini',   value: fmt(saldoTahun),      valueColor: saldoTahun >= 0 ? 'kpi-value-accent' : 'kpi-value-red', sub: 'total semua data', icon: <Landmark size={16} /> },
+    { href: '/income',   cls: 'income',      label: 'Total Pemasukan',   rawValue: s.totalIncome,   valueColor: 'kpi-value-green',  mom: momIncome,  icon: <TrendingUp size={16} /> },
+    { href: '/expenses', cls: 'expense',     label: 'Total Pengeluaran', rawValue: s.totalExpenses, valueColor: 'kpi-value-red',    sub: `${s.expensesCount} transaksi`, mom: momExpense, icon: <TrendingDown size={16} /> },
+    { href: '/record',   cls: 'saldo',       label: 'Saldo Periode',     rawValue: s.saldo,         valueColor: s.saldo >= 0 ? 'kpi-value-accent' : 'kpi-value-red', sub: 'income − pengeluaran', icon: <BarChart2 size={16} /> },
+    { href: '/record',   cls: 'saldo-tahun', label: 'Saldo Tahun Ini',   rawValue: saldoTahun,      valueColor: saldoTahun >= 0 ? 'kpi-value-accent' : 'kpi-value-red', sub: 'total semua data', icon: <Landmark size={16} /> },
   ]
 
   const [modalType, setModalType] = useState(null)
@@ -97,7 +104,9 @@ export default function DashboardPage() {
                   <span className="kpi-label">{item.label}</span>
                   <span className={cn('kpi-icon', item.cls)}>{item.icon}</span>
                 </div>
-                <div className={cn('kpi-value', item.valueColor)}>{item.value}</div>
+                <div className={cn('kpi-value', item.valueColor)}>
+                  <AnimatedAmount value={item.rawValue ?? 0} formatter={fmt} duration={600} />
+                </div>
                 {item.sub && <div className="kpi-sub">{item.sub}</div>}
                 {item.mom && (
                   <div className={cn('kpi-mom', item.mom.cls === 'good' || item.mom.cls === 'mom-good' ? 'good' : 'bad')}>
