@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '../../lib/utils-cn'
 
 const NAV_ITEMS = [
@@ -28,8 +29,8 @@ const NAV_ITEMS = [
   {
     href: '/expenses',
     label: 'Keluar',
-    activeColor: 'text-[var(--red)]',
-    activeBg: 'bg-[var(--red-bg)]',
+    accentVar: '--red',
+    accentAlpha: 'rgba(var(--red-rgb, 248 113 113) / 0.15)',
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 5v14M5 12l7 7 7-7"/>
@@ -83,15 +84,16 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={cn(
-        'fixed bottom-0 left-0 right-0 z-50 md:hidden',
-      )}
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
+        // Glass effect: semi-transparent + blur
+        background: 'rgba(var(--surface-rgb, 18 18 28) / 0.75)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        // Subtle top glow line
+        boxShadow: '0 -1px 0 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.3)',
       }}
     >
       <div className="flex items-stretch justify-around" style={{ height: 60, paddingInline: 4 }}>
@@ -114,17 +116,16 @@ export default function BottomNav() {
                     flexShrink: 0,
                     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                     background: isInputActive
-                      ? 'var(--surface2)'
+                      ? 'rgba(255,255,255,0.06)'
                       : 'var(--accent)',
                     boxShadow: isInputActive
-                      ? 'none'
-                      : '0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent)',
-                    outline: isInputActive ? '2px solid var(--accent)' : 'none',
+                      ? 'inset 0 0 0 1.5px var(--accent)'
+                      : '0 4px 18px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent)',
                   }}
-                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.90)' }}
-                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
-                  onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.90)' }}
+                  onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.88)' }}
                   onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.88)' }}
+                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
                 >
                   <svg
                     width="22" height="22"
@@ -145,43 +146,57 @@ export default function BottomNav() {
             : pathname.startsWith(item.href) ||
               (item.href === '/wallet' && pathname.startsWith('/record'))
 
-          const activeColor = item.activeColor || 'text-[var(--accent)]'
-          const activeBg    = item.activeBg    || 'bg-[var(--accent-light)]'
+          // Per-item accent (Keluar = red, others = accent)
+          const pillColor  = item.accentVar  ? `var(${item.accentVar})`  : 'var(--accent)'
+          const pillBg     = item.accentAlpha ? item.accentAlpha : 'color-mix(in srgb, var(--accent) 15%, transparent)'
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-[4px]',
-                'relative py-1 rounded-xl no-underline',
-                'transition-colors duration-200',
-                isActive ? activeColor : 'text-[var(--text3)] hover:text-[var(--text2)]',
-              )}
-              style={{ touchAction: 'manipulation', minHeight: 44 }}
+              className="flex-1 flex flex-col items-center justify-center gap-[4px] relative py-1 no-underline"
+              style={{
+                color: isActive ? pillColor : 'var(--text3)',
+                transition: 'color 0.2s',
+                minHeight: 44,
+                touchAction: 'manipulation',
+              }}
             >
-              {/* Active pill background */}
-              <span
-                className={cn(
-                  'absolute inset-x-1.5 rounded-xl',
-                  'transition-opacity duration-200',
-                  activeBg,
-                  isActive ? 'opacity-100' : 'opacity-0',
+              {/* Animated pill indicator */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.span
+                    key="pill"
+                    layoutId={`nav-pill-${item.href}`}
+                    initial={{ opacity: 0, scaleX: 0.6, scaleY: 0.8 }}
+                    animate={{ opacity: 1, scaleX: 1, scaleY: 1 }}
+                    exit={{ opacity: 0, scaleX: 0.6, scaleY: 0.8 }}
+                    transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      inset: '4px 6px',
+                      borderRadius: 12,
+                      background: pillBg,
+                      border: `1px solid color-mix(in srgb, ${pillColor} 25%, transparent)`,
+                      zIndex: 0,
+                      transformOrigin: 'center',
+                    }}
+                  />
                 )}
-                style={{ top: 4, bottom: 4 }}
-                aria-hidden="true"
-              />
+              </AnimatePresence>
 
               {/* Icon */}
-              <span
+              <motion.span
                 className="relative z-10 flex items-center justify-center"
-                style={{
-                  transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-                  transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                animate={{
+                  scale: isActive ? 1.15 : 1,
+                  y: isActive ? -1 : 0,
                 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 400 }}
               >
                 {isActive ? item.activeIcon : item.icon}
-              </span>
+              </motion.span>
 
               {/* Label */}
               <span
@@ -189,7 +204,8 @@ export default function BottomNav() {
                 style={{
                   fontSize: 10,
                   fontWeight: isActive ? 700 : 500,
-                  transition: 'font-weight 0.15s',
+                  transition: 'font-weight 0.15s, opacity 0.2s',
+                  opacity: isActive ? 1 : 0.6,
                 }}
               >
                 {item.label}
