@@ -6,6 +6,7 @@ import { AlertTriangle, CalendarDays, BarChart2, Lightbulb, Landmark, ChevronDow
 import { Progress } from '../ui/progress'
 import { Badge } from '../ui/badge'
 import KategoriIcon from '../ui/KategoriIcon'
+import EmptyState from '../ui/EmptyState'
 import { fmt, fmtFull, fmtTanggalShort, KATEGORI_COLOR, getLocalDateStr } from '../../lib/utils'
 import { cn } from '../../lib/utils-cn'
 import { AnimatedAmount } from '../../hooks/useCountUp'
@@ -24,7 +25,6 @@ export function ScorecardCard({ items, onItemClick }) {
               <div className="scorecard-item-icon"><item.Icon size={18} /></div>
               <div className="scorecard-label">{item.label}</div>
               <div className={`scorecard-value ${item.cls}`}>
-                {/* Gunakan AnimatedAmount jika rawValue tersedia, fallback ke value string */}
                 {item.rawValue !== undefined
                   ? <AnimatedAmount value={item.rawValue} formatter={fmt} duration={600} />
                   : item.value}
@@ -88,20 +88,22 @@ export function UserSpendingCard({ userSplit }) {
     <div className="bento-4">
       <div className="dash-card">
         <div className="dash-card-header">Pengeluaran per Anggota</div>
-        {userSplit.length === 0 ? <p className="dash-empty">Belum ada data</p> : (
-          <div className="progress-list">
-            {userSplit.map(u => (
-              <div key={u.name} className="progress-row">
-                <div className="progress-row-top">
-                  <span className="progress-label">{u.name}</span>
-                  <span className="progress-pct">{u.pct}%</span>
+        {userSplit.length === 0
+          ? <EmptyState variant="dashboard-transfer" size="sm" />
+          : (
+            <div className="progress-list">
+              {userSplit.map(u => (
+                <div key={u.name} className="progress-row">
+                  <div className="progress-row-top">
+                    <span className="progress-label">{u.name}</span>
+                    <span className="progress-pct">{u.pct}%</span>
+                  </div>
+                  <Progress value={u.pct} className="h-2 bg-[var(--surface2)]"
+                    indicatorClassName={u.name === 'Aldin' ? 'bg-[var(--accent)]' : 'bg-[#db2777]'} />
                 </div>
-                <Progress value={u.pct} className="h-2 bg-[var(--surface2)]"
-                  indicatorClassName={u.name === 'Aldin' ? 'bg-[var(--accent)]' : 'bg-[#db2777]'} />
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </div>
   )
@@ -114,26 +116,30 @@ export function Top5KategoriCard({ top5, totalExpenses }) {
       <Link href="/expenses" className="no-underline block">
         <div className="dash-card dash-card-link">
           <div className="dash-card-header">Top 5 Kategori</div>
-          <div className="progress-list">
-            {top5.length === 0 ? <p className="dash-empty">Belum ada data</p> : top5.map(([kat, val]) => {
-              const pct   = totalExpenses > 0 ? Math.round(val / totalExpenses * 100) : 0
-              const color = KATEGORI_COLOR[kat] || 'var(--accent)'
-              return (
-                <div key={kat} className="progress-row">
-                  <div className="progress-row-top">
-                    <span className="progress-row-kat">
-                      <KategoriIcon kategori={kat} size={16} />
-                      <span className="progress-label">{kat}</span>
-                    </span>
-                    <span className="progress-pct">
-                      {fmt(val)}<span className="progress-pct-sub"> ({pct}%)</span>
-                    </span>
-                  </div>
-                  <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color }} />
-                </div>
-              )
-            })}
-          </div>
+          {top5.length === 0
+            ? <EmptyState variant="dashboard-kategori" size="sm" />
+            : (
+              <div className="progress-list">
+                {top5.map(([kat, val]) => {
+                  const pct   = totalExpenses > 0 ? Math.round(val / totalExpenses * 100) : 0
+                  const color = KATEGORI_COLOR[kat] || 'var(--accent)'
+                  return (
+                    <div key={kat} className="progress-row">
+                      <div className="progress-row-top">
+                        <span className="progress-row-kat">
+                          <KategoriIcon kategori={kat} size={16} />
+                          <span className="progress-label">{kat}</span>
+                        </span>
+                        <span className="progress-pct">
+                          {fmt(val)}<span className="progress-pct-sub"> ({pct}%)</span>
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-1.5 bg-[var(--surface2)]" style={{ '--progress-color': color }} />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
         </div>
       </Link>
     </div>
@@ -148,20 +154,22 @@ export function BudgetCard({ budgetVsReal }) {
       <Link href="/budget" className="no-underline block">
         <div className="dash-card dash-card-link">
           <div className="dash-card-header">Budget vs Realisasi</div>
-          {items.length === 0 ? <p className="dash-empty">Belum ada budget plan</p> : (
-            <div className="progress-list">
-              {items.map(b => (
-                <div key={b.kategori} className="progress-row">
-                  <div className="progress-row-top">
-                    <span className="progress-label">{b.kategori}</span>
-                    <span className={cn('progress-pct', b.pct >= 100 ? 'danger' : b.pct >= 80 ? 'warn' : 'ok')}>{b.pct}%</span>
+          {items.length === 0
+            ? <EmptyState variant="dashboard-budget" size="sm" />
+            : (
+              <div className="progress-list">
+                {items.map(b => (
+                  <div key={b.kategori} className="progress-row">
+                    <div className="progress-row-top">
+                      <span className="progress-label">{b.kategori}</span>
+                      <span className={cn('progress-pct', b.pct >= 100 ? 'danger' : b.pct >= 80 ? 'warn' : 'ok')}>{b.pct}%</span>
+                    </div>
+                    <Progress value={Math.min(b.pct, 100)} className="h-2 bg-[var(--surface2)]"
+                      indicatorClassName={b.pct >= 100 ? 'bg-[var(--red)]' : b.pct >= 80 ? 'bg-[var(--yellow)]' : 'bg-[var(--green)]'} />
                   </div>
-                  <Progress value={Math.min(b.pct, 100)} className="h-2 bg-[var(--surface2)]"
-                    indicatorClassName={b.pct >= 100 ? 'bg-[var(--red)]' : b.pct >= 80 ? 'bg-[var(--yellow)]' : 'bg-[var(--green)]'} />
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </div>
       </Link>
     </div>
@@ -191,9 +199,15 @@ export function AnomaliCard({ anomali }) {
         </div>
 
         {!hasItems ? (
-          <div className="dash-empty-center">
-            <div className="dash-empty-icon">✅</div>
-            <p>Tidak ada anomali</p>
+          <div style={{ padding: '8px 0' }}>
+            <EmptyState
+              variant="dashboard-transfer"
+              title="Semua transaksi normal"
+              desc="Tidak ada transaksi yang nilainya jauh di atas rata-rata."
+              cta="Lihat semua transaksi"
+              href="/expenses"
+              size="sm"
+            />
           </div>
         ) : (
           <>
@@ -259,38 +273,42 @@ export function RecentTransactionsCard({ recent, getUserName }) {
               transition={{ duration: 0.25, ease: 'easeInOut' }}
               style={{ overflow: 'hidden' }}
             >
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tanggal</th><th>Deskripsi</th><th>Kategori</th><th>User</th>
-                      <th style={{ textAlign: 'right' }}>Jumlah</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recent.length === 0 ? (
-                      <tr><td colSpan={5} className="text-center py-8 text-[var(--text3)]">Belum ada transaksi</td></tr>
-                    ) : recent.map(r => (
-                      <tr key={r.id}>
-                        <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
-                        <td>
-                          <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
-                          {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
-                        </td>
-                        <td>
-                          <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
-                            <KategoriIcon kategori={r.kategori} size={12} />{r.kategori}
-                          </Badge>
-                        </td>
-                        <td>
-                          <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span>
-                        </td>
-                        <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
+              {recent.length === 0 ? (
+                <div style={{ padding: '8px 20px 20px' }}>
+                  <EmptyState variant="expenses" size="sm" />
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tanggal</th><th>Deskripsi</th><th>Kategori</th><th>User</th>
+                        <th style={{ textAlign: 'right' }}>Jumlah</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {recent.map(r => (
+                        <tr key={r.id}>
+                          <td className="whitespace-nowrap text-[var(--text3)] text-[12px] tabular-nums">{fmtTanggalShort(r.tanggal)}</td>
+                          <td>
+                            <div className="font-semibold text-[13px]">{r.toko || '—'}</div>
+                            {r.uraian && <div className="text-[11px] text-[var(--text3)]">{r.uraian}</div>}
+                          </td>
+                          <td>
+                            <Badge variant="secondary" className="text-[11px] bg-[var(--surface2)] text-[var(--text2)] border-0 gap-1.5">
+                              <KategoriIcon kategori={r.kategori} size={12} />{r.kategori}
+                            </Badge>
+                          </td>
+                          <td>
+                            <span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span>
+                          </td>
+                          <td className="amount text-[var(--red)]">{fmt(r.nilai)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
