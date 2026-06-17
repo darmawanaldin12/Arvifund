@@ -1,11 +1,24 @@
 'use client'
+import { useState } from 'react'
 import { motion } from 'motion/react'
-import { X, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, Trash2, ShieldCheck } from 'lucide-react'
 import { CARD_THEME } from './AtmCard'
 import { fmtFull, fmtTanggalShort } from '../../lib/utils'
+import { deleteCashRecord } from '../../lib/data'
+import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 
-export default function RiwayatDrawer({ account, userName, expenses, income, cashRecords, transfers, getUserName, periodIdx, periods, onClose }) {
+async function requireBiometric() {
+  const supported  = await isBiometricSupported()
+  const registered = isBiometricRegistered()
+  if (!supported || !registered) return true
+  await authenticateWithBiometric()
+  return true
+}
+
+export default function RiwayatDrawer({ account, userName, expenses, income, cashRecords, transfers, getUserName, periodIdx, periods, onClose, onRefresh }) {
   const theme = CARD_THEME[account.name] || CARD_THEME.default
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
 
   const baselineDate = account.balance_set_at ? (() => {
     const d = new Date(account.balance_set_at); d.setHours(0,0,0,0); return d
@@ -25,32 +38,57 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
   }
 
   const rows = []
+
   income.forEach(r => {
     if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal))
-      rows.push({ id: r.id, tanggal: r.tanggal, label: r.sumber || 'Pemasukan', sub: r.kategori || '', amount: r.jumlah, type: 'in' })
+      rows.push({ id: r.id, rawId: r.id, source: 'income', tanggal: r.tanggal, label: r.sumber || 'Pemasukan', sub: r.kategori || '', amount: r.jumlah, type: 'in', deletable: false })
   })
+
   expenses.forEach(r => {
     if (r.bank === account.name && r.user_id === account.user_id && afterBaseline(r.tanggal) && inPeriod(r.tanggal))
-      rows.push({ id: r.id, tanggal: r.tanggal, label: r.toko || 'Pengeluaran', sub: r.kategori || '', amount: r.nilai, type: 'out' })
+      rows.push({ id: r.id, rawId: r.id, source: 'expense', tanggal: r.tanggal, label: r.toko || 'Pengeluaran', sub: r.kategori || '', amount: r.nilai, type: 'out', deletable: false })
   })
+
   cashRecords.forEach(r => {
     if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
-    if (r.bank === account.name && r.user_id === account.user_id)
-      rows.push({ id: r.id + '_out', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: 'ke Cash', amount: r.nilai, type: 'out' })
-    if (account.name === 'Cash' && r.user_id === account.user_id)
-      rows.push({ id: r.id + '_in', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `dari ${r.bank}`, amount: r.nilai, type: 'in' })
+
+    // Keluar dari bank sumber (misal BRI → Cash): tampil sebagai OUT di akun BRI
+    if (r.bank === account.name && r.user_id === account.user_id && r.bank !== 'Cash')
+      rows.push({ id: r.id + '_out', rawId: r.id, source: 'cash', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: 'ke Cash', amount: r.nilai, type: 'out', deletable: true })
+
+    // Masuk ke Cash: tampil sebagai IN di akun Cash — hanya jika bank asal BUKAN Cash
+    if (account.name === 'Cash' && r.user_id === account.user_id && r.bank !== 'Cash')
+      rows.push({ id: r.id + '_in', rawId: r.id, source: 'cash', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: `dari ${r.bank}`, amount: r.nilai, type: 'in', deletable: true })
   })
+
   transfers.forEach(r => {
     if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
     if (r.from_user === account.user_id && r.from_bank === account.name)
-      rows.push({ id: r.id + '_out', tanggal: r.tanggal, label: `Transfer ke ${r.from_user === r.to_user ? r.to_bank : getUserName(r.to_user)}`, sub: r.catatan || '', amount: r.jumlah, type: 'out' })
+      rows.push({ id: r.id + '_out', rawId: r.id, source: 'transfer', tanggal: r.tanggal, label: `Transfer ke ${r.from_user === r.to_user ? r.to_bank : getUserName(r.to_user)}`, sub: r.catatan || '', amount: r.jumlah, type: 'out', deletable: false })
     if (r.to_user === account.user_id && r.to_bank === account.name)
-      rows.push({ id: r.id + '_in', tanggal: r.tanggal, label: `Transfer dari ${r.from_user === r.to_user ? r.from_bank : getUserName(r.from_user)}`, sub: r.catatan || '', amount: r.jumlah, type: 'in' })
+      rows.push({ id: r.id + '_in', rawId: r.id, source: 'transfer', tanggal: r.tanggal, label: `Transfer dari ${r.from_user === r.to_user ? r.from_bank : getUserName(r.from_user)}`, sub: r.catatan || '', amount: r.jumlah, type: 'in', deletable: false })
   })
+
   rows.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
   const totalIn  = rows.filter(r => r.type === 'in').reduce((s, r) => s + r.amount, 0)
   const totalOut = rows.filter(r => r.type === 'out').reduce((s, r) => s + r.amount, 0)
+
+  async function handleDeleteCash(row) {
+    setDeleteError('')
+    setDeletingId(row.id)
+    try {
+      await requireBiometric()
+      await deleteCashRecord(row.rawId)
+      if (onRefresh) await onRefresh()
+    } catch (e) {
+      setDeleteError(
+        e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')
+          ? 'Autentikasi dibatalkan'
+          : 'Gagal hapus: ' + e.message
+      )
+    } finally { setDeletingId(null) }
+  }
 
   return (
     <motion.div
@@ -60,6 +98,8 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 32, stiffness: 350 }}
         style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 560, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
         <div style={{ background: theme.bg, borderRadius: '20px 20px 0 0', padding: '16px 20px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 36 }}>
@@ -86,6 +126,15 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
             <X size={16} />
           </button>
         </div>
+
+        {/* Error hapus */}
+        {deleteError && (
+          <div style={{ margin: '8px 16px 0', padding: '8px 12px', background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ShieldCheck size={13} /> {deleteError}
+          </div>
+        )}
+
+        {/* List */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', paddingBottom: 'calc(60px + max(env(safe-area-inset-bottom), 16px) + 8px)' }}>
           {rows.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>Belum ada transaksi di periode ini</div>
@@ -101,6 +150,16 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
               <div style={{ fontSize: 14, fontWeight: 800, color: r.type === 'in' ? 'var(--green)' : 'var(--red)', flexShrink: 0 }}>
                 {r.type === 'in' ? '+' : '-'}{fmtFull(r.amount)}
               </div>
+              {r.deletable && (
+                <button
+                  onClick={() => handleDeleteCash(r)}
+                  disabled={deletingId === r.id}
+                  style={{ background: 'none', border: 'none', cursor: deletingId === r.id ? 'not-allowed' : 'pointer', color: deletingId === r.id ? 'var(--text3)' : 'var(--red)', padding: '4px', flexShrink: 0, opacity: deletingId === r.id ? 0.5 : 1, display: 'flex', alignItems: 'center' }}>
+                  {deletingId === r.id
+                    ? <ShieldCheck size={14} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} />
+                    : <Trash2 size={14} />}
+                </button>
+              )}
             </div>
           ))}
         </div>
