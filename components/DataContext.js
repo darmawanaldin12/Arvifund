@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { supabase, getUser } from '../lib/supabase'
 import { getAllDashboardData, getProfile } from '../lib/data'
 import { buildSummary, buildPeriods, getCurrentPeriodIndex, filterByPeriod } from '../lib/utils'
+import { saveReturnTo } from '../lib/returnTo'
 
 const DataContext = createContext(null)
 
@@ -84,9 +85,8 @@ export function DataProvider({ children }) {
   const [budgetPlans, setBudgetPlans] = useState([])
   const [transfers, setTransfers]     = useState([])
   const [accounts, setAccounts]       = useState([])
-  // loading = true hanya saat PERTAMA KALI (belum ada data sama sekali)
   const [loading, setLoading]         = useState(true)
-  const [refreshing, setRefreshing]   = useState(false) // background refresh
+  const [refreshing, setRefreshing]   = useState(false)
   const [error, setError]             = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
   const hasDataRef                    = useRef(false)
@@ -105,8 +105,6 @@ export function DataProvider({ children }) {
 
   const loadData = useCallback(async () => {
     try {
-      // Kalau sudah punya data → background refresh (tidak flash skeleton)
-      // Kalau belum punya data → full loading screen
       if (hasDataRef.current) {
         setRefreshing(true)
       } else {
@@ -151,6 +149,11 @@ export function DataProvider({ children }) {
         setExpenses([]); setIncome([])
         setCashRecords([]); setBudgetPlans([])
         setTransfers([]); setAccounts([])
+        // Simpan halaman saat ini agar bisa kembali setelah login/biometric
+        if (typeof window !== 'undefined') {
+          saveReturnTo(window.location.pathname)
+          window.location.href = '/login?reason=timeout'
+        }
       }
     })
     return () => subscription.unsubscribe()

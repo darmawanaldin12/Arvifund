@@ -11,6 +11,7 @@ import {
   removeBiometricCred,
   getBiometricCred,
 } from '../../lib/biometric'
+import { popReturnTo } from '../../lib/returnTo'
 import { Fingerprint, ScanFace, Loader2, Eye, EyeOff, KeyRound, Mail, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
@@ -66,7 +67,9 @@ export default function LoginPage() {
     try {
       await authenticateWithBiometric(supabase)
       try { localStorage.setItem('arvifund_last_active', Date.now().toString()) } catch (_) {}
-      router.push('/dashboard')
+      // Kembali ke halaman asal sebelum timeout, atau fallback ke /input jika dari share
+      const returnTo = popReturnTo('/dashboard')
+      router.push(returnTo)
     } catch (err) {
       setBioAutoTriggered(false)
       if (err.name === 'NotAllowedError') {
@@ -98,7 +101,8 @@ export default function LoginPage() {
         setPendingPassword(password)
         setShowRegisterBio(true)
       } else {
-        router.push('/dashboard')
+        const returnTo = popReturnTo('/dashboard')
+        router.push(returnTo)
       }
     } catch (err) {
       setError(err.message || 'Email atau password salah')
@@ -108,16 +112,16 @@ export default function LoginPage() {
   }
 
   async function handleRegisterBio() {
-    if (!pendingEmail || !pendingPassword) { router.push('/dashboard'); return }
+    if (!pendingEmail || !pendingPassword) { router.push(popReturnTo('/dashboard')); return }
     setBioLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const username = user?.email?.split('@')[0] || 'User'
       await registerBiometric(user?.id || '', username, pendingEmail, pendingPassword)
       setBioRegistered(true)
-      router.push('/dashboard')
+      router.push(popReturnTo('/dashboard'))
     } catch (err) {
-      router.push('/dashboard')
+      router.push(popReturnTo('/dashboard'))
     } finally {
       setBioLoading(false)
       setPendingEmail('')
@@ -128,7 +132,7 @@ export default function LoginPage() {
   function handleSkipBio() {
     setPendingEmail('')
     setPendingPassword('')
-    router.push('/dashboard')
+    router.push(popReturnTo('/dashboard'))
   }
 
   async function handleForgot(e) {
