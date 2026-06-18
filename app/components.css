@@ -39,15 +39,22 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.15s;
+  transition: transform 0.1s ease, filter 0.15s ease, background 0.15s ease, opacity 0.15s ease;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
+.btn:active { transform: scale(0.97); opacity: 0.88; }
 .btn-primary  { background: var(--accent); color: white; }
-.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:hover  { filter: brightness(1.1); }
+.btn-primary:active { transform: scale(0.97); filter: brightness(0.95); }
 .btn-ghost    { background: var(--surface2); color: var(--text1); border: 1px solid var(--border); }
-.btn-ghost:hover { background: var(--surface3); }
+.btn-ghost:hover  { background: var(--surface3); }
+.btn-ghost:active { transform: scale(0.97); background: var(--surface3); }
 .btn-danger   { background: var(--red-bg); color: var(--red); border: 1px solid var(--border); }
+.btn-danger:active { transform: scale(0.97); }
 .btn-sm       { padding: 6px 12px; font-size: 12px; }
 .btn-full     { width: 100%; }
 
@@ -64,7 +71,7 @@
   color: var(--text1);
   font-size: 14px;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
   outline: none;
   appearance: none;
 }
@@ -79,6 +86,7 @@
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
+  cursor: pointer;
 }
 
 /* ── MODAL ── */
@@ -168,12 +176,18 @@
   flex-shrink: 0; padding: 6px 16px; border-radius: var(--radius-full);
   font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface);
-  color: var(--text2); transition: all 0.15s; white-space: nowrap;
+  color: var(--text2);
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
 .filter-chip:hover:not(.active) { background: var(--surface2); }
+.filter-chip:active { transform: scale(0.95); opacity: 0.85; }
 
 @media (max-width: 767px) {
   .filter-bar { overflow-x: auto; width: 100%; }
@@ -202,9 +216,13 @@
   width: 28px; height: 28px; border-radius: 6px;
   background: var(--accent-light); border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  color: var(--accent); transition: all 0.15s;
+  color: var(--accent);
+  transition: transform 0.1s ease, filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.edit-btn:hover { filter: brightness(0.95); }
+.edit-btn:hover  { filter: brightness(0.95); }
+.edit-btn:active { transform: scale(0.9); filter: brightness(0.88); }
 
 /* ── USER CHIP ── */
 .user-chip {
@@ -218,8 +236,17 @@
 
 /* ── SKELETON ── */
 .skeleton {
-  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
-  background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px;
+  background: linear-gradient(
+    105deg,
+    var(--surface2) 0%,
+    var(--surface2) 38%,
+    var(--surface3) 50%,
+    var(--surface2) 62%,
+    var(--surface2) 100%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 6px;
 }
 
 /* ── SECTION TITLE ── */
@@ -250,83 +277,82 @@
 .empty-state .emoji { font-size: 36px; margin-bottom: 12px; }
 .empty-state p { font-size: 14px; font-weight: 600; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
 
-/* ─────────────────────────────────────────
-   MICRO-INTERACTIONS
-   scale(0.97) active state + 100ms ease
-   berlaku di semua tombol, chip, card klik
-───────────────────────────────────────── */
+/* ── MICRO-INTERACTIONS ── */
 
-/* 1. Extend transition ke semua elemen interaktif */
-.btn,
-.edit-btn,
-.filter-chip,
-button,
-[role="button"] {
-  transition:
-    transform     100ms cubic-bezier(0.4, 0, 0.2, 1),
-    filter        150ms ease,
-    background    150ms ease,
-    border-color  150ms ease,
-    box-shadow    150ms ease,
-    opacity       150ms ease;
-}
-
-/* 2. Active press → scale turun, terasa "ditekan" */
-.btn:active,
-.edit-btn:active,
-button:active:not(:disabled),
-[role="button"]:active {
-  transform: scale(0.97);
-}
-
-/* 3. Filter chip lebih kecil karena bentuk pill */
-.filter-chip:active {
-  transform: scale(0.95);
-}
-
-/* 4. Card yang bisa diklik — tambah class .card-clickable di JSX */
-.card-clickable {
+a .card, button .card, [onclick] .card, .card-link, .dash-card-link {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s ease;
   cursor: pointer;
-  transition:
-    transform     100ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow    150ms ease,
-    border-color  150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.card-clickable:active {
+a .card:active, button .card:active, [onclick] .card:active,
+.card-link:active, .dash-card-link:active {
   transform: scale(0.97);
-  box-shadow: none;
+  box-shadow: var(--shadow-sm);
 }
 
-/* 5. Hover lift di desktop (pointer: fine = mouse/trackpad) */
-@media (hover: hover) and (pointer: fine) {
-  .card-clickable:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-    border-color: var(--accent);
-  }
-  .card-clickable:active {
-    transform: scale(0.97) translateY(0);
-    box-shadow: none;
-    border-color: var(--border);
-  }
+a[href] { -webkit-tap-highlight-color: transparent; }
+a[href]:active > * {
+  transform: scale(0.97);
+  opacity: 0.9;
+  transition: transform 0.1s ease, opacity 0.1s ease;
 }
 
-/* 6. Tombol disabled — jangan scale sama sekali */
-.btn:disabled,
-button:disabled {
-  transform: none !important;
-  cursor: not-allowed;
+.tappable {
+  transition: transform 0.1s ease, opacity 0.12s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
+.tappable:active { transform: scale(0.97); opacity: 0.85; }
 
-/* 7. Respek prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .btn,
-  .edit-btn,
-  .filter-chip,
-  button,
-  [role="button"],
-  .card-clickable {
-    transition: background 150ms ease, opacity 150ms ease !important;
-    transform: none !important;
-  }
+.scorecard-item-btn {
+  transition: transform 0.1s ease, box-shadow 0.12s ease, background 0.15s ease !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: manipulation;
+}
+.scorecard-item-btn:active { transform: scale(0.95) !important; box-shadow: none !important; }
+
+.kpi-card {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.kpi-card:active { transform: scale(0.97); }
+
+.period-filter-bar button {
+  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.period-filter-bar button:active { transform: scale(0.93); }
+
+.bottom-nav a, .bottom-nav button {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.bottom-nav a:active, .bottom-nav button:active { transform: scale(0.88); opacity: 0.7; }
+
+.sidebar-item { transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease; }
+.sidebar-item:active { transform: scale(0.98); }
+
+.atm-card-interactive {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.atm-card-interactive:active { transform: scale(0.97); }
+
+* { -webkit-tap-highlight-color: transparent; }
+
+/* ── SHIMMER — diagonal wave ── */
+@keyframes shimmer {
+  0%   { background-position: -300% 0; }
+  100% { background-position:  300% 0; }
+}
+@keyframes skPulse {
+  0%,100% { opacity: 1;   }
+  50%     { opacity: 0.5; }
 }
