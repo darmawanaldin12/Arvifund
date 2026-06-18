@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { setAccountBalance, insertTransfer, updateTransfer, deleteTransfer } from '../../lib/data'
+import { supabase } from '../../lib/supabase'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 import { fmtFull, fmtTanggalShort } from '../../lib/utils'
 import { ArrowLeftRight, Plus, Trash2, Pencil, ShieldCheck } from 'lucide-react'
@@ -15,7 +16,7 @@ async function requireBiometric() {
   const supported  = await isBiometricSupported()
   const registered = isBiometricRegistered()
   if (!supported || !registered) return true
-  await authenticateWithBiometric()
+  await authenticateWithBiometric(supabase)
   return true
 }
 

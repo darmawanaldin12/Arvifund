@@ -5,13 +5,14 @@ import { X, TrendingUp, TrendingDown, Trash2, ShieldCheck } from 'lucide-react'
 import { CARD_THEME } from './AtmCard'
 import { fmtFull, fmtTanggalShort } from '../../lib/utils'
 import { deleteCashRecord } from '../../lib/data'
+import { supabase } from '../../lib/supabase'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 
 async function requireBiometric() {
   const supported  = await isBiometricSupported()
   const registered = isBiometricRegistered()
   if (!supported || !registered) return true
-  await authenticateWithBiometric()
+  await authenticateWithBiometric(supabase)
   return true
 }
 
@@ -52,7 +53,7 @@ export default function RiwayatDrawer({ account, userName, expenses, income, cas
   cashRecords.forEach(r => {
     if (!afterBaseline(r.tanggal) || !inPeriod(r.tanggal)) return
 
-    // Keluar dari bank sumber (misal BRI → Cash): tampil sebagai OUT di akun BRI
+    // Keluar dari bank sumber (misal BCA → Cash): tampil sebagai OUT di akun BCA
     if (r.bank === account.name && r.user_id === account.user_id && r.bank !== 'Cash')
       rows.push({ id: r.id + '_out', rawId: r.id, source: 'cash', tanggal: r.tanggal, label: r.transaksi || 'Tarik Tunai', sub: 'ke Cash', amount: r.nilai, type: 'out', deletable: true })
 
