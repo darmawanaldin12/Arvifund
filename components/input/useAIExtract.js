@@ -10,8 +10,9 @@ function isIOS() {
 
 const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
 const SHARE_CACHE_KEY  = '/share-image-pending'
+const SHARE_IMAGE_TTL  = 30 * 60 * 1000 // 30 menit
 
-// Simulasi progress bertahap — cepat di awal, lambat di tengah, stuck di 90% sampai selesai
+// Simulasi progress bertahap
 function useExtractProgress(aiLoading) {
   const [progress, setProgress] = useState(0)
   const timerRef = useRef(null)
@@ -22,12 +23,11 @@ function useExtractProgress(aiLoading) {
       let current = 0
       function step() {
         setProgress(prev => {
-          // Naik cepat sampai 30, sedang sampai 60, lambat sampai 90, berhenti di 90
           let increment
           if (prev < 30)      increment = 6 + Math.random() * 4
           else if (prev < 60) increment = 3 + Math.random() * 3
           else if (prev < 85) increment = 1 + Math.random() * 2
-          else                return prev // stuck di ~85-90 sampai selesai
+          else                return prev
           current = Math.min(90, prev + increment)
           return current
         })
@@ -36,7 +36,6 @@ function useExtractProgress(aiLoading) {
       }
       timerRef.current = setTimeout(step, 150)
     } else {
-      // Saat selesai, langsung ke 100% lalu reset
       setProgress(100)
       timerRef.current = setTimeout(() => setProgress(0), 600)
     }
@@ -176,8 +175,6 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
 
   function handleImageFile(file) {
     if (!file) return
-    // Hanya tampilkan preview gambar dulu — biar user bisa nambahin catatan
-    // (opsional) di kotak teks sebelum menekan tombol "Ekstrak Data AI".
     compressImage(file)
       .then(c  => { setImageFile(c); imageFileRef.current = c; setImagePreview(URL.createObjectURL(c)) })
       .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)) })
@@ -219,15 +216,21 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
       const params   = new URLSearchParams(window.location.search)
       const isShared = params.get('shared') === '1'
       if (isShared) {
+        // Bersihkan query string dulu
         window.history.replaceState({}, '', '/input')
         try {
           const cache  = await caches.open(SHARE_CACHE_NAME)
           const cached = await cache.match(SHARE_CACHE_KEY)
           if (cached) {
             const { dataUrl, timestamp } = await cached.json()
-            await cache.delete(SHARE_CACHE_KEY)
-            if (Date.now() - timestamp > 5 * 60 * 1000) return
+            // TTL diperpanjang ke 30 menit agar cukup waktu untuk biometric login
+            if (Date.now() - timestamp > SHARE_IMAGE_TTL) {
+              await cache.delete(SHARE_CACHE_KEY)
+              return
+            }
             if (dataUrl && dataUrl.startsWith('data:')) {
+              // Delete cache SETELAH berhasil dibaca
+              await cache.delete(SHARE_CACHE_KEY)
               const res  = await fetch(dataUrl)
               const blob = await res.blob()
               const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })

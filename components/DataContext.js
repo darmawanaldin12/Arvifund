@@ -149,9 +149,9 @@ export function DataProvider({ children }) {
         setExpenses([]); setIncome([])
         setCashRecords([]); setBudgetPlans([])
         setTransfers([]); setAccounts([])
-        // Simpan halaman saat ini agar bisa kembali setelah login/biometric
+        // Simpan full path + search agar share target tidak kehilangan ?shared=1
         if (typeof window !== 'undefined') {
-          saveReturnTo(window.location.pathname)
+          saveReturnTo(window.location.pathname + window.location.search)
           window.location.href = '/login?reason=timeout'
         }
       }

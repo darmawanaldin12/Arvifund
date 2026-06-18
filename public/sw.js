@@ -1,7 +1,9 @@
-// Arvifund Service Worker v4
+// Arvifund Service Worker v5
 // Bump versi ini setiap kali ada perubahan SW agar browser update otomatis
-const SW_VERSION = 'v4';
+const SW_VERSION = 'v5';
 const SHARE_TARGET_CACHE = 'arvifund-share-images-v4';
+// TTL cache share image: 30 menit (cukup untuk biometric + redirect)
+const SHARE_IMAGE_TTL_MS = 30 * 60 * 1000;
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
