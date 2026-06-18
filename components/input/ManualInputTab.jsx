@@ -9,6 +9,9 @@ const TIPE_LIST = [
   { id: 'cash',    label: 'Tarik Tunai', color: 'var(--yellow)', Icon: Landmark },
 ]
 
+// Bank yang bisa jadi sumber tarik tunai (exclude Cash)
+const BANK_ASAL_LIST = BANK_LIST.filter(b => b !== 'Cash')
+
 export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, saving, error, onSubmit }) {
   const manualAmt = useAmountInput(form.total, v => setF('total', v))
 
@@ -25,6 +28,7 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
     }),
     errorBox: { padding: '10px 14px', marginBottom: 14, background: 'var(--red-bg)', borderRadius: 10, color: 'var(--red)', fontSize: 13, fontWeight: 600 },
     ctaBtn:   (disabled) => ({ height: 50, fontSize: 15, fontWeight: 700, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.5 : 1 }),
+    infoBox: { padding: '10px 14px', marginBottom: 14, background: 'rgba(234,179,8,0.1)', borderRadius: 10, color: 'var(--yellow)', fontSize: 12, fontWeight: 600, border: '1px solid rgba(234,179,8,0.2)' },
   }
 
   return (
@@ -94,10 +98,17 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
         )}
 
         <div className="form-group">
-          <label className="form-label">Bank / Dompet</label>
+          <label className="form-label">
+            {tipe === 'cash' ? 'Bank Asal (sumber tarik tunai)' : 'Bank / Dompet'}
+          </label>
           <select className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)}>
-            {BANK_LIST.map(b => <option key={b}>{b}</option>)}
+            {(tipe === 'cash' ? BANK_ASAL_LIST : BANK_LIST).map(b => <option key={b}>{b}</option>)}
           </select>
+          {tipe === 'cash' && (
+            <div style={S.infoBox}>
+              💡 Saldo bank ini akan berkurang & saldo Cash otomatis bertambah
+            </div>
+          )}
         </div>
 
         <div className="form-group">

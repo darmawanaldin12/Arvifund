@@ -35,7 +35,7 @@ export default function InputPage() {
 
   const [form, setForm] = useState({
     tanggal: today, toko: '', uraian: '', total: '',
-    kategori: '', metode: 'Cash', bank: 'Cash', user_id: '',
+    kategori: '', metode: 'Cash', bank: 'BCA', user_id: '',
   })
   useEffect(() => { if (user?.id) setForm(f => ({ ...f, user_id: user.id })) }, [user])
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })) }
@@ -71,7 +71,10 @@ export default function InputPage() {
         const { error: err } = await supabase.from('income').insert([{ sumber: parsedResult.toko, tanggal: parsedResult.tanggal, bulan, jumlah: nilai, metode: parsedResult.metode || 'Cash', items: parsedResult.uraian, bank: parsedResult.bank || 'Cash', kategori: 'Pemasukan', user_id: parsedResult.user_id }])
         if (err) throw err
       } else if (t === 'cash') {
-        const { error: err } = await supabase.from('cash_records').insert([{ tanggal: parsedResult.tanggal, bulan, transaksi: parsedResult.uraian || 'Tarik Tunai', kategori: 'Pengeluaran', bank: parsedResult.bank || 'Cash', nilai, alamat: parsedResult.toko, metode: 'Cash', user_id: parsedResult.user_id }])
+        // Tarik tunai: bank = bank ASAL (bukan 'Cash')
+        // buildBankBalances akan otomatis kurangi bank asal dan tambah Cash
+        const bankAsal = parsedResult.bank && parsedResult.bank !== 'Cash' ? parsedResult.bank : 'BCA'
+        const { error: err } = await supabase.from('cash_records').insert([{ tanggal: parsedResult.tanggal, bulan, transaksi: parsedResult.uraian || 'Tarik Tunai', kategori: 'Pengeluaran', bank: bankAsal, nilai, alamat: parsedResult.toko, metode: 'Cash', user_id: parsedResult.user_id }])
         if (err) throw err
       }
       await loadData(); setShowConfirm(false)
@@ -117,11 +120,13 @@ export default function InputPage() {
         const { error: err } = await supabase.from('income').insert([{ sumber: form.toko, tanggal: form.tanggal, bulan, jumlah: nilai, metode: form.metode, items: form.uraian, bank: form.bank, kategori: 'Pemasukan', user_id: form.user_id }])
         if (err) throw err
       } else if (tipe === 'cash') {
+        // Tarik tunai: bank = bank ASAL yang dipilih user (bukan 'Cash')
+        // buildBankBalances akan otomatis kurangi bank asal dan tambah Cash
         const { error: err } = await supabase.from('cash_records').insert([{ tanggal: form.tanggal, bulan, transaksi: form.uraian || 'Tarik Tunai', kategori: 'Pengeluaran', bank: form.bank, nilai, alamat: form.toko, metode: 'Cash', user_id: form.user_id }])
         if (err) throw err
       }
       await loadData()
-      setForm({ tanggal: today, toko: '', uraian: '', total: '', kategori: '', metode: 'Cash', bank: 'Cash', user_id: user?.id || '' })
+      setForm({ tanggal: today, toko: '', uraian: '', total: '', kategori: '', metode: 'Cash', bank: 'BCA', user_id: user?.id || '' })
       showToast(tipe, nilai)
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
@@ -161,7 +166,7 @@ export default function InputPage() {
               toko: parsedResult.toko || '', uraian: parsedResult.uraian || '',
               total: parsedResult.total ? String(parsedResult.total) : '',
               kategori: parsedResult.kategori || '', metode: parsedResult.metode || 'Cash',
-              bank: parsedResult.bank || 'Cash', user_id: parsedResult.user_id || user?.id || '',
+              bank: parsedResult.bank || 'BCA', user_id: parsedResult.user_id || user?.id || '',
             })
             setShowConfirm(false); handleModeChange('manual')
           }}
