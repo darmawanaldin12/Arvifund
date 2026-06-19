@@ -262,7 +262,7 @@ function RecentTransactionsModal({ rows, onClose }) {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 1200,
-          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         }}
         onClick={e => e.target === e.currentTarget && onClose()}
@@ -271,77 +271,182 @@ function RecentTransactionsModal({ rows, onClose }) {
           initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 32, stiffness: 350 }}
           style={{
-            background: 'var(--surface)', borderRadius: '20px 20px 0 0',
-            width: '100%', maxWidth: 560, maxHeight: '88dvh',
-            display: 'flex', flexDirection: 'column',
+            background: 'var(--surface)',
+            borderRadius: '24px 24px 0 0',
+            width: '100%',
+            maxWidth: 560,
+            maxHeight: '90dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
           }}
         >
+          {/* Drag handle */}
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border)' }} />
+          </div>
+
           {/* Header */}
           <div style={{
-            padding: '16px 20px 12px', borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            padding: '10px 20px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={16} color="var(--accent)" />
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text1)' }}>10 Transaksi Terakhir</span>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: 'rgba(59,130,246,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Clock size={16} color="var(--accent)" />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text1)', lineHeight: 1.2 }}>
+                  10 Transaksi Terakhir
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                  {rows.length} transaksi ditemukan
+                </div>
+              </div>
             </div>
             <button onClick={onClose} style={{
-              background: 'var(--surface2)', border: '1px solid var(--border)',
-              borderRadius: 8, cursor: 'pointer', color: 'var(--text2)',
-              padding: '4px 6px', display: 'flex', alignItems: 'center',
-            }}><X size={16} /></button>
+              width: 32, height: 32,
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              cursor: 'pointer',
+              color: 'var(--text2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <X size={15} />
+            </button>
           </div>
 
           {/* Legend */}
-          <div style={{ padding: '10px 16px 8px', display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{
+            padding: '0 20px 12px',
+            display: 'flex',
+            gap: 6,
+            flexWrap: 'wrap',
+            flexShrink: 0,
+            borderBottom: '1px solid var(--border)',
+          }}>
             {Object.entries(TIPE_CONFIG).map(([key, cfg]) => (
               <div key={key} style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '3px 8px', borderRadius: 20,
-                background: cfg.bg, fontSize: 11, fontWeight: 700, color: cfg.color,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 99,
+                background: cfg.bg,
+                border: `1px solid ${cfg.color}22`,
+                fontSize: 11,
+                fontWeight: 700,
+                color: cfg.color,
+                letterSpacing: '0.01em',
               }}>
-                <cfg.Icon size={11} /> {cfg.label}
+                <cfg.Icon size={10} /> {cfg.label}
               </div>
             ))}
           </div>
 
           {/* List */}
-          <div style={{ overflowY: 'auto', flex: 1, padding: '4px 16px 32px' }}>
+          <div style={{ overflowY: 'auto', flex: 1, padding: '4px 0 32px' }}>
             {rows.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>Belum ada transaksi</div>
+              <div style={{
+                textAlign: 'center',
+                padding: '48px 0',
+                color: 'var(--text3)',
+                fontSize: 13,
+              }}>
+                Belum ada transaksi
+              </div>
             ) : rows.map((r, i) => {
               const cfg = TIPE_CONFIG[r.tipe] || TIPE_CONFIG.expense
               const Ic  = cfg.Icon
               return (
                 <div key={r.id + i} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 0', borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '13px 20px',
+                  borderBottom: '1px solid var(--border)',
+                  transition: 'background 0.15s',
                 }}>
                   {/* Icon */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    flexShrink: 0,
+                    background: cfg.bg,
+                    border: `1px solid ${cfg.color}22`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}>
-                    <Ic size={16} color={cfg.color} />
+                    <Ic size={17} color={cfg.color} />
                   </div>
+
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: 'var(--text1)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.3,
+                    }}>
                       {r.label}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span>{fmtTanggalShort(r.tanggal)}</span>
-                      {r.sub && <><span>·</span><span>{r.sub}</span></>}
+                    <div style={{
+                      fontSize: 11,
+                      color: 'var(--text3)',
+                      marginTop: 3,
+                      display: 'flex',
+                      gap: 5,
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                    }}>
+                      <span style={{ fontWeight: 500 }}>{fmtTanggalShort(r.tanggal)}</span>
+                      {r.sub && (
+                        <>
+                          <span style={{ opacity: 0.4 }}>·</span>
+                          <span style={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: 120,
+                          }}>{r.sub}</span>
+                        </>
+                      )}
                       <span style={{
-                        padding: '1px 6px', borderRadius: 10,
-                        background: cfg.bg, color: cfg.color,
-                        fontSize: 10, fontWeight: 700,
+                        padding: '2px 7px',
+                        borderRadius: 99,
+                        background: cfg.bg,
+                        color: cfg.color,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        flexShrink: 0,
                       }}>{cfg.label}</span>
                     </div>
                   </div>
+
                   {/* Amount */}
-                  <div style={{ fontSize: 14, fontWeight: 800, color: cfg.color, flexShrink: 0 }}>
-                    {r.tipe === 'income' || (r.tipe === 'cash' && r.sign === '+') ? '+' : '-'}{fmtFull(r.amount)}
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: cfg.color,
+                    flexShrink: 0,
+                    textAlign: 'right',
+                    minWidth: 80,
+                  }}>
+                    {r.tipe === 'income' || (r.tipe === 'cash' && r.sign === '+') ? '+' : '−'}{fmtFull(r.amount)}
                   </div>
                 </div>
               )
@@ -403,46 +508,108 @@ export function RecentTransactionsCard({ expenses, income, cashRecords, transfer
         <div
           className="dash-card dash-card-link"
           onClick={() => setOpen(true)}
-          role="button" tabIndex={0}
+          role="button"
+          tabIndex={0}
           aria-label="Lihat 10 transaksi terakhir"
         >
-          <div className="dash-card-header-row">
-            <span className="dash-card-header mb-0" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Clock size={14} color="var(--accent)" /> 10 Transaksi Terakhir
+          {/* Card header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: 'rgba(59,130,246,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Clock size={13} color="var(--accent)" />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text1)' }}>
+                10 Transaksi Terakhir
+              </span>
+            </div>
+            <span style={{
+              fontSize: 11,
+              color: 'var(--accent)',
+              fontWeight: 700,
+              background: 'rgba(59,130,246,0.1)',
+              padding: '3px 8px',
+              borderRadius: 99,
+            }}>
+              Tap detail ↗
             </span>
-            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>Tap untuk detail ↗</span>
           </div>
 
-          {/* Preview 3 transaksi */}
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {preview.map((r, i) => {
+          {/* Preview rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {preview.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text3)', fontSize: 12 }}>
+                Belum ada transaksi
+              </div>
+            ) : preview.map((r, i) => {
               const cfg = TIPE_CONFIG[r.tipe] || TIPE_CONFIG.expense
               const Ic  = cfg.Icon
               return (
                 <div key={r.id + i} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '6px 8px', borderRadius: 8, background: 'var(--surface2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
                 }}>
                   <div style={{
-                    width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                    background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 30,
+                    height: 30,
+                    borderRadius: 9,
+                    flexShrink: 0,
+                    background: cfg.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Ic size={13} color={cfg.color} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--text1)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.3,
+                    }}>
                       {r.label}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{fmtTanggalShort(r.tanggal)}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+                      {fmtTanggalShort(r.tanggal)}
+                      {r.sub ? ` · ${r.sub}` : ''}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: cfg.color, flexShrink: 0 }}>
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: cfg.color,
+                    flexShrink: 0,
+                    textAlign: 'right',
+                  }}>
                     {fmtFull(r.amount)}
                   </div>
                 </div>
               )
             })}
+
             {rows.length > 3 && (
-              <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', paddingTop: 2 }}>
+              <div style={{
+                textAlign: 'center',
+                fontSize: 11,
+                color: 'var(--text3)',
+                paddingTop: 4,
+                letterSpacing: '0.01em',
+              }}>
                 +{rows.length - 3} transaksi lainnya
               </div>
             )}
