@@ -126,7 +126,7 @@ export default function DashboardPage() {
             <ChartCarousel expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode} />
           </div>
           <RecentTransactionsCard
-            expenses={filteredExpenses}
+            expenses={expenses}
             income={income}
             cashRecords={cashRecords}
             transfers={transfers}
