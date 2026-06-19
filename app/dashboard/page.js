@@ -19,7 +19,8 @@ import {
 export default function DashboardPage() {
   const {
     summaryPeriode, summaryAll, loading, loadData, periodIdx, setPeriodIdx,
-    periods, filteredExpenses, budgetPlans, getUserName, expenses, income,
+    periods, filteredExpenses, budgetPlans, getUserName,
+    expenses, income, cashRecords, transfers,
   } = useData()
 
   const s  = summaryPeriode
@@ -47,9 +48,6 @@ export default function DashboardPage() {
   const top5     = Object.entries(s.byKategori).sort((a,b) => b[1]-a[1]).slice(0,5)
   const avgNilai = filteredExpenses.length > 0 ? filteredExpenses.reduce((s,r) => s+r.nilai, 0) / filteredExpenses.length : 0
   const anomali  = filteredExpenses.filter(r => r.nilai > avgNilai * 3 && r.nilai > 100000).slice(0,3)
-  const recent   = [...filteredExpenses]
-    .sort((a,b) => (parseTanggal(b.tanggal)?.getTime()||0) - (parseTanggal(a.tanggal)?.getTime()||0))
-    .slice(0,10)
 
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay())
   const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
@@ -127,7 +125,13 @@ export default function DashboardPage() {
           <div className="bento-12">
             <ChartCarousel expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode} />
           </div>
-          <RecentTransactionsCard recent={recent} getUserName={getUserName} />
+          <RecentTransactionsCard
+            expenses={filteredExpenses}
+            income={income}
+            cashRecords={cashRecords}
+            transfers={transfers}
+            getUserName={getUserName}
+          />
         </div>
       </div>
       <ScorecardChartModal
