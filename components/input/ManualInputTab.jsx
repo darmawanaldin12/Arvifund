@@ -15,6 +15,26 @@ const BANK_ASAL_LIST = BANK_LIST.filter(b => b !== 'Cash')
 export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, saving, error, onSubmit }) {
   const manualAmt = useAmountInput(form.total, v => setF('total', v))
 
+  // Saat user ganti metode ke Cash, otomatis set bank = Cash
+  function handleMetodeChange(val) {
+    setF('metode', val)
+    if (val === 'Cash') setF('bank', 'Cash')
+  }
+
+  // Saat user ganti tipe, reset bank ke default yang sesuai
+  function handleTipeChange(val) {
+    setTipe(val)
+    if (val === 'cash') {
+      // Tarik tunai: bank asal default BCA
+      setF('bank', 'BCA')
+      setF('metode', 'Cardless')
+    } else {
+      // Expense/income: default Cash (paling umum transaksi harian)
+      setF('bank', 'Cash')
+      setF('metode', 'Cash')
+    }
+  }
+
   const S = {
     typeGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 },
     typeBtn:  (selected, color) => ({
@@ -37,7 +57,7 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
         {TIPE_LIST.map(t => {
           const I = t.Icon
           return (
-            <button key={t.id} type="button" onClick={() => setTipe(t.id)} style={S.typeBtn(tipe === t.id, t.color)}>
+            <button key={t.id} type="button" onClick={() => handleTipeChange(t.id)} style={S.typeBtn(tipe === t.id, t.color)}>
               <I size={22} />
               {t.label}
             </button>
@@ -91,7 +111,7 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
         {tipe !== 'cash' && (
           <div className="form-group">
             <label className="form-label">Metode</label>
-            <select className="form-select" value={form.metode} onChange={e => setF('metode', e.target.value)}>
+            <select className="form-select" value={form.metode} onChange={e => handleMetodeChange(e.target.value)}>
               {METODE_LIST.map(m => <option key={m}>{m}</option>)}
             </select>
           </div>

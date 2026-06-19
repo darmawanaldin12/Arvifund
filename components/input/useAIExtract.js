@@ -12,6 +12,15 @@ const SHARE_CACHE_NAME = 'arvifund-share-images-v4'
 const SHARE_CACHE_KEY  = '/share-image-pending'
 const SHARE_IMAGE_TTL  = 30 * 60 * 1000 // 30 menit
 
+// Kalau metode Cash, paksa bank juga Cash
+function normalizeBankFromMetode(result) {
+  if (!result) return result
+  if ((result.metode === 'Cash' || result.metode === 'cash') && result.bank !== 'Cash') {
+    return { ...result, bank: 'Cash' }
+  }
+  return result
+}
+
 // Simulasi progress bertahap
 function useExtractProgress(aiLoading) {
   const [progress, setProgress] = useState(0)
@@ -146,16 +155,18 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
           else
             matchedProfile = profiles?.find(p => { const u = p.username?.toLowerCase(); return u && aiLower.includes(u) })
         }
+        // Normalize: kalau metode Cash, paksa bank = Cash
+        const normalized = normalizeBankFromMetode(result)
         onResult({
-          tipe: result.tipe || 'expense',
-          tanggal: result.tanggal || today,
-          toko: result.toko || '',
-          uraian: result.uraian || '',
-          total: result.total ? parseRupiahToInt(result.total) : '',
-          kategori: result.kategori || '',
-          metode: result.metode || 'Cash',
-          bank: result.bank || 'Cash',
-          user_id: result.user_id || matchedProfile?.id || user?.id || '',
+          tipe: normalized.tipe || 'expense',
+          tanggal: normalized.tanggal || today,
+          toko: normalized.toko || '',
+          uraian: normalized.uraian || '',
+          total: normalized.total ? parseRupiahToInt(normalized.total) : '',
+          kategori: normalized.kategori || '',
+          metode: normalized.metode || 'Cash',
+          bank: normalized.bank || 'Cash',
+          user_id: normalized.user_id || matchedProfile?.id || user?.id || '',
         })
       }
     } catch (err) { setError('AI Gagal: ' + err.message) }
@@ -216,20 +227,17 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
       const params   = new URLSearchParams(window.location.search)
       const isShared = params.get('shared') === '1'
       if (isShared) {
-        // Bersihkan query string dulu
         window.history.replaceState({}, '', '/input')
         try {
           const cache  = await caches.open(SHARE_CACHE_NAME)
           const cached = await cache.match(SHARE_CACHE_KEY)
           if (cached) {
             const { dataUrl, timestamp } = await cached.json()
-            // TTL diperpanjang ke 30 menit agar cukup waktu untuk biometric login
             if (Date.now() - timestamp > SHARE_IMAGE_TTL) {
               await cache.delete(SHARE_CACHE_KEY)
               return
             }
             if (dataUrl && dataUrl.startsWith('data:')) {
-              // Delete cache SETELAH berhasil dibaca
               await cache.delete(SHARE_CACHE_KEY)
               const res  = await fetch(dataUrl)
               const blob = await res.blob()
