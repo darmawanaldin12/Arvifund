@@ -59,26 +59,75 @@
 .btn-full     { width: 100%; }
 
 /* ── FORM ── */
-.form-group   { margin-bottom: 14px; }
-.form-label   { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.3px; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+.form-group { margin-bottom: 14px; position: relative; }
+
+.form-label {
+  display: block;
+  font-size: 12px; font-weight: 600;
+  color: var(--text2); margin-bottom: 6px;
+  letter-spacing: 0.3px;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  transition: color 0.15s ease;
+}
+
+/* Label berubah warna saat field di-focus */
+.form-group:focus-within .form-label { color: var(--accent); }
+.form-group.error .form-label        { color: var(--red); }
 
 .form-input, .form-select {
   width: 100%;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   color: var(--text1);
   font-size: 14px;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
   outline: none;
   appearance: none;
 }
 
+/* ── Glow focus ── */
 .form-input:focus, .form-select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
+  box-shadow: 0 0 0 3.5px var(--accent-light);
+}
+
+/* ── Error state ── */
+.form-group.error .form-input,
+.form-group.error .form-select {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-bg);
+}
+
+.form-group.error .form-input:focus,
+.form-group.error .form-select:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3.5px var(--red-bg);
+}
+
+/* ── Error message ── */
+.form-error {
+  font-size: 11px; font-weight: 600;
+  color: var(--red);
+  margin-top: 5px;
+  display: flex; align-items: center; gap: 4px;
+  animation: errorFadeIn 0.2s ease forwards;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+/* ── Shake animation ── */
+.form-input.shake,
+.form-select.shake {
+  animation: inputShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ── Success state ── */
+.form-group.success .form-input,
+.form-group.success .form-select {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-bg);
 }
 
 .form-select {
@@ -87,6 +136,26 @@
   background-position: right 12px center;
   padding-right: 32px;
   cursor: pointer;
+}
+
+textarea.form-input {
+  resize: none;
+  line-height: 1.6;
+  min-height: 80px;
+}
+
+@keyframes inputShake {
+  0%,100% { transform: translateX(0); }
+  15%     { transform: translateX(-6px); }
+  30%     { transform: translateX(5px); }
+  45%     { transform: translateX(-4px); }
+  60%     { transform: translateX(3px); }
+  75%     { transform: translateX(-2px); }
+}
+
+@keyframes errorFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── MODAL ── */
@@ -118,12 +187,7 @@
 }
 
 @media (min-width: 480px) {
-  .modal-content {
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    margin: 16px;
-    padding-bottom: 0;
-  }
+  .modal-content { border-radius: var(--radius); border: 1px solid var(--border); margin: 16px; padding-bottom: 0; }
 }
 
 .modal-header {
@@ -131,7 +195,6 @@
   padding: 16px 20px; border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: var(--surface); z-index: 1;
 }
-
 .modal-body   { padding: 20px; }
 .modal-title  { font-size: 16px; font-weight: 700; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
 
@@ -140,8 +203,7 @@
   position: fixed; inset: 0; z-index: 1100;
   display: flex; align-items: flex-end; justify-content: center;
   background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
-  animation: fadeIn 0.18s ease;
-  touch-action: none;
+  animation: fadeIn 0.18s ease; touch-action: none;
 }
 .confirm-popup-card {
   background: var(--surface);
@@ -152,10 +214,8 @@
   width: 100%;
   box-shadow: 0 -8px 40px rgba(0,0,0,0.35);
   animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  max-height: 85dvh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  max-height: 85dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
 @media (min-width: 480px) {
@@ -163,32 +223,24 @@
   .confirm-popup-card {
     border-radius: var(--radius); border: 1px solid var(--border);
     max-width: 440px; margin: 16px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-    padding-bottom: 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45); padding-bottom: 20px;
   }
 }
 
 /* ── FILTER CHIPS ── */
 .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .filter-bar::-webkit-scrollbar { display: none; }
-
 .filter-chip {
   flex-shrink: 0; padding: 6px 16px; border-radius: var(--radius-full);
   font-size: 12px; font-weight: 600; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text2);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text2);
   transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  user-select: none;
+  white-space: nowrap; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
 }
-
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
 .filter-chip:hover:not(.active) { background: var(--surface2); }
 .filter-chip:active { transform: scale(0.95); opacity: 0.85; }
-
 @media (max-width: 767px) {
   .filter-bar { overflow-x: auto; width: 100%; }
   .filter-chip { flex-shrink: 0; }
@@ -201,7 +253,6 @@
   min-width: 240px; max-width: calc(100vw - 32px);
 }
 @media (min-width: 768px) { .toast-container { bottom: 24px; } }
-
 .toast {
   background: var(--text1); color: var(--surface); border-radius: var(--radius-sm);
   padding: 12px 16px; font-size: 13px; font-weight: 600; text-align: center;
@@ -215,11 +266,9 @@
 .edit-btn {
   width: 28px; height: 28px; border-radius: 6px;
   background: var(--accent-light); border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--accent);
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
   transition: transform 0.1s ease, filter 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 .edit-btn:hover  { filter: brightness(0.95); }
 .edit-btn:active { transform: scale(0.9); filter: brightness(0.88); }
@@ -228,8 +277,7 @@
 .user-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px; border-radius: var(--radius-full);
-  font-size: 11px; font-weight: 600;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-size: 11px; font-weight: 600; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
 .user-chip.aldin      { background: var(--accent-light); color: var(--accent); }
 .user-chip.solikhatun { background: rgba(236,72,153,0.1); color: #db2777; }
@@ -238,11 +286,9 @@
 .skeleton {
   background: linear-gradient(
     105deg,
-    var(--surface2) 0%,
-    var(--surface2) 38%,
+    var(--surface2) 0%, var(--surface2) 38%,
     var(--surface3) 50%,
-    var(--surface2) 62%,
-    var(--surface2) 100%
+    var(--surface2) 62%, var(--surface2) 100%
   );
   background-size: 300% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -256,10 +302,7 @@
   margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
-
-@media (max-width: 767px) {
-  .section-title { font-size: 11px; }
-}
+@media (max-width: 767px) { .section-title { font-size: 11px; } }
 
 /* ── PROGRESS ── */
 .progress-wrap { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
@@ -267,10 +310,7 @@
 .progress-bar.ok     { background: var(--green); }
 .progress-bar.warn   { background: var(--yellow); }
 .progress-bar.danger { background: var(--red); }
-
-@media (max-width: 767px) {
-  .progress-wrap { width: 100%; min-width: 0; }
-}
+@media (max-width: 767px) { .progress-wrap { width: 100%; min-width: 0; } }
 
 /* ── EMPTY STATE ── */
 .empty-state { text-align: center; padding: 48px 16px; color: var(--text3); }
@@ -278,76 +318,40 @@
 .empty-state p { font-size: 14px; font-weight: 600; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
 
 /* ── MICRO-INTERACTIONS ── */
-
 a .card, button .card, [onclick] .card, .card-link, .dash-card-link {
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s ease;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 a .card:active, button .card:active, [onclick] .card:active,
-.card-link:active, .dash-card-link:active {
-  transform: scale(0.97);
-  box-shadow: var(--shadow-sm);
-}
+.card-link:active, .dash-card-link:active { transform: scale(0.97); box-shadow: var(--shadow-sm); }
 
 a[href] { -webkit-tap-highlight-color: transparent; }
-a[href]:active > * {
-  transform: scale(0.97);
-  opacity: 0.9;
-  transition: transform 0.1s ease, opacity 0.1s ease;
-}
+a[href]:active > * { transform: scale(0.97); opacity: 0.9; transition: transform 0.1s ease, opacity 0.1s ease; }
 
-.tappable {
-  transition: transform 0.1s ease, opacity 0.12s ease;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  user-select: none;
-}
+.tappable { transition: transform 0.1s ease, opacity 0.12s ease; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; }
 .tappable:active { transform: scale(0.97); opacity: 0.85; }
 
-.scorecard-item-btn {
-  transition: transform 0.1s ease, box-shadow 0.12s ease, background 0.15s ease !important;
-  -webkit-tap-highlight-color: transparent !important;
-  touch-action: manipulation;
-}
+.scorecard-item-btn { transition: transform 0.1s ease, box-shadow 0.12s ease, background 0.15s ease !important; -webkit-tap-highlight-color: transparent !important; touch-action: manipulation; }
 .scorecard-item-btn:active { transform: scale(0.95) !important; box-shadow: none !important; }
 
-.kpi-card {
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+.kpi-card { transition: transform 0.12s ease, box-shadow 0.12s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .kpi-card:active { transform: scale(0.97); }
 
-.period-filter-bar button {
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+.period-filter-bar button { transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .period-filter-bar button:active { transform: scale(0.93); }
 
-.bottom-nav a, .bottom-nav button {
-  transition: transform 0.1s ease, opacity 0.1s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+.bottom-nav a, .bottom-nav button { transition: transform 0.1s ease, opacity 0.1s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .bottom-nav a:active, .bottom-nav button:active { transform: scale(0.88); opacity: 0.7; }
 
 .sidebar-item { transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease; }
 .sidebar-item:active { transform: scale(0.98); }
 
-.atm-card-interactive {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+.atm-card-interactive { transition: transform 0.15s ease, box-shadow 0.15s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .atm-card-interactive:active { transform: scale(0.97); }
 
 * { -webkit-tap-highlight-color: transparent; }
 
-/* ── SHIMMER — diagonal wave ── */
+/* ── SHIMMER ── */
 @keyframes shimmer {
   0%   { background-position: -300% 0; }
   100% { background-position:  300% 0; }
