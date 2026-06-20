@@ -1,8 +1,17 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingUp, Landmark, PieChart, Target, CalendarDays, CreditCard } from 'lucide-react'
 import { C, DONUT_COLORS, ChartIncExp, ChartSaldo, ChartKategori, ChartBudget, ChartDow, ChartMetode } from './CarouselCharts'
 import { buildIncExpData, buildSaldoData, buildPieData, buildBudgetData, buildDowData, buildMetodeData } from '../lib/carousel-data'
+
+const CHART_ICONS = {
+  trending_up:     TrendingUp,
+  account_balance: Landmark,
+  donut_large:     PieChart,
+  pie_chart:       Target,
+  calendar_today:  CalendarDays,
+  payments:        CreditCard,
+}
 
 function useSwipe(onLeft, onRight) {
   const startX = useRef(null)
@@ -47,10 +56,36 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
   ]
 
   const current = charts[idx]
+  const Icon    = CHART_ICONS[current.icon] || TrendingUp
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div {...swipe} style={{ padding: '12px 12px 4px', height: 240, overflow: 'hidden', transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)', opacity: animDir ? 0 : 1, transition: 'transform 0.18s ease, opacity 0.18s ease', userSelect: 'none' }}>
+      {/* Header: icon + judul + subtitle, supaya jelas chart ini nampilin data apa */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '12px 12px 4px',
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: 'rgba(59,130,246,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Icon size={14} color="var(--accent)" />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text1)', lineHeight: 1.25 }}>
+            {current.title}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.2 }}>
+            {current.subtitle}
+          </div>
+        </div>
+      </div>
+
+      <div {...swipe} style={{ padding: '8px 12px 4px', height: 224, overflow: 'hidden', transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)', opacity: animDir ? 0 : 1, transition: 'transform 0.18s ease, opacity 0.18s ease', userSelect: 'none' }}>
         {current.render()}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px 12px' }}>
