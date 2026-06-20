@@ -261,7 +261,7 @@ function RecentTransactionsModal({ rows, onClose }) {
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         style={{
-          position: 'fixed', inset: 0, zIndex: 1200,
+          position: 'fixed', inset: 0, zIndex: 'var(--z-modal, 9999)',
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         }}
@@ -275,10 +275,11 @@ function RecentTransactionsModal({ rows, onClose }) {
             borderRadius: '24px 24px 0 0',
             width: '100%',
             maxWidth: 560,
-            maxHeight: '90dvh',
+            maxHeight: '88dvh',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
           }}
         >
           {/* Drag handle */}
@@ -353,8 +354,16 @@ function RecentTransactionsModal({ rows, onClose }) {
             ))}
           </div>
 
-          {/* List */}
-          <div style={{ overflowY: 'auto', flex: 1, padding: '4px 0 32px' }}>
+          {/* List — scrollable, with safe-area padding so last item clears bottom nav / home indicator */}
+          <div
+            style={{
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              flex: 1,
+              minHeight: 0,
+              padding: '4px 0 calc(env(safe-area-inset-bottom, 0px) + 96px)',
+            }}
+          >
             {rows.length === 0 ? (
               <div style={{
                 textAlign: 'center',
