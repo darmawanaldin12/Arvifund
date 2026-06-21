@@ -6,7 +6,7 @@
   --surface:         #FFFFFF;
   --surface2:        #EEF2FF;
   --surface3:        #C7D2FE;
-  --border:          #C7D2FE;
+  --border:          #7E8AA8;
   --border2:         #DDE3FF;
   --text1:           #0F172A;
   --text2:           #1E293B;
@@ -33,7 +33,7 @@
   --bg-hsl:          231 100% 97%;   /* #EEF2FF */
   --surface-hsl:     0 0% 100%;      /* #FFFFFF */
   --surface2-hsl:    231 100% 97%;   /* #EEF2FF */
-  --border-hsl:      226 73% 85%;    /* #C7D2FE */
+  --border-hsl:      223 19% 58%;    /* #7E8AA8 */
   --fg-hsl:          222 47% 6%;     /* #0F172A */
   --text3-hsl:       215 16% 47%;    /* #64748B */
   --accent-hsl:      224 80% 40%;    /* #1E40AF */
@@ -50,7 +50,7 @@
     --surface:         #1C1C1E;
     --surface2:        #2C2C2E;
     --surface3:        #3A3A3C;
-    --border:          #2C2C2E;
+    --border:          #6E6E73;
     --border2:         #3A3A3C;
     --text1:           #FFFFFF;
     --text2:           #98989D;
@@ -71,7 +71,7 @@
     --bg-hsl:          0 0% 0%;
     --surface-hsl:     0 0% 11%;
     --surface2-hsl:    0 0% 17%;
-    --border-hsl:      0 0% 17%;
+    --border-hsl:      240 2% 44%;
     --fg-hsl:          0 0% 100%;
     --text3-hsl:       0 0% 56%;
     --accent-hsl:      212 100% 53%;
