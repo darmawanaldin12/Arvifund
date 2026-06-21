@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────
-   PAGES.CSS — redesign ui-ux-pro-max v2
+   PAGES.CSS — redesign premium-minimalist v3
    Font: Plus Jakarta Sans
-   Palette: Navy #1E40AF + Emerald #15803D
-   Background: Indigo tint #EEF2FF
+   Palette: Navy #1E40AF accent, neutral cool-gray surfaces
+   Background: soft off-white (#F7F8FB), not a heavy color wash
    Spacing rhythm: 4/8/12/16/24/32px
    Type scale: 11/12/13/15/18/22px
    Touch targets: ≥44px
@@ -64,7 +64,7 @@
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   scrollbar-width: none;
 }
 .period-filter-bar::-webkit-scrollbar { display: none; }
@@ -80,10 +80,10 @@
   white-space: nowrap;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', inherit;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
   min-height: 34px;
 }
-.filter-chip:hover { background: var(--surface2); color: var(--text1); }
+.filter-chip:hover { background: var(--surface2); color: var(--text1); border-color: var(--surface3); }
 .filter-chip.active {
   background: var(--accent);
   color: #fff;
@@ -94,33 +94,33 @@
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 @media (min-width: 768px) {
-  .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
 }
 
 .kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 14px;
+  padding: 16px;
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1),
+              box-shadow 0.25s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.2s ease;
   min-height: 100px;
 }
 
-.kpi-card:hover  { transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-card:hover  { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--surface3); }
 .kpi-card:active { transform: scale(0.98); }
 
-.kpi-card.income      { border-left: 3px solid var(--green); }
-.kpi-card.expense     { border-left: 3px solid var(--red); }
-.kpi-card.saldo       { border-left: 3px solid var(--accent); }
-.kpi-card.saldo-tahun { border-left: 3px solid var(--accent); }
+/* Semantic color now lives only in the value + icon chip — no extra colored
+   border bar, so each card carries a single, calm color signal. */
 
 .kpi-card-top {
   display: flex;
@@ -163,6 +163,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 767px) {
@@ -198,18 +199,20 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 16px;
+  padding: 18px;
   height: 100%;
 }
 
 .dash-card-link {
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1),
+              box-shadow 0.25s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.2s ease;
   display: block;
   height: 100%;
   text-decoration: none;
 }
-.dash-card-link:hover  { transform: translateY(-2px); box-shadow: var(--shadow); }
+.dash-card-link:hover  { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--surface3); }
 .dash-card-link:active { transform: scale(0.99); }
 
 .dash-card-flush {
@@ -302,7 +305,7 @@
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', inherit;
   min-height: 80px;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), background 0.2s ease;
 }
 .scorecard-item-btn:hover  { background: var(--surface3); }
 .scorecard-item-btn:active { transform: scale(0.97); }
@@ -335,6 +338,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .scorecard-value.green  { color: var(--green); }
 .scorecard-value.red    { color: var(--red); }
@@ -384,7 +388,7 @@
 .weekly-bar-fill {
   width: 100%;
   border-radius: 4px 4px 0 0;
-  transition: height 0.5s ease;
+  transition: height 0.6s cubic-bezier(0.16,1,0.3,1);
   min-height: 4px;
 }
 
@@ -432,6 +436,7 @@
   white-space: nowrap;
   margin-left: 8px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .progress-pct.ok     { color: var(--green); }
 .progress-pct.warn   { color: var(--yellow); }
@@ -601,7 +606,7 @@ tr:hover td { background: var(--surface2); }
 }
 
 @media (min-width: 768px) {
-  .bento-grid { grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .bento-grid { grid-template-columns: repeat(12, 1fr); gap: 18px; }
   .bento-4  { grid-column: span 4; }
   .bento-5  { grid-column: span 5; }
   .bento-6  { grid-column: span 6; }
@@ -614,4 +619,44 @@ tr:hover td { background: var(--surface2); }
   .bento-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; }
   .bento-4, .bento-5, .bento-6,
   .bento-7, .bento-8, .bento-12 { width: 100%; min-width: 0; }
+}
+
+/* ── ENTRANCE MOTION (dashboard mount) ──
+   Quiet, staggered fade-up — present but never distracting.
+   Respects prefers-reduced-motion. */
+@keyframes dashCardEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.kpi-grid > a,
+.bento-grid > .bento-4,
+.bento-grid > .bento-5,
+.bento-grid > .bento-6,
+.bento-grid > .bento-7,
+.bento-grid > .bento-8,
+.bento-grid > .bento-12 {
+  animation: dashCardEnter 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.kpi-grid > a:nth-child(1) { animation-delay: 0ms;   }
+.kpi-grid > a:nth-child(2) { animation-delay: 60ms;  }
+.kpi-grid > a:nth-child(3) { animation-delay: 120ms; }
+.kpi-grid > a:nth-child(4) { animation-delay: 180ms; }
+
+.bento-grid > *:nth-child(1) { animation-delay: 100ms; }
+.bento-grid > *:nth-child(2) { animation-delay: 160ms; }
+.bento-grid > *:nth-child(3) { animation-delay: 220ms; }
+.bento-grid > *:nth-child(4) { animation-delay: 280ms; }
+.bento-grid > *:nth-child(5) { animation-delay: 340ms; }
+.bento-grid > *:nth-child(6) { animation-delay: 400ms; }
+.bento-grid > *:nth-child(7) { animation-delay: 460ms; }
+.bento-grid > *:nth-child(8) { animation-delay: 520ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-grid > a,
+  .bento-grid > .bento-4, .bento-grid > .bento-5, .bento-grid > .bento-6,
+  .bento-grid > .bento-7, .bento-grid > .bento-8, .bento-grid > .bento-12 {
+    animation: none;
+  }
 }
