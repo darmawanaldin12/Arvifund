@@ -27,18 +27,17 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: '/expenses',
-    label: 'Keluar',
-    accentVar: '--red',
-    accentAlpha: 'rgba(var(--red-rgb, 248 113 113) / 0.15)',
+    href: '/transaksi',
+    label: 'Transaksi',
+    extraActiveMatch: ['/expenses'],
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 5v14M5 12l7 7 7-7"/>
+        <path d="M4 6h16M4 12h16M4 18h10"/>
       </svg>
     ),
     activeIcon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 5v14M5 12l7 7 7-7"/>
+        <path d="M4 6h16M4 12h16M4 18h10"/>
       </svg>
     ),
   },
@@ -144,9 +143,10 @@ export default function BottomNav() {
           const isActive = item.href === '/dashboard'
             ? pathname === '/dashboard'
             : pathname.startsWith(item.href) ||
-              (item.href === '/wallet' && pathname.startsWith('/record'))
+              (item.href === '/wallet' && pathname.startsWith('/record')) ||
+              (item.extraActiveMatch || []).some(p => pathname.startsWith(p))
 
-          // Per-item accent (Keluar = red, others = accent)
+          // Per-item accent (default ke warna accent utama)
           const pillColor  = item.accentVar  ? `var(${item.accentVar})`  : 'var(--accent)'
           const pillBg     = item.accentAlpha ? item.accentAlpha : 'color-mix(in srgb, var(--accent) 15%, transparent)'
 
