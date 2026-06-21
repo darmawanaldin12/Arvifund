@@ -1,27 +1,27 @@
 /* ── CSS VARIABLES ── */
 :root {
   /* ── Hex tokens (dipakai langsung di CSS) ── */
-  --bg:              #EEF2FF;
-  --bg2:             #E0E7FF;
+  --bg:              #F7F8FB;
+  --bg2:             #EEF1F7;
   --surface:         #FFFFFF;
-  --surface2:        #EEF2FF;
-  --surface3:        #C7D2FE;
-  --border:          #7E8AA8;
-  --border2:         #DDE3FF;
+  --surface2:        #F3F4F8;
+  --surface3:        #E4E7F0;
+  --border:          #E4E7F0;
+  --border2:         #EEF0F5;
   --text1:           #0F172A;
-  --text2:           #1E293B;
-  --text3:           #64748B;
+  --text2:           #334155;
+  --text3:           #6B7280;
   --accent:          #1E40AF;
-  --accent-light:    #DBEAFE;
+  --accent-light:    #E7EDFB;
   --accent-dim:      #93C5FD;
   --green:           #15803D;
-  --green-bg:        #DCFCE7;
+  --green-bg:        #E8F5EC;
   --red:             #B91C1C;
-  --red-bg:          #FEE2E2;
+  --red-bg:          #FBEAEA;
   --yellow:          #B45309;
-  --yellow-bg:       #FEF3C7;
-  --shadow:          0 4px 16px rgba(30,64,175,0.10);
-  --shadow-sm:       0 1px 4px rgba(30,64,175,0.06);
+  --yellow-bg:       #FBF1DC;
+  --shadow:          0 10px 30px rgba(15,23,42,0.08);
+  --shadow-sm:       0 1px 3px rgba(15,23,42,0.05);
   --nav-h:           64px;
   --header-h:        56px;
   --sidebar-w:       256px;
@@ -30,16 +30,16 @@
   --radius-full:     99px;
 
   /* ── HSL tokens (dipakai Tailwind via tailwind.config.js) ── */
-  --bg-hsl:          231 100% 97%;   /* #EEF2FF */
-  --surface-hsl:     0 0% 100%;      /* #FFFFFF */
-  --surface2-hsl:    231 100% 97%;   /* #EEF2FF */
-  --border-hsl:      223 19% 58%;    /* #7E8AA8 */
-  --fg-hsl:          222 47% 6%;     /* #0F172A */
-  --text3-hsl:       215 16% 47%;    /* #64748B */
-  --accent-hsl:      224 80% 40%;    /* #1E40AF */
-  --accent-fg-hsl:   0 0% 100%;      /* white */
+  --bg-hsl:          228 33% 97%;   /* #F7F8FB */
+  --surface-hsl:     0 0% 100%;     /* #FFFFFF */
+  --surface2-hsl:    225 20% 96%;   /* #F3F4F8 */
+  --border-hsl:      222 25% 91%;   /* #E4E7F0 */
+  --fg-hsl:          222 47% 6%;    /* #0F172A */
+  --text3-hsl:       220 9% 46%;    /* #6B7280 */
+  --accent-hsl:      224 80% 40%;   /* #1E40AF */
+  --accent-fg-hsl:   0 0% 100%;     /* white */
   --ring:            224 80% 40%;
-  --red-hsl:         0 69% 42%;      /* #B91C1C */
+  --red-hsl:         0 69% 42%;     /* #B91C1C */
 }
 
 @media (prefers-color-scheme: dark) {
