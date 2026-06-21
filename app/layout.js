@@ -28,9 +28,6 @@ export const viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  minimumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
 }
 
@@ -62,17 +59,15 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
-                document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
-                document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+                // Catatan a11y: pinch-zoom & multi-touch zoom SENGAJA tidak diblokir lagi
+                // (sebelumnya gesturestart/gesturechange/gestureend + touchmove multi-touch
+                // di-preventDefault, yang membuat user low-vision tidak bisa zoom sama sekali).
+                // Cuma double-tap-zoom (single touch) yang masih dicegah untuk feel "app-like".
                 var lastTouchEnd = 0;
                 document.addEventListener('touchend', function(e) {
                   var now = Date.now();
                   if (now - lastTouchEnd < 300) { e.preventDefault(); }
                   lastTouchEnd = now;
-                }, { passive: false });
-                document.addEventListener('touchmove', function(e) {
-                  if (e.touches && e.touches.length > 1) { e.preventDefault(); }
                 }, { passive: false });
               })();
             `,
