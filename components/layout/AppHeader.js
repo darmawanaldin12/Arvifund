@@ -49,9 +49,9 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
         </div>
 
         <div className="min-w-0">
-          <div className="text-[16px] font-bold text-[var(--text1)] leading-tight truncate">
+          <h1 className="text-[16px] font-bold text-[var(--text1)] leading-tight truncate m-0">
             {title || 'Arvifund'}
-          </div>
+          </h1>
           {subtitle ? (
             <div className="text-[11px] text-[var(--text3)]">{subtitle}</div>
           ) : (
@@ -117,6 +117,7 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
             variant="outline"
             size="icon"
             onClick={onRefresh}
+            aria-label="Muat ulang data"
             className={cn(
               'w-9 h-9 rounded-lg shrink-0',
               'bg-[var(--surface2)] border-[var(--border)]',
