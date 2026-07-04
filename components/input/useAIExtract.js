@@ -191,6 +191,34 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
       .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)) })
   }
 
+  // Coba ambil gambar share-target yang masih pending dari Cache API.
+  // Sengaja TIDAK bergantung pada flag ?shared=1 di URL, karena flag itu
+  // bisa hilang kalau request sempat dilempar ke /login dulu (session
+  // expired / re-auth biometrik) sebelum akhirnya balik ke /input.
+  // Cache entry sendiri punya TTL 30 menit jadi aman dicek kapan saja.
+  async function tryConsumePendingShareImage() {
+    try {
+      const cache  = await caches.open(SHARE_CACHE_NAME)
+      const cached = await cache.match(SHARE_CACHE_KEY)
+      if (!cached) return false
+      const { dataUrl, timestamp } = await cached.json()
+      if (Date.now() - timestamp > SHARE_IMAGE_TTL) {
+        await cache.delete(SHARE_CACHE_KEY)
+        return false
+      }
+      if (dataUrl && dataUrl.startsWith('data:')) {
+        await cache.delete(SHARE_CACHE_KEY)
+        const res  = await fetch(dataUrl)
+        const blob = await res.blob()
+        const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
+        setSharedFromApp(true); onModeChange('ai')
+        handleImageFile(file)
+        return true
+      }
+    } catch (err) { console.error('[Share] Gagal baca cache:', err) }
+    return false
+  }
+
   function toggleRecording() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR || !voiceSupported) {
@@ -226,28 +254,13 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
       if (typeof window === 'undefined') return
       const params   = new URLSearchParams(window.location.search)
       const isShared = params.get('shared') === '1'
-      if (isShared) {
-        window.history.replaceState({}, '', '/input')
-        try {
-          const cache  = await caches.open(SHARE_CACHE_NAME)
-          const cached = await cache.match(SHARE_CACHE_KEY)
-          if (cached) {
-            const { dataUrl, timestamp } = await cached.json()
-            if (Date.now() - timestamp > SHARE_IMAGE_TTL) {
-              await cache.delete(SHARE_CACHE_KEY)
-              return
-            }
-            if (dataUrl && dataUrl.startsWith('data:')) {
-              await cache.delete(SHARE_CACHE_KEY)
-              const res  = await fetch(dataUrl)
-              const blob = await res.blob()
-              const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
-              setSharedFromApp(true); onModeChange('ai')
-              handleImageFile(file); return
-            }
-          }
-        } catch (err) { console.error('[Share] Gagal baca cache:', err) }
-      }
+      if (isShared) window.history.replaceState({}, '', '/input')
+
+      // Selalu coba konsumsi gambar pending dulu, terlepas dari ada/tidaknya
+      // flag ?shared=1 (lihat catatan di tryConsumePendingShareImage).
+      const consumed = await tryConsumePendingShareImage()
+      if (consumed) return
+
       const sharedText = params.get('text') || params.get('title') || ''
       const sharedUrl  = params.get('url')  || ''
       if (sharedText || sharedUrl) {
