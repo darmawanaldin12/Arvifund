@@ -78,7 +78,7 @@ export default function InputPage() {
         if (err) throw err
       }
       await loadData(); setShowConfirm(false)
-      ai.resetAI(); showToast(t, nilai)
+      ai.resetAI(); ai.clearPendingShareImage(); showToast(t, nilai)
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -101,7 +101,7 @@ export default function InputPage() {
         jumlah: parseFloat(formData.jumlah), catatan: formData.catatan || null,
       }, user?.id)
       await loadData(); setShowTransferConfirm(false)
-      ai.resetAI(); showToast('transfer', parseFloat(formData.jumlah))
+      ai.resetAI(); ai.clearPendingShareImage(); showToast('transfer', parseFloat(formData.jumlah))
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -198,7 +198,7 @@ export default function InputPage() {
             {mode === 'ai' && (
               <AIInputTab
                 {...ai}
-                onClearImage={() => { ai.setImageFile(null); ai.imageFileRef.current = null; ai.setImagePreview('') }}
+                onClearImage={() => { ai.setImageFile(null); ai.imageFileRef.current = null; ai.setImagePreview(''); ai.clearPendingShareImage() }}
               />
             )}
             {mode === 'manual' && (
