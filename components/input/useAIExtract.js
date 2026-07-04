@@ -191,11 +191,26 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
       .catch(() => { setImageFile(file); imageFileRef.current = file; setImagePreview(URL.createObjectURL(file)) })
   }
 
+  // Hapus entry gambar share-target yang pending di Cache API.
+  // Dipanggil setelah transaksi berhasil disimpan, atau saat user
+  // menghapus gambar secara manual — supaya gambar lama nggak
+  // "nyangkut" dan ke-load ulang di sesi berikutnya.
+  async function clearPendingShareImage() {
+    try {
+      const cache = await caches.open(SHARE_CACHE_NAME)
+      await cache.delete(SHARE_CACHE_KEY)
+    } catch (err) { console.error('[Share] Gagal hapus cache:', err) }
+  }
+
   // Coba ambil gambar share-target yang masih pending dari Cache API.
   // Sengaja TIDAK bergantung pada flag ?shared=1 di URL, karena flag itu
   // bisa hilang kalau request sempat dilempar ke /login dulu (session
   // expired / re-auth biometrik) sebelum akhirnya balik ke /input.
-  // Cache entry sendiri punya TTL 30 menit jadi aman dicek kapan saja.
+  // Entry cache SENGAJA TIDAK langsung dihapus begitu dibaca — supaya kalau
+  // user ke-logout paksa (session timeout) sebelum sempat extract/simpan,
+  // gambar tetap bisa diambil ulang begitu balik lagi ke /input. Entry akan
+  // hilang sendiri lewat TTL 30 menit, atau dihapus manual lewat
+  // clearPendingShareImage() setelah transaksi disimpan / gambar dihapus.
   async function tryConsumePendingShareImage() {
     try {
       const cache  = await caches.open(SHARE_CACHE_NAME)
@@ -207,7 +222,6 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
         return false
       }
       if (dataUrl && dataUrl.startsWith('data:')) {
-        await cache.delete(SHARE_CACHE_KEY)
         const res  = await fetch(dataUrl)
         const blob = await res.blob()
         const file = new File([blob], 'shared-image.jpg', { type: blob.type || 'image/jpeg' })
@@ -303,6 +317,6 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
     error, setError,
     sharedFromApp,
     handleAIExtract, handleImageFile, toggleRecording,
-    resetAI,
+    resetAI, clearPendingShareImage,
   }
 }
