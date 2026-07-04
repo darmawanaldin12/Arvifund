@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '../../lib/supabase'
 import { DataProvider } from '../../components/DataContext'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
+import { saveReturnTo } from '../../lib/returnTo'
 import BottomNav from '../../components/layout/BottomNav'
 
 const BARS = [
@@ -53,19 +54,29 @@ function AppShell({ children }) {
 
 export default function DashboardLayout({ children }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    const timeout = setTimeout(() => { router.replace('/login') }, 8000)
+    // Simpan tujuan asli (termasuk query string, misal ?shared=1 dari Web Share Target)
+    // sebelum lempar ke /login, biar setelah re-auth/biometrik bisa balik ke sini lagi.
+    function goToLogin() {
+      if (typeof window !== 'undefined') {
+        saveReturnTo(pathname + window.location.search)
+      }
+      router.replace('/login')
+    }
+
+    const timeout = setTimeout(goToLogin, 8000)
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         clearTimeout(timeout)
-        if (!session) router.replace('/login')
+        if (!session) goToLogin()
         else setChecking(false)
       })
-      .catch(() => { clearTimeout(timeout); router.replace('/login') })
+      .catch(() => { clearTimeout(timeout); goToLogin() })
     return () => clearTimeout(timeout)
-  }, [router])
+  }, [router, pathname])
 
   if (checking) return (
     <div style={{
