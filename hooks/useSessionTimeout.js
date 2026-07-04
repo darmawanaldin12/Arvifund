@@ -2,6 +2,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
+import { saveReturnTo } from '../lib/returnTo'
 
 const TIMEOUT_MS = 60 * 60 * 1000 // 1 jam
 const STORAGE_KEY = 'arvifund_last_active'
@@ -26,6 +27,12 @@ export function useSessionTimeout() {
   const timerRef = useRef(null)
 
   const logout = useCallback(async () => {
+    // Simpan halaman + query yang sedang dibuka (misal /input?shared=1)
+    // sebelum sign-out, biar setelah re-auth/biometrik bisa balik ke sini
+    // lagi — bukan cuma jatuh ke /dashboard.
+    if (typeof window !== 'undefined') {
+      saveReturnTo(window.location.pathname + window.location.search)
+    }
     safeRemoveStorage(STORAGE_KEY)
     await supabase.auth.signOut()
     router.replace('/login?reason=timeout')
