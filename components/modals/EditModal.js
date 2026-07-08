@@ -16,7 +16,15 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
 
   // Auto-focus field pertama + Escape untuk tutup + focus trap (Tab tidak bocor ke belakang modal)
   useEffect(() => {
-    firstFieldRef.current?.focus()
+    // Pastikan modal selalu terbuka dari posisi paling atas.
+    // Beberapa browser mobile (terutama untuk <input type="date">) melakukan
+    // scroll-into-view otomatis saat elemen di-focus, dan karena modal ini
+    // adalah overlay dengan scroll sendiri (overflow-y: auto), itu bisa bikin
+    // modal-content ke-scroll ke bawah saat pertama kali muncul.
+    // preventScroll menghentikan auto-scroll bawaan browser, lalu kita reset
+    // scroll position secara manual.
+    if (modalRef.current) modalRef.current.scrollTop = 0
+    firstFieldRef.current?.focus({ preventScroll: true })
 
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
