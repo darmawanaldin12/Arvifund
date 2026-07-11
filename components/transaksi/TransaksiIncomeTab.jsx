@@ -1,8 +1,8 @@
 'use client'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { fmt, fmtTanggalShort } from '../../lib/utils'
 
-export default function TransaksiIncomeTab({ rows, sortKey, sortDir, onSort, onEdit, getUserName }) {
+export default function TransaksiIncomeTab({ rows, sortKey, sortDir, onSort, onEdit, onDelete, deletingId, getUserName }) {
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div className="table-wrap">
@@ -36,9 +36,21 @@ export default function TransaksiIncomeTab({ rows, sortKey, sortDir, onSort, onE
                 <td><span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span></td>
                 <td className="amount" style={{ color: 'var(--green)' }}>{fmt(r.jumlah)}</td>
                 <td>
-                  <button className="edit-btn" onClick={() => onEdit(r)} aria-label="Edit pemasukan" title="Edit">
-                    <Pencil size={13} />
-                  </button>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <button className="edit-btn" onClick={() => onEdit(r)} aria-label="Edit pemasukan" title="Edit">
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      className="edit-btn"
+                      onClick={() => onDelete(r.id)}
+                      disabled={deletingId === r.id}
+                      aria-label="Hapus pemasukan (perlu biometrik)"
+                      title="Hapus (perlu biometrik)"
+                      style={{ color: deletingId === r.id ? 'var(--text3)' : 'var(--red)', opacity: deletingId === r.id ? 0.5 : 1 }}
+                    >
+                      {deletingId === r.id ? <ShieldCheck size={13} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} /> : <Trash2 size={13} />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
