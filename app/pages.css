@@ -584,6 +584,25 @@ tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--surface2); }
 .amount { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 
+/* ── STICKY ACTIONS COLUMN ──
+   Tabel transaksi (Pengeluaran/Pemasukan) butuh scroll horizontal di HP karena
+   min-width 580px. Tanpa ini, tombol edit/hapus di kolom paling kanan ke-sembunyi
+   di luar layar dan user harus geser dulu buat nemu tombolnya. Dibikin sticky ke
+   kanan supaya selalu keliatan di posisi scroll manapun. */
+th.table-actions-col,
+td.table-actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background: var(--surface);
+  box-shadow: -6px 0 10px -6px rgba(0,0,0,0.18);
+}
+th.table-actions-col {
+  background: var(--surface2);
+  z-index: 4;
+}
+tr:hover td.table-actions-cell { background: var(--surface2); }
+
 
 /* ── USER CHIPS ── */
 .user-chip {
