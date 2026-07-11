@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
 
 const METODE_LIST_EDIT = ['Cash', 'QRIS', 'Transfer', 'Card', 'Cardless', 'Virtual Account Transfer']
@@ -7,8 +8,13 @@ const BANK_LIST_EDIT   = ['BCA', 'BRI', 'Mandiri', 'OVO', 'GoPay', 'ShopeePay', 
 
 export default function EditModal({ type, data, onSave, onClose, loading }) {
   const [form, setForm] = useState({})
+  const [mounted, setMounted] = useState(false)
   const modalRef = useRef(null)
   const firstFieldRef = useRef(null)
+
+  // Portal hanya bisa dibuat setelah komponen mount di client (document.body belum
+  // tentu ada saat SSR).
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (data) setForm({ ...data })
@@ -16,13 +22,6 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
 
   // Auto-focus field pertama + Escape untuk tutup + focus trap (Tab tidak bocor ke belakang modal)
   useEffect(() => {
-    // Pastikan modal selalu terbuka dari posisi paling atas.
-    // Beberapa browser mobile (terutama untuk <input type="date">) melakukan
-    // scroll-into-view otomatis saat elemen di-focus, dan karena modal ini
-    // adalah overlay dengan scroll sendiri (overflow-y: auto), itu bisa bikin
-    // modal-content ke-scroll ke bawah saat pertama kali muncul.
-    // preventScroll menghentikan auto-scroll bawaan browser, lalu kita reset
-    // scroll position secara manual.
     if (modalRef.current) modalRef.current.scrollTop = 0
     firstFieldRef.current?.focus({ preventScroll: true })
 
@@ -47,6 +46,14 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
+  // Kunci scroll body selagi modal terbuka (portal me-render di luar page,
+  // jadi body masih bisa ke-scroll kalau tidak dikunci manual)
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [])
+
   function set(key, val) {
     setForm(f => ({ ...f, [key]: val }))
   }
@@ -58,7 +65,9 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
 
   const title = type === 'expense' ? 'Edit Pengeluaran' : type === 'income' ? 'Edit Pemasukan' : 'Edit Tarik Tunai'
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-content" ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
         <div className="modal-header">
@@ -195,6 +204,7 @@ export default function EditModal({ type, data, onSave, onClose, loading }) {
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
