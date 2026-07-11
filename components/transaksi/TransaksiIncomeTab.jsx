@@ -15,7 +15,7 @@ export default function TransaksiIncomeTab({ rows, sortKey, sortDir, onSort, onE
               <th>Bank</th>
               <th>User</th>
               <th onClick={() => onSort('jumlah')} style={{ cursor: 'pointer', textAlign: 'right' }}>Jumlah {sortKey === 'jumlah' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
-              <th></th>
+              <th className="table-actions-col"></th>
             </tr>
           </thead>
           <tbody>
@@ -35,7 +35,7 @@ export default function TransaksiIncomeTab({ rows, sortKey, sortDir, onSort, onE
                 <td><span className="badge badge-blue">{r.bank || '—'}</span></td>
                 <td><span className={`user-chip ${getUserName(r.user_id)?.toLowerCase()}`}>{getUserName(r.user_id)}</span></td>
                 <td className="amount" style={{ color: 'var(--green)' }}>{fmt(r.jumlah)}</td>
-                <td>
+                <td className="table-actions-cell">
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                     <button className="edit-btn" onClick={() => onEdit(r)} aria-label="Edit pemasukan" title="Edit">
                       <Pencil size={13} />
