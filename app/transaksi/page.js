@@ -8,7 +8,7 @@ import {
   fmtTanggalShort, parseTanggal, filterByPeriod,
   KATEGORI_LIST, KATEGORI_COLOR, BULAN_ORDER,
 } from '../../lib/utils'
-import { updateExpense, deleteExpense, updateIncome, updateCashRecord, deleteCashRecord } from '../../lib/data'
+import { updateExpense, deleteExpense, updateIncome, deleteIncome, updateCashRecord, deleteCashRecord } from '../../lib/data'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 import { supabase } from '../../lib/supabase'
 import AppSelect from '../../components/ui/AppSelect'
@@ -194,6 +194,20 @@ export default function TransaksiPage() {
     // transfer: dikelola di halaman Wallet
   }
 
+  // ── Helper: minta verifikasi biometrik sebelum aksi destruktif ──
+  // Kalau biometrik tersedia & sudah didaftarkan → wajib verifikasi biometrik.
+  // Kalau tidak tersedia (device lama / belum daftar) → fallback ke confirm biasa,
+  // supaya user tetap bisa hapus data di device yang tidak support biometrik.
+  async function confirmWithBiometric(confirmMessage) {
+    const supported  = await isBiometricSupported()
+    const registered = isBiometricRegistered()
+    if (supported && registered) {
+      await authenticateWithBiometric(supabase)
+      return true
+    }
+    return window.confirm(confirmMessage)
+  }
+
   // ── Handlers: Expense ──
   async function handleSaveExpense(form) {
     setSaving(true)
@@ -217,13 +231,8 @@ export default function TransaksiPage() {
   async function handleDeleteExpense(id) {
     setDeletingId(id)
     try {
-      const supported  = await isBiometricSupported()
-      const registered = isBiometricRegistered()
-      if (supported && registered) {
-        await authenticateWithBiometric(supabase)
-      } else if (!window.confirm('Hapus transaksi ini? Tindakan tidak bisa dibatalkan.')) {
-        setDeletingId(null); return
-      }
+      const ok = await confirmWithBiometric('Hapus transaksi ini? Tindakan tidak bisa dibatalkan.')
+      if (!ok) { setDeletingId(null); return }
       await deleteExpense(id)
       showToast('🗑️ Transaksi dihapus')
       await loadData()
@@ -252,6 +261,20 @@ export default function TransaksiPage() {
     } finally { setSaving(false) }
   }
 
+  async function handleDeleteIncome(id) {
+    setDeletingId(id)
+    try {
+      const ok = await confirmWithBiometric('Hapus pemasukan ini? Tindakan tidak bisa dibatalkan.')
+      if (!ok) { setDeletingId(null); return }
+      await deleteIncome(id)
+      showToast('🗑️ Pemasukan dihapus')
+      await loadData()
+    } catch (e) {
+      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) showToast('Autentikasi dibatalkan', 'error')
+      else showToast('❌ Gagal hapus: ' + e.message, 'error')
+    } finally { setDeletingId(null) }
+  }
+
   // ── Handlers: Cash ──
   async function handleSaveCash(form) {
     setSaving(true)
@@ -271,14 +294,16 @@ export default function TransaksiPage() {
   }
 
   async function handleDeleteCash(id) {
-    if (!window.confirm('Hapus catatan tarik tunai ini? Tindakan tidak bisa dibatalkan.')) return
     setDeletingId(id)
     try {
+      const ok = await confirmWithBiometric('Hapus catatan tarik tunai ini? Tindakan tidak bisa dibatalkan.')
+      if (!ok) { setDeletingId(null); return }
       await deleteCashRecord(id)
       showToast('🗑️ Catatan dihapus')
       await loadData()
     } catch (e) {
-      showToast('❌ Gagal hapus: ' + e.message, 'error')
+      if (e?.name === 'NotAllowedError' || e?.message?.includes('cancelled')) showToast('Autentikasi dibatalkan', 'error')
+      else showToast('❌ Gagal hapus: ' + e.message, 'error')
     } finally { setDeletingId(null) }
   }
 
@@ -393,6 +418,8 @@ export default function TransaksiPage() {
             sortDir={sortDir}
             onSort={toggleSort}
             onEdit={r => { setEditData(r); setEditType('income') }}
+            onDelete={handleDeleteIncome}
+            deletingId={deletingId}
             getUserName={getUserName}
           />
         )}
