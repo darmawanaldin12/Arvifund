@@ -1,8 +1,9 @@
 'use client'
+import { Trash2, ShieldCheck } from 'lucide-react'
 import { fmt, fmtTanggalShort } from '../../lib/utils'
 import { TIPE_CONFIG } from '../../lib/transaksiHelpers'
 
-export default function TransaksiAllTab({ rows, onRowClick }) {
+export default function TransaksiAllTab({ rows, onRowClick, onDelete, deletingId }) {
   if (rows.length === 0) {
     return <div className="card"><div className="empty-state"><div className="emoji">🔍</div><p>Tidak ada transaksi ditemukan</p></div></div>
   }
@@ -11,7 +12,9 @@ export default function TransaksiAllTab({ rows, onRowClick }) {
       {rows.map(row => {
         const cfg = TIPE_CONFIG[row.tipe]
         const Ic  = cfg.Icon
-        const tappable = row.tipe !== 'transfer'
+        const tappable  = row.tipe !== 'transfer'
+        // Transfer dikelola di halaman Wallet — tidak bisa dihapus dari sini
+        const deletable = row.tipe === 'expense' || row.tipe === 'income' || row.tipe === 'cash'
         return (
           <div
             key={row.id}
@@ -31,8 +34,22 @@ export default function TransaksiAllTab({ rows, onRowClick }) {
                 <span style={{ padding: '1px 7px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 10 }}>{cfg.label}</span>
               </div>
             </div>
-            <div className="trx-row-amount" style={{ color: cfg.color }}>
-              {row.tipe === 'income' ? '+' : row.tipe === 'expense' ? '−' : ''}{fmt(row.amount)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="trx-row-amount" style={{ color: cfg.color }}>
+                {row.tipe === 'income' ? '+' : row.tipe === 'expense' ? '−' : ''}{fmt(row.amount)}
+              </div>
+              {deletable && (
+                <button
+                  className="edit-btn"
+                  onClick={e => { e.stopPropagation(); onDelete(row) }}
+                  disabled={deletingId === row.raw.id}
+                  aria-label="Hapus transaksi (perlu biometrik)"
+                  title="Hapus (perlu biometrik)"
+                  style={{ color: deletingId === row.raw.id ? 'var(--text3)' : 'var(--red)', opacity: deletingId === row.raw.id ? 0.5 : 1 }}
+                >
+                  {deletingId === row.raw.id ? <ShieldCheck size={13} style={{ animation: 'pulse 0.8s ease-in-out infinite' }} /> : <Trash2 size={13} />}
+                </button>
+              )}
             </div>
           </div>
         )
