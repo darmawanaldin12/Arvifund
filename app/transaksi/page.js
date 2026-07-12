@@ -194,6 +194,14 @@ export default function TransaksiPage() {
     // transfer: dikelola di halaman Wallet
   }
 
+  // ── Hapus dari row gabungan (tab "Semua") — dispatch ke handler sesuai tipe ──
+  function handleDeleteFromRow(row) {
+    if (row.tipe === 'expense') return handleDeleteExpense(row.raw.id)
+    if (row.tipe === 'income')  return handleDeleteIncome(row.raw.id)
+    if (row.tipe === 'cash')    return handleDeleteCash(row.raw.id)
+    // transfer: dikelola di halaman Wallet
+  }
+
   // ── Helper: minta verifikasi biometrik sebelum aksi destruktif ──
   // Kalau biometrik tersedia & sudah didaftarkan → wajib verifikasi biometrik.
   // Kalau tidak tersedia (device lama / belum daftar) → fallback ke confirm biasa,
@@ -395,7 +403,12 @@ export default function TransaksiPage() {
         />
 
         {tab === 'all' && (
-          <TransaksiAllTab rows={allRows} onRowClick={openEditFromRow} />
+          <TransaksiAllTab
+            rows={allRows}
+            onRowClick={openEditFromRow}
+            onDelete={handleDeleteFromRow}
+            deletingId={deletingId}
+          />
         )}
 
         {tab === 'expense' && (
