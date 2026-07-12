@@ -126,6 +126,7 @@ export default function ExportPDFButton() {
                     value={selectedIdx}
                     onChange={e => setSelectedIdx(e.target.value)}
                   >
+                    <option value="">Semua Periode</option>
                     {periods.map((p, i) => (
                       <option key={i} value={i}>{p.label}</option>
                     ))}
@@ -142,7 +143,6 @@ export default function ExportPDFButton() {
                     className="btn btn-primary"
                     style={{ marginTop: 16, width: '100%' }}
                     onClick={handleGenerate}
-                    disabled={selectedIdx === ''}
                   >
                     Generate PDF
                   </button>
