@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, BarChart2, Landmark, CalendarDays, Lightbulb } from 'lucide-react'
 import DashboardLoadingState from '../../components/dashboard/DashboardLoadingState'
+import ExportPDFButton from '../../components/dashboard/ExportPDFButton'
 import { AnimatedAmount } from '../../hooks/useCountUp'
 import {
   ScorecardCard, WeeklySummaryCard, UserSpendingCard,
@@ -88,11 +89,14 @@ export default function DashboardPage() {
     <>
       <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
       <div className="page-container">
-        <div className="period-filter-bar">
-          <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
-          {periods.map((p,i) => (
-            <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div className="period-filter-bar" style={{ marginBottom: 0, flex: 1 }}>
+            <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
+            {periods.map((p,i) => (
+              <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
+            ))}
+          </div>
+          <ExportPDFButton />
         </div>
         <div className="kpi-grid">
           {kpiItems.map(item => (
