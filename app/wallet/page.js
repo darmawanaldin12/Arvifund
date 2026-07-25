@@ -60,12 +60,12 @@ export default function WalletPage() {
   }
 
   async function handleSaveAdd(form) {
-    await insertTransfer({ tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null }, user?.id)
+    await insertTransfer({ tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null, biaya_admin: parseFloat(form.biaya_admin) || 0 }, user?.id)
     await loadData()
   }
 
   async function handleSaveEdit(form) {
-    await updateTransfer(editTransfer.id, { tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null }, user?.id)
+    await updateTransfer(editTransfer.id, { tanggal: form.tanggal, from_user: form.from_user, to_user: form.to_user, from_bank: form.from_bank, to_bank: form.to_bank, jumlah: parseFloat(form.jumlah), catatan: form.catatan || null, biaya_admin: parseFloat(form.biaya_admin) || 0 }, user?.id)
     await loadData()
   }
 
@@ -94,7 +94,7 @@ export default function WalletPage() {
       )}
       {editTransfer && (
         <TransferForm profiles={profiles} accounts={accounts} user={user}
-          initial={{ tanggal: editTransfer.tanggal, from_user: editTransfer.from_user, to_user: editTransfer.to_user, from_bank: editTransfer.from_bank, to_bank: editTransfer.to_bank, jumlah: String(editTransfer.jumlah), catatan: editTransfer.catatan || '' }}
+          initial={{ tanggal: editTransfer.tanggal, from_user: editTransfer.from_user, to_user: editTransfer.to_user, from_bank: editTransfer.from_bank, to_bank: editTransfer.to_bank, jumlah: String(editTransfer.jumlah), catatan: editTransfer.catatan || '', biaya_admin: editTransfer.biaya_admin ?? 0 }}
           onClose={() => setEditTransfer(null)} onSaved={handleSaveEdit}
           title="Edit Transfer" submitLabel="Simpan Perubahan" />
       )}
@@ -162,6 +162,7 @@ export default function WalletPage() {
                       <span>{fmtTanggalShort(t.tanggal)}</span>
                       {!isInternal && t.from_bank && <span>· {t.from_bank} → {t.to_bank}</span>}
                       {t.catatan && <span>· {t.catatan}</span>}
+                      {t.biaya_admin > 0 && <span style={{ color: 'var(--red)' }}>· biaya admin {fmtFull(t.biaya_admin)}</span>}
                     </div>
                   </div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--accent)', flexShrink: 0 }}>{fmtFull(t.jumlah)}</div>
