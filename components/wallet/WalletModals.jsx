@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, CheckCircle2, ArrowLeftRight, ChevronRight } from 'lucide-react'
 import { fmtFull } from '../../lib/utils'
 
@@ -50,12 +50,19 @@ export function SetSaldoModal({ account, userName, onClose, onSaved }) {
   )
 }
 
+const DEFAULT_ADMIN_FEE = 2500
+
 export function TransferForm({ profiles, accounts, user, initial, onClose, onSaved, title, submitLabel }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
-  const [form, setForm] = useState(initial || {
-    tanggal: today, from_user: user?.id || '', to_user: '',
-    from_bank: '', to_bank: '', jumlah: '', catatan: '',
-  })
+  const [form, setForm] = useState(initial
+    ? { ...initial, biaya_admin: initial.biaya_admin ?? 0 }
+    : {
+        tanggal: today, from_user: user?.id || '', to_user: '',
+        from_bank: '', to_bank: '', jumlah: '', catatan: '', biaya_admin: 0,
+      })
+  // Kalau ini edit transfer lama, anggap field biaya admin "sudah disentuh" —
+  // biar nilai yang sudah ada tidak ketimpa auto-default 2500.
+  const [feeTouched, setFeeTouched] = useState(!!initial)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -69,6 +76,30 @@ export function TransferForm({ profiles, accounts, user, initial, onClose, onSav
   const fromName   = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName     = profiles.find(p => p.id === form.to_user)?.username   || ''
 
+  // Biaya admin relevan begitu bank asal ≠ bank tujuan — TIDAK peduli sama/beda user.
+  // Contoh: Aldin BCA → Solikhatun BCA = sama bank = gratis.
+  //         Solikhatun BCA → Solikhatun Mandiri = beda bank = kena biaya.
+  const bedaBank = form.from_bank && form.to_bank && form.from_bank !== form.to_bank
+
+  useEffect(() => {
+    if (!bedaBank) {
+      // Bank disamakan lagi → biaya admin tidak relevan, reset ke 0 dan bersihkan status "touched"
+      if (form.biaya_admin) setForm(f => ({ ...f, biaya_admin: 0 }))
+      if (feeTouched) setFeeTouched(false)
+      return
+    }
+    // Baru pertama kali jadi beda bank & belum pernah diisi manual → isi default
+    if (!feeTouched && !form.biaya_admin) {
+      setForm(f => ({ ...f, biaya_admin: DEFAULT_ADMIN_FEE }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.from_bank, form.to_bank])
+
+  function handleFeeChange(v) {
+    setFeeTouched(true)
+    setF('biaya_admin', v)
+  }
+
   async function handleSave() {
     setError('')
     if (!form.from_user) return setError('Pilih pengirim')
@@ -77,8 +108,13 @@ export function TransferForm({ profiles, accounts, user, initial, onClose, onSav
     if (!form.to_bank)   return setError('Pilih rekening tujuan')
     if (isInternal && form.from_bank === form.to_bank) return setError('Rekening asal dan tujuan tidak boleh sama')
     if (!form.jumlah || isNaN(parseFloat(form.jumlah)) || parseFloat(form.jumlah) <= 0) return setError('Jumlah harus lebih dari 0')
+    if (form.biaya_admin && (isNaN(parseFloat(form.biaya_admin)) || parseFloat(form.biaya_admin) < 0)) return setError('Biaya admin tidak valid')
     setSaving(true)
-    try { await onSaved(form); onClose() }
+    try {
+      const payload = { ...form, biaya_admin: bedaBank ? (parseFloat(form.biaya_admin) || 0) : 0 }
+      await onSaved(payload)
+      onClose()
+    }
     catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -145,6 +181,16 @@ export function TransferForm({ profiles, accounts, user, initial, onClose, onSav
           <input className="form-input" type="number" inputMode="numeric" placeholder="0"
             value={form.jumlah} onChange={e => setF('jumlah', e.target.value)} min="0" />
         </div>
+        {bedaBank && (
+          <div className="form-group">
+            <label className="form-label">Biaya Admin (beda bank)</label>
+            <input className="form-input" type="number" inputMode="numeric" placeholder="2500"
+              value={form.biaya_admin} onChange={e => handleFeeChange(e.target.value)} min="0" />
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+              Otomatis tercatat sebagai pengeluaran kategori "Biaya Admin" dari rekening asal.
+            </div>
+          </div>
+        )}
         <div className="form-group">
           <label className="form-label">Catatan (opsional)</label>
           <input className="form-input" type="text" placeholder="Contoh: buat belanja bulan ini"
