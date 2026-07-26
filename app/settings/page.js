@@ -15,8 +15,9 @@ import {
 } from '../../lib/biometric'
 import {
   ShieldCheck, Fingerprint, CalendarDays, Zap, KeyRound,
-  Info, Smartphone, LogOut, Trash2, CheckCircle2, X, Camera, User,
+  Info, Smartphone, LogOut, Trash2, CheckCircle2, X, Camera, User, Bell, BellOff,
 } from 'lucide-react'
+import { isPushSupported, isDeviceSubscribed, subscribeToPush, unsubscribeFromPush } from '../../lib/push'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -45,6 +46,10 @@ export default function SettingsPage() {
   const [bioLoading, setBioLoading]       = useState(false)
   const [bioCred, setBioCred]             = useState(null)
 
+  const [pushSupported, setPushSupported]   = useState(false)
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushLoading, setPushLoading]       = useState(false)
+
   useEffect(() => {
     if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
   }, [profile])
@@ -59,6 +64,15 @@ export default function SettingsPage() {
       }
     }
     checkBio()
+  }, [])
+
+  useEffect(() => {
+    async function checkPush() {
+      const supported = isPushSupported()
+      setPushSupported(supported)
+      if (supported) setPushSubscribed(await isDeviceSubscribed())
+    }
+    checkPush()
   }, [])
 
   function handleAvatarChange(e) {
@@ -200,6 +214,32 @@ export default function SettingsPage() {
     showToast('✅ Data biometrik dihapus dari device ini')
   }
 
+  async function handleEnablePush() {
+    setPushLoading(true)
+    try {
+      await subscribeToPush(user?.id)
+      setPushSubscribed(true)
+      showToast('✅ Notifikasi pengingat diaktifkan')
+    } catch (err) {
+      showToast('❌ Gagal: ' + err.message, 'error')
+    } finally {
+      setPushLoading(false)
+    }
+  }
+
+  async function handleDisablePush() {
+    setPushLoading(true)
+    try {
+      await unsubscribeFromPush()
+      setPushSubscribed(false)
+      showToast('✅ Notifikasi pengingat dimatikan')
+    } catch (err) {
+      showToast('❌ Gagal: ' + err.message, 'error')
+    } finally {
+      setPushLoading(false)
+    }
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.replace('/login')
@@ -333,6 +373,41 @@ export default function SettingsPage() {
                 <button className="btn btn-primary btn-full" onClick={handleRegisterBio} disabled={bioLoading} style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <ShieldCheck size={16} />
                   {bioLoading ? 'Memproses...' : 'Aktifkan Login Biometrik'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Notifikasi Pengingat */}
+        {pushSupported && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="section-title" style={{ marginBottom: 12 }}>
+              <Bell size={16} color="var(--accent)" />
+              Notifikasi Pengingat
+            </div>
+
+            {pushSubscribed ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--green-bg)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.25)', marginBottom: 14 }}>
+                  <CheckCircle2 size={22} color="var(--green)" style={{ flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>Pengingat Aktif</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>Notifikasi jam 19:00 kalau belum ada transaksi tercatat hari itu.</div>
+                  </div>
+                </div>
+                <button className="btn btn-danger btn-full" onClick={handleDisablePush} disabled={pushLoading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <BellOff size={14} /> {pushLoading ? 'Memproses...' : 'Matikan Notifikasi Pengingat'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14, lineHeight: 1.6 }}>
+                  Dapat pengingat jam 19:00 kalau kamu belum catat transaksi apapun hari itu — biar nggak ada yang kelewat dicatat.
+                </p>
+                <button className="btn btn-primary btn-full" onClick={handleEnablePush} disabled={pushLoading} style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Bell size={16} />
+                  {pushLoading ? 'Memproses...' : 'Aktifkan Notifikasi Pengingat'}
                 </button>
               </>
             )}
