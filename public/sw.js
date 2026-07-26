@@ -1,6 +1,6 @@
-// Arvifund Service Worker v5
+// Arvifund Service Worker v6
 // Bump versi ini setiap kali ada perubahan SW agar browser update otomatis
-const SW_VERSION = 'v5';
+const SW_VERSION = 'v6';
 const SHARE_TARGET_CACHE = 'arvifund-share-images-v4';
 // TTL cache share image: 30 menit (cukup untuk biometric + redirect)
 const SHARE_IMAGE_TTL_MS = 30 * 60 * 1000;
@@ -86,3 +86,41 @@ function bufferToBase64(buffer) {
   }
   return btoa(binary);
 }
+
+// ── WEB PUSH: notifikasi pengingat "belum catat transaksi" ──
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'Arvifund', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'Arvifund';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: data.tag || 'arvifund-reminder', // notifikasi baru menggantikan yang lama, tidak menumpuk
+    data: { url: data.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
+  );
+});
