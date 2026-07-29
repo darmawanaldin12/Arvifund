@@ -156,12 +156,12 @@ export default function TransaksiPage() {
     filteredExpenses.forEach(r => rows.push({
       id: 'exp_' + r.id, tipe: 'expense', tanggal: r.tanggal,
       label: r.toko || 'Pengeluaran', sub: r.uraian || r.kategori || '',
-      amount: r.nilai, userName: getUserName(r.user_id), raw: r,
+      amount: r.nilai, userName: getUserName(r.user_id), metode: r.transaksi, raw: r,
     }))
     filteredIncome.forEach(r => rows.push({
       id: 'inc_' + r.id, tipe: 'income', tanggal: r.tanggal,
       label: r.sumber || 'Pemasukan', sub: r.items || r.kategori || '',
-      amount: r.jumlah, userName: getUserName(r.user_id), raw: r,
+      amount: r.jumlah, userName: getUserName(r.user_id), metode: r.metode, raw: r,
     }))
     filteredCashRecords.forEach(r => rows.push({
       id: 'csh_' + r.id, tipe: 'cash', tanggal: r.tanggal,
