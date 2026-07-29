@@ -32,6 +32,9 @@ export default function TransaksiAllTab({ rows, onRowClick, onDelete, deletingId
                 <span>{fmtTanggalShort(row.tanggal)}</span>
                 {row.sub && <><span style={{ opacity: 0.4 }}>·</span><span>{row.sub}</span></>}
                 <span style={{ padding: '1px 7px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 10 }}>{cfg.label}</span>
+                {row.metode && (
+                  <span style={{ padding: '1px 7px', borderRadius: 99, background: 'var(--surface2)', color: 'var(--text3)', fontWeight: 700, fontSize: 10, border: '1px solid var(--border)' }}>{row.metode}</span>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
