@@ -1,6 +1,6 @@
 'use client'
 import { Trash2, ShieldCheck } from 'lucide-react'
-import { fmt, fmtTanggalShort } from '../../lib/utils'
+import { fmt, fmtTanggalShort, METODE_COLOR } from '../../lib/utils'
 import { TIPE_CONFIG } from '../../lib/transaksiHelpers'
 
 export default function TransaksiAllTab({ rows, onRowClick, onDelete, deletingId }) {
@@ -15,6 +15,7 @@ export default function TransaksiAllTab({ rows, onRowClick, onDelete, deletingId
         const tappable  = row.tipe !== 'transfer'
         // Transfer dikelola di halaman Wallet — tidak bisa dihapus dari sini
         const deletable = row.tipe === 'expense' || row.tipe === 'income' || row.tipe === 'cash'
+        const metodeColor = METODE_COLOR[row.metode] || '#94a3b8'
         return (
           <div
             key={row.id}
@@ -33,7 +34,7 @@ export default function TransaksiAllTab({ rows, onRowClick, onDelete, deletingId
                 {row.sub && <><span style={{ opacity: 0.4 }}>·</span><span>{row.sub}</span></>}
                 <span style={{ padding: '1px 7px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 10 }}>{cfg.label}</span>
                 {row.metode && (
-                  <span style={{ padding: '1px 7px', borderRadius: 99, background: 'var(--surface2)', color: 'var(--text3)', fontWeight: 700, fontSize: 10, border: '1px solid var(--border)' }}>{row.metode}</span>
+                  <span style={{ padding: '1px 7px', borderRadius: 99, background: `${metodeColor}1A`, color: metodeColor, fontWeight: 700, fontSize: 10, border: `1px solid ${metodeColor}40` }}>{row.metode}</span>
                 )}
               </div>
             </div>
