@@ -1,9 +1,10 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
-import { fmt, KATEGORI_LIST, BULAN_ORDER, filterByPeriod } from '../../lib/utils'
+import { fmt, fmtFull, fmtTanggalShort, KATEGORI_LIST, BULAN_ORDER, filterByPeriod } from '../../lib/utils'
 import { upsertBudgetPlan } from '../../lib/data'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 
@@ -17,6 +18,7 @@ export default function BudgetPage() {
   const [editKat, setEditKat]   = useState(null)
   const [editVal, setEditVal]   = useState('')
   const [saving, setSaving]     = useState(false)
+  const [openKat, setOpenKat]   = useState(null) // kategori yang rincian pengeluarannya sedang dibuka
 
   // periodIdx === '' → chip "Semua" (sama seperti halaman Transaksi & Dashboard)
   const isAll     = periodIdx === ''
@@ -43,13 +45,26 @@ export default function BudgetPage() {
     return m
   }, [budgetPlans, isAll, selBulan, selTahun])
 
-  // Realisasi dihitung berdasarkan rentang tanggal periode (sama seperti halaman lain)
+  // Pengeluaran pada periode terpilih, dikelompokkan per kategori (terbaru di atas)
+  const rowsByKategori = useMemo(() => {
+    const rows = isAll ? expenses : filterByPeriod(expenses, activeIdx, payPeriodDate, overrides)
+    const g = {}
+    rows.forEach(r => { (g[r.kategori] = g[r.kategori] || []).push(r) })
+    Object.values(g).forEach(list => list.sort((a, b) => {
+      const dc = (b.tanggal || '').localeCompare(a.tanggal || '')
+      return dc !== 0 ? dc : (b.created_at || '').localeCompare(a.created_at || '')
+    }))
+    return g
+  }, [expenses, isAll, activeIdx, payPeriodDate, overrides])
+
+  // Realisasi per kategori = jumlah dari rincian di atas
   const realisasiMap = useMemo(() => {
     const m = {}
-    const rows = isAll ? expenses : filterByPeriod(expenses, activeIdx, payPeriodDate, overrides)
-    rows.forEach(r => { m[r.kategori] = (m[r.kategori] || 0) + (r.nilai || 0) })
+    Object.entries(rowsByKategori).forEach(([kat, list]) => {
+      m[kat] = list.reduce((s, r) => s + (r.nilai || 0), 0)
+    })
     return m
-  }, [expenses, isAll, activeIdx, payPeriodDate, overrides])
+  }, [rowsByKategori])
 
   const totalAlokasi   = Object.values(budgetMap).reduce((s, p) => s + (p.alokasi || 0), 0)
   const totalRealisasi = Object.values(realisasiMap).reduce((s, v) => s + v, 0)
@@ -82,7 +97,7 @@ export default function BudgetPage() {
         <div className="filter-bar" style={{ marginBottom: 12 }}>
           <div
             className={`filter-chip${isAll ? ' active' : ''}`}
-            onClick={() => { setPeriodIdx(''); setEditKat(null) }}
+            onClick={() => { setPeriodIdx(''); setEditKat(null); setOpenKat(null) }}
           >
             Semua
           </div>
@@ -90,7 +105,7 @@ export default function BudgetPage() {
             <div
               key={i}
               className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`}
-              onClick={() => { setPeriodIdx(String(i)); setEditKat(null) }}
+              onClick={() => { setPeriodIdx(String(i)); setEditKat(null); setOpenKat(null) }}
             >
               {p.label}
             </div>
@@ -145,14 +160,28 @@ export default function BudgetPage() {
             const pct       = alokasi > 0 ? Math.min(Math.round(realisasi / alokasi * 100), 100) : 0
             const sisa      = alokasi - realisasi
             const isEdit    = editKat === kat
+            const isOpen    = openKat === kat
+            const rincian   = rowsByKategori[kat] || []
 
             return (
               <div key={kat} className="card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  {/* Kategori label dengan Lucide icon */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Ketuk nama kategori untuk melihat rincian pengeluaran */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenKat(isOpen ? null : kat)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenKat(isOpen ? null : kat) } }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, minWidth: 0 }}
+                  >
                     <KategoriIcon kategori={kat} size={18} />
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{kat}</span>
+                    <ChevronDown
+                      size={16}
+                      aria-hidden="true"
+                      style={{ color: 'var(--text3)', transition: 'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}
+                    />
                   </div>
                   {!isAll && (
                     <button
@@ -209,6 +238,36 @@ export default function BudgetPage() {
                       </span>
                     </div>
                   </>
+                )}
+
+                {/* Rincian pengeluaran kategori ini pada periode terpilih */}
+                {isOpen && (
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+                      {rincian.length} transaksi
+                    </div>
+                    {rincian.length === 0 ? (
+                      <div style={{ fontSize: 12, color: 'var(--text3)' }}>Belum ada pengeluaran di periode ini</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
+                        {rincian.map(r => (
+                          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700 }}>{r.toko || 'Pengeluaran'}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                                {fmtTanggalShort(r.tanggal)}
+                                {r.uraian ? ` · ${r.uraian}` : ''}
+                                {r.transaksi ? ` · ${r.transaksi}` : ''}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>
+                              {fmtFull(r.nilai)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )
