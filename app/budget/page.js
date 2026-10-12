@@ -3,42 +3,59 @@ import { useState, useMemo } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
-import { fmt, KATEGORI_LIST, BULAN_ORDER } from '../../lib/utils'
+import { fmt, KATEGORI_LIST, BULAN_ORDER, filterByPeriod } from '../../lib/utils'
 import { upsertBudgetPlan } from '../../lib/data'
-import AppSelect from '../../components/ui/AppSelect'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 
 export default function BudgetPage() {
-  const { budgetPlans, expenses, loadData, loading, user } = useData()
+  const {
+    budgetPlans, expenses, loadData, loading, user,
+    periods, periodIdx, setPeriodIdx, payPeriodDate, overrides,
+  } = useData()
   const { showToast, ToastContainer } = useToast()
 
-  const now = new Date()
-  const [selBulan, setSelBulan] = useState(BULAN_ORDER[now.getMonth()])
-  const [selTahun, setSelTahun] = useState(now.getFullYear())
   const [editKat, setEditKat]   = useState(null)
   const [editVal, setEditVal]   = useState('')
   const [saving, setSaving]     = useState(false)
 
-  const tahunList = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
+  // periodIdx === '' → chip "Semua" (sama seperti halaman Transaksi & Dashboard)
+  const isAll     = periodIdx === ''
+  const activeIdx = isAll ? null : parseInt(periodIdx)
+  const period    = isAll ? null : (periods[activeIdx] || periods[0])
+
+  // Tabel budget_plans menyimpan bulan + tahun, jadi periode dipetakan ke bulan
+  // di tanggal AKHIR periode (mis. 24 Sep – 23 Okt → "Oktober"), karena mayoritas
+  // harinya jatuh di bulan tersebut.
+  const selBulan = period ? BULAN_ORDER[period.end.getMonth()] : null
+  const selTahun = period ? period.end.getFullYear() : null
 
   const budgetMap = useMemo(() => {
     const m = {}
-    budgetPlans.filter(p => p.bulan === selBulan && p.tahun === selTahun)
-      .forEach(p => { m[p.kategori] = p })
+    if (isAll) {
+      // Mode "Semua": jumlahkan alokasi seluruh periode per kategori
+      budgetPlans.forEach(p => {
+        m[p.kategori] = { ...p, alokasi: (m[p.kategori]?.alokasi || 0) + (p.alokasi || 0) }
+      })
+    } else {
+      budgetPlans.filter(p => p.bulan === selBulan && p.tahun === selTahun)
+        .forEach(p => { m[p.kategori] = p })
+    }
     return m
-  }, [budgetPlans, selBulan, selTahun])
+  }, [budgetPlans, isAll, selBulan, selTahun])
 
+  // Realisasi dihitung berdasarkan rentang tanggal periode (sama seperti halaman lain)
   const realisasiMap = useMemo(() => {
     const m = {}
-    expenses.filter(r => r.bulan === selBulan && new Date(r.tanggal).getFullYear() === selTahun)
-      .forEach(r => { m[r.kategori] = (m[r.kategori] || 0) + (r.nilai || 0) })
+    const rows = isAll ? expenses : filterByPeriod(expenses, activeIdx, payPeriodDate, overrides)
+    rows.forEach(r => { m[r.kategori] = (m[r.kategori] || 0) + (r.nilai || 0) })
     return m
-  }, [expenses, selBulan, selTahun])
+  }, [expenses, isAll, activeIdx, payPeriodDate, overrides])
 
   const totalAlokasi   = Object.values(budgetMap).reduce((s, p) => s + (p.alokasi || 0), 0)
   const totalRealisasi = Object.values(realisasiMap).reduce((s, v) => s + v, 0)
 
   async function handleSave(kategori) {
+    if (isAll) return
     const alokasi = parseFloat(editVal)
     if (isNaN(alokasi) || alokasi < 0) { showToast('❌ Nilai tidak valid', 'error'); return }
     setSaving(true)
@@ -61,21 +78,30 @@ export default function BudgetPage() {
       <AppHeader title="Budget Plan" onRefresh={loadData} loading={loading} />
       <div className="page-container">
 
-        {/* Selector Bulan & Tahun */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <AppSelect
-            value={selBulan}
-            onChange={e => setSelBulan(e.target.value)}
-            options={BULAN_ORDER}
-            style={{ flex: 2 }}
-          />
-          <AppSelect
-            value={String(selTahun)}
-            onChange={e => setSelTahun(parseInt(e.target.value))}
-            options={tahunList.map(y => ({ value: String(y), label: String(y) }))}
-            style={{ flex: 1 }}
-          />
+        {/* ── Period Filter (sama seperti halaman Transaksi) ── */}
+        <div className="filter-bar" style={{ marginBottom: 12 }}>
+          <div
+            className={`filter-chip${isAll ? ' active' : ''}`}
+            onClick={() => { setPeriodIdx(''); setEditKat(null) }}
+          >
+            Semua
+          </div>
+          {periods.map((p, i) => (
+            <div
+              key={i}
+              className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`}
+              onClick={() => { setPeriodIdx(String(i)); setEditKat(null) }}
+            >
+              {p.label}
+            </div>
+          ))}
         </div>
+
+        {isAll && (
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>
+            Menampilkan total semua periode. Pilih satu periode untuk mengatur budget.
+          </div>
+        )}
 
         {/* Summary */}
         <div className="card" style={{ marginBottom: 16 }}>
@@ -128,15 +154,17 @@ export default function BudgetPage() {
                     <KategoriIcon kategori={kat} size={18} />
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{kat}</span>
                   </div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => { setEditKat(isEdit ? null : kat); setEditVal(alokasi || '') }}
-                  >
-                    {isEdit ? 'Batal' : alokasi > 0 ? 'Edit' : '+ Set'}
-                  </button>
+                  {!isAll && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => { setEditKat(isEdit ? null : kat); setEditVal(alokasi || '') }}
+                    >
+                      {isEdit ? 'Batal' : alokasi > 0 ? 'Edit' : '+ Set'}
+                    </button>
+                  )}
                 </div>
 
-                {isEdit && (
+                {isEdit && !isAll && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
                       className="form-input"
