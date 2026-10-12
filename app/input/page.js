@@ -5,6 +5,7 @@ import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { BULAN_ORDER } from '../../lib/utils'
+import { normalizeKategori } from '../../lib/kategori'
 import { parseRupiahToInt } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
 import { SavedToast } from '../../components/input/BottomSheet'
@@ -53,7 +54,13 @@ export default function InputPage() {
   const ai = useAIExtract({
     user, profiles, today,
     onModeChange: handleModeChange,
-    onResult: (result) => { setParsedResult(result); setShowConfirm(true) },
+    // Kategori hasil AI disamakan dengan kategori Budget Plan sebelum ditampilkan
+    onResult: (result) => {
+      setParsedResult((result?.tipe || 'expense') === 'expense'
+        ? { ...result, kategori: normalizeKategori(result.kategori) }
+        : result)
+      setShowConfirm(true)
+    },
     onTransferResult: (result) => { setParsedResult(result); setShowTransferConfirm(true) },
   })
 
@@ -65,7 +72,7 @@ export default function InputPage() {
     try {
       const bulan = getBulan(parsedResult.tanggal); const nilai = parseFloat(parsedResult.total); const t = parsedResult.tipe || 'expense'
       if (t === 'expense') {
-        const { error: err } = await supabase.from('expenses').insert([{ toko: parsedResult.toko, tanggal: parsedResult.tanggal, bulan, transaksi: parsedResult.metode || 'Cash', uraian: parsedResult.uraian, kategori: parsedResult.kategori || 'Lainnya', bank: parsedResult.bank || 'Cash', nilai, user_id: parsedResult.user_id }])
+        const { error: err } = await supabase.from('expenses').insert([{ toko: parsedResult.toko, tanggal: parsedResult.tanggal, bulan, transaksi: parsedResult.metode || 'Cash', uraian: parsedResult.uraian, kategori: normalizeKategori(parsedResult.kategori), bank: parsedResult.bank || 'Cash', nilai, user_id: parsedResult.user_id }])
         if (err) throw err
       } else if (t === 'income') {
         const { error: err } = await supabase.from('income').insert([{ sumber: parsedResult.toko, tanggal: parsedResult.tanggal, bulan, jumlah: nilai, metode: parsedResult.metode || 'Cash', items: parsedResult.uraian, bank: parsedResult.bank || 'Cash', kategori: 'Pemasukan', user_id: parsedResult.user_id }])
@@ -114,7 +121,7 @@ export default function InputPage() {
     try {
       const bulan = getBulan(form.tanggal); const nilai = parseFloat(form.total)
       if (tipe === 'expense') {
-        const { error: err } = await supabase.from('expenses').insert([{ toko: form.toko, tanggal: form.tanggal, bulan, transaksi: form.metode, uraian: form.uraian, kategori: form.kategori || 'Lainnya', bank: form.bank, nilai, user_id: form.user_id }])
+        const { error: err } = await supabase.from('expenses').insert([{ toko: form.toko, tanggal: form.tanggal, bulan, transaksi: form.metode, uraian: form.uraian, kategori: normalizeKategori(form.kategori), bank: form.bank, nilai, user_id: form.user_id }])
         if (err) throw err
       } else if (tipe === 'income') {
         const { error: err } = await supabase.from('income').insert([{ sumber: form.toko, tanggal: form.tanggal, bulan, jumlah: nilai, metode: form.metode, items: form.uraian, bank: form.bank, kategori: 'Pemasukan', user_id: form.user_id }])

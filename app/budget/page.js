@@ -4,7 +4,8 @@ import { ChevronDown } from 'lucide-react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { useToast } from '../../hooks/useToast'
-import { fmt, fmtFull, fmtTanggalShort, KATEGORI_LIST, BULAN_ORDER, filterByPeriod } from '../../lib/utils'
+import { fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, filterByPeriod } from '../../lib/utils'
+import { normalizeKategori, KATEGORI_EXPENSE } from '../../lib/kategori'
 import { upsertBudgetPlan } from '../../lib/data'
 import KategoriIcon from '../../components/ui/KategoriIcon'
 
@@ -31,17 +32,15 @@ export default function BudgetPage() {
   const selBulan = period ? BULAN_ORDER[period.end.getMonth()] : null
   const selTahun = period ? period.end.getFullYear() : null
 
+  // Kategori budget = patokan. Nama kategori yang tidak dikenal digabung ke "Lainnya"
+  // supaya total di atas selalu sama dengan jumlah semua kartu kategori.
   const budgetMap = useMemo(() => {
     const m = {}
-    if (isAll) {
-      // Mode "Semua": jumlahkan alokasi seluruh periode per kategori
-      budgetPlans.forEach(p => {
-        m[p.kategori] = { ...p, alokasi: (m[p.kategori]?.alokasi || 0) + (p.alokasi || 0) }
-      })
-    } else {
-      budgetPlans.filter(p => p.bulan === selBulan && p.tahun === selTahun)
-        .forEach(p => { m[p.kategori] = p })
-    }
+    const rows = isAll ? budgetPlans : budgetPlans.filter(p => p.bulan === selBulan && p.tahun === selTahun)
+    rows.forEach(p => {
+      const k = normalizeKategori(p.kategori)
+      m[k] = { ...p, kategori: k, alokasi: (m[k]?.alokasi || 0) + (p.alokasi || 0) }
+    })
     return m
   }, [budgetPlans, isAll, selBulan, selTahun])
 
@@ -49,7 +48,7 @@ export default function BudgetPage() {
   const rowsByKategori = useMemo(() => {
     const rows = isAll ? expenses : filterByPeriod(expenses, activeIdx, payPeriodDate, overrides)
     const g = {}
-    rows.forEach(r => { (g[r.kategori] = g[r.kategori] || []).push(r) })
+    rows.forEach(r => { const k = normalizeKategori(r.kategori); (g[k] = g[k] || []).push(r) })
     Object.values(g).forEach(list => list.sort((a, b) => {
       const dc = (b.tanggal || '').localeCompare(a.tanggal || '')
       return dc !== 0 ? dc : (b.created_at || '').localeCompare(a.created_at || '')
@@ -86,7 +85,7 @@ export default function BudgetPage() {
     }
   }
 
-  const katList = KATEGORI_LIST.filter(k => k !== 'Pemasukan')
+  const katList = KATEGORI_EXPENSE
 
   return (
     <>
