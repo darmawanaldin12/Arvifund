@@ -21,8 +21,12 @@ function getSupabaseAdmin() {
 export async function GET(request) {
   // Proteksi endpoint: Vercel otomatis mengirim header ini kalau env var
   // CRON_SECRET diset, jadi endpoint ini tidak bisa dipicu sembarang orang.
+  // PENTING: kalau CRON_SECRET belum diset, TOLAK semua request. Sebelumnya perbandingan
+  // `Bearer ${undefined}` akan cocok dengan header "Bearer undefined" sehingga endpoint
+  // (yang memakai service role key) bisa dipicu siapa saja.
+  const cronSecret = process.env.CRON_SECRET
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
