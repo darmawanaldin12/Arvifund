@@ -4,7 +4,7 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
-import { fmt, BULAN_ORDER, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate, filterByPeriod, getCurrentPeriodIndex } from '../../lib/utils'
+import { fmt, BULAN_ORDER, getMoMInfo, parseTanggal, getLocalDate, filterByPeriod, getCurrentPeriodIndex } from '../../lib/utils'
 import { buildBudgetVsReal } from '../../lib/kategori'
 import { periodDays, sumInPeriod, budgetOfPeriod } from '../../lib/scorecard-period'
 import { cn } from '../../lib/utils-cn'
@@ -14,10 +14,11 @@ import DashboardLoadingState from '../../components/dashboard/DashboardLoadingSt
 import ExportPDFButton from '../../components/dashboard/ExportPDFButton'
 import { AnimatedAmount } from '../../hooks/useCountUp'
 import {
-  ScorecardCard, WeeklySummaryCard, UserSpendingCard,
+  WeeklySummaryCard, UserSpendingCard,
   Top5KategoriCard, BudgetCard,
   AnomaliCard, RecentTransactionsCard,
 } from '../../components/dashboard/DashboardCards'
+import { ScorecardCard } from '../../components/dashboard/ScorecardPeriodCard'
 
 export default function DashboardPage() {
   const {
@@ -30,7 +31,7 @@ export default function DashboardPage() {
   const sA = summaryAll
   const now = getLocalDate()
 
-  // Periode acuan untuk kartu Periode Ini / Rata-rata Harian / Proyeksi:
+  // Periode acuan untuk kartu Periode Ini / Rata-rata Harian / Proyeksi / MoM / carousel:
   // periode yang dipilih, atau periode berjalan kalau chip "Semua" aktif.
   const refIdx      = periodIdx !== '' ? parseInt(periodIdx) : getCurrentPeriodIndex(payPeriodDate, overrides)
   const refPeriod   = periods[refIdx] || periods[0]
@@ -47,11 +48,15 @@ export default function DashboardPage() {
   const budgetPeriode  = buildBudgetVsReal({ budgetPlans, expenses: filteredExpenses, period: selectedPeriod })
   const sisaBudget      = budgetPeriode.totalAlokasi - budgetPeriode.totalRealisasi
 
-  const bulanAda     = BULAN_ORDER.filter(b => s.byBulan[b] || s.incomeByBulan[b])
-  const bulanIniMom  = bulanAda[bulanAda.length - 1]
-  const bulanLaluMom = bulanAda[bulanAda.length - 2]
-  const momIncome    = getMoMInfo(s.incomeByBulan[bulanIniMom] || 0, s.incomeByBulan[bulanLaluMom] || 0, 'income')
-  const momExpense   = getMoMInfo(s.byBulan[bulanIniMom] || 0, s.byBulan[bulanLaluMom] || 0, 'expense')
+  // Perbandingan dengan periode gajian sebelumnya (bukan bulan kalender)
+  const prevPeriod   = periods[refIdx + 1] || null
+  const bulanLaluMom = prevPeriod ? BULAN_ORDER[prevPeriod.end.getMonth()] : ''
+  const momIncome    = prevPeriod && refPeriod
+    ? getMoMInfo(sumInPeriod(income, refPeriod, 'jumlah'), sumInPeriod(income, prevPeriod, 'jumlah'), 'income')
+    : null
+  const momExpense   = prevPeriod && refPeriod
+    ? getMoMInfo(expPeriode, sumInPeriod(expenses, prevPeriod), 'expense')
+    : null
   const saldoTahun   = (sA.totalIncome || 0) - (sA.totalExpenses || 0)
 
   const top5     = Object.entries(s.byKategori).sort((a,b) => b[1]-a[1]).slice(0,5)
@@ -135,7 +140,10 @@ export default function DashboardPage() {
           <BudgetCard budgetVsReal={budgetPeriode.items} />
           <AnomaliCard anomali={anomali} />
           <div className="bento-12">
-            <ChartCarousel expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode} />
+            <ChartCarousel
+              expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode}
+              periods={periods} refPeriod={refPeriod} refExpenses={refExpenses}
+            />
           </div>
           <RecentTransactionsCard
             expenses={expenses}

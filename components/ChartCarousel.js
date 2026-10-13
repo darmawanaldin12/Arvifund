@@ -1,8 +1,9 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, TrendingUp, Landmark, PieChart, Target, CalendarDays, CreditCard } from 'lucide-react'
-import { C, DONUT_COLORS, ChartIncExp, ChartSaldo, ChartKategori, ChartBudget, ChartDow, ChartMetode } from './CarouselCharts'
-import { buildIncExpData, buildSaldoData, buildPieData, buildBudgetData, buildDowData, buildMetodeData } from '../lib/carousel-data'
+import { DONUT_COLORS, ChartIncExp, ChartSaldo, ChartKategori, ChartBudget, ChartDow, ChartMetode } from './CarouselCharts'
+import { buildPieData, buildDowData } from '../lib/carousel-data'
+import { buildIncExpPeriode, buildSaldoPeriode, buildMetodePeriode, buildBudgetPeriode } from '../lib/carousel-period'
 
 const CHART_ICONS = {
   trending_up:     TrendingUp,
@@ -25,7 +26,8 @@ function useSwipe(onLeft, onRight) {
   return { onTouchStart, onTouchEnd }
 }
 
-export default function ChartCarousel({ expenses, income, budgetPlans, summaryPeriode }) {
+// periods/refPeriod/refExpenses: periode gajian (refPeriod = periode terpilih, atau periode berjalan bila "Semua")
+export default function ChartCarousel({ expenses, income, budgetPlans, summaryPeriode, periods = [], refPeriod = null, refExpenses = [] }) {
   const [idx, setIdx]         = useState(0)
   const [animDir, setAnimDir] = useState(null)
 
@@ -39,20 +41,20 @@ export default function ChartCarousel({ expenses, income, budgetPlans, summaryPe
 
   const swipe = useSwipe(() => go('left'), () => go('right'))
 
-  const { data12, incMap, expMap } = buildIncExpData(expenses, income)
-  const dataSaldo  = buildSaldoData(incMap, expMap)
-  const pieData    = buildPieData(summaryPeriode, DONUT_COLORS)
-  const { bulanNow, data: dataBudget } = buildBudgetData(expenses, budgetPlans)
-  const dataDow    = buildDowData(expenses)
-  const dataMetode = buildMetodeData(expenses)
+  const data12      = buildIncExpPeriode(expenses, income, periods)
+  const dataSaldo   = buildSaldoPeriode(data12)
+  const pieData     = buildPieData(summaryPeriode, DONUT_COLORS)
+  const dataBudget  = refPeriod ? buildBudgetPeriode(budgetPlans, refExpenses, refPeriod) : []
+  const dataDow     = buildDowData(expenses)
+  const dataMetode  = buildMetodePeriode(expenses, periods)
 
   const charts = [
-    { title: 'Income vs Pengeluaran', subtitle: '12 bulan terakhir',              icon: 'trending_up',    render: () => <ChartIncExp  data={data12} /> },
-    { title: 'Saldo Kumulatif',       subtitle: '12 bulan terakhir',              icon: 'account_balance',render: () => <ChartSaldo   data={dataSaldo} /> },
+    { title: 'Income vs Pengeluaran', subtitle: 'Periode gajian terakhir',        icon: 'trending_up',    render: () => <ChartIncExp  data={data12} /> },
+    { title: 'Saldo Kumulatif',       subtitle: 'Periode gajian terakhir',        icon: 'account_balance',render: () => <ChartSaldo   data={dataSaldo} /> },
     { title: 'Top Kategori',          subtitle: 'Periode aktif',                  icon: 'donut_large',    render: () => <ChartKategori pieData={pieData} /> },
-    { title: 'Budget vs Realisasi',   subtitle: `Bulan ${bulanNow}`,             icon: 'pie_chart',      render: () => <ChartBudget  data={dataBudget} /> },
+    { title: 'Budget vs Realisasi',   subtitle: refPeriod ? `Periode ${refPeriod.label}` : 'Periode berjalan', icon: 'pie_chart', render: () => <ChartBudget  data={dataBudget} /> },
     { title: 'Hari Paling Boros',     subtitle: 'Rata-rata pengeluaran per hari', icon: 'calendar_today', render: () => <ChartDow     data={dataDow} /> },
-    { title: 'Metode Pembayaran',     subtitle: '6 bulan terakhir',               icon: 'payments',       render: () => <ChartMetode  data={dataMetode} /> },
+    { title: 'Metode Pembayaran',     subtitle: '6 periode terakhir',             icon: 'payments',       render: () => <ChartMetode  data={dataMetode} /> },
   ]
 
   const current = charts[idx]
