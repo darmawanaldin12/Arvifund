@@ -19,6 +19,7 @@ export default function BudgetPage() {
   const [editKat, setEditKat]   = useState(null)
   const [editVal, setEditVal]   = useState('')
   const [saving, setSaving]     = useState(false)
+  const [copying, setCopying]   = useState(false)
   const [openKat, setOpenKat]   = useState(null) // kategori yang rincian pengeluarannya sedang dibuka
 
   // periodIdx === '' → chip "Semua" (sama seperti halaman Transaksi & Dashboard)
@@ -68,6 +69,39 @@ export default function BudgetPage() {
   const totalAlokasi   = Object.values(budgetMap).reduce((s, p) => s + (p.alokasi || 0), 0)
   const totalRealisasi = Object.values(realisasiMap).reduce((s, v) => s + v, 0)
 
+  // ── Salin budget dari periode sebelumnya (hanya kategori yang BELUM diset di periode ini) ──
+  const prevPeriod     = !isAll ? (periods[activeIdx + 1] || null) : null
+  const prevBulanLabel = prevPeriod ? BULAN_ORDER[prevPeriod.end.getMonth()] : ''
+  const copyable = useMemo(() => {
+    if (!prevPeriod) return []
+    const pb = BULAN_ORDER[prevPeriod.end.getMonth()]
+    const pt = prevPeriod.end.getFullYear()
+    const m = {}
+    budgetPlans.filter(p => p.bulan === pb && p.tahun === pt).forEach(p => {
+      const k = normalizeKategori(p.kategori)
+      m[k] = (m[k] || 0) + (p.alokasi || 0)
+    })
+    return KATEGORI_EXPENSE
+      .filter(k => (m[k] || 0) > 0 && !((budgetMap[k]?.alokasi || 0) > 0))
+      .map(k => ({ kategori: k, alokasi: m[k] }))
+  }, [prevPeriod, budgetPlans, budgetMap])
+
+  async function handleCopy() {
+    if (isAll || copyable.length === 0) return
+    setCopying(true)
+    try {
+      for (const c of copyable) {
+        await upsertBudgetPlan({ kategori: c.kategori, bulan: selBulan, tahun: selTahun, alokasi: c.alokasi, user_id: user?.id }, user?.id)
+      }
+      showToast(`✅ ${copyable.length} budget disalin dari ${prevBulanLabel}`)
+    } catch (err) {
+      showToast('❌ Gagal menyalin: ' + err.message, 'error')
+    } finally {
+      await loadData()
+      setCopying(false)
+    }
+  }
+
   async function handleSave(kategori) {
     if (isAll) return
     const alokasi = parseFloat(editVal)
@@ -114,6 +148,19 @@ export default function BudgetPage() {
         {isAll && (
           <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>
             Menampilkan total semua periode. Pilih satu periode untuk mengatur budget.
+          </div>
+        )}
+
+        {/* Salin budget dari periode sebelumnya */}
+        {!isAll && copyable.length > 0 && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Salin budget dari {prevBulanLabel}?</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, lineHeight: 1.5 }}>
+              {copyable.length} kategori belum diset di periode ini: {copyable.map(c => `${c.kategori} ${fmt(c.alokasi)}`).join(', ')}. Kategori yang sudah diset tidak diubah.
+            </div>
+            <button className="btn btn-primary" style={{ marginTop: 10, width: '100%' }} onClick={handleCopy} disabled={copying}>
+              {copying ? 'Menyalin...' : 'Salin ke periode ini'}
+            </button>
           </div>
         )}
 
