@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
-import { ChartBulanIni, ChartRataHarian, ChartProyeksi, RED, ACCENT, YELLOW, GREEN } from './ScorecardCharts'
+import { RED, ACCENT, YELLOW, GREEN } from './ScorecardCharts'
+import { ChartPeriodeIni, ChartRataHarianPeriode, ChartProyeksiPeriode } from './ScorecardPeriodCharts'
 import { ChartSisaBudgetPeriode } from './ScorecardSisaBudget'
 
 function useMount(open) {
@@ -13,13 +14,17 @@ function useMount(open) {
 }
 
 const CONFIGS = {
-  bulanIni:   { title: 'Pengeluaran Bulan Ini',   subtitle: 'Per hari — tabel expenses',                icon: 'calendar_today',  color: RED    },
-  rataHarian: { title: 'Rata-rata Harian',         subtitle: '12 bulan terakhir — tabel expenses',     icon: 'query_stats',     color: YELLOW },
-  proyeksi:   { title: 'Proyeksi Akhir Bulan',     subtitle: '6 bulan: actual vs proyeksi vs budget',   icon: 'insights',        color: ACCENT },
-  sisaBudget: { title: 'Sisa Budget per Kategori', subtitle: 'Periode terpilih: alokasi vs realisasi',  icon: 'account_balance', color: GREEN  },
+  bulanIni:   { title: 'Pengeluaran Periode Ini',   subtitle: 'Per hari — periode gajian',                 icon: 'calendar_today',  color: RED    },
+  rataHarian: { title: 'Rata-rata Harian',           subtitle: 'Periode gajian terakhir — tabel expenses', icon: 'query_stats',     color: YELLOW },
+  proyeksi:   { title: 'Proyeksi Akhir Periode',     subtitle: '6 periode: actual vs proyeksi vs budget',    icon: 'insights',        color: ACCENT },
+  sisaBudget: { title: 'Sisa Budget per Kategori',   subtitle: 'Periode terpilih: alokasi vs realisasi',     icon: 'account_balance', color: GREEN  },
 }
 
-export default function ScorecardChartModal({ open, onClose, type, filteredExpenses = [], expenses = [], budgetPlans = [], budgetPeriode = null }) {
+export default function ScorecardChartModal({
+  open, onClose, type,
+  expenses = [], budgetPlans = [], budgetPeriode = null,
+  periods = [], refPeriod = null, refExpenses = [],
+}) {
   const mounted    = useMount(open)
   const overlayRef = useRef(null)
 
@@ -41,9 +46,9 @@ export default function ScorecardChartModal({ open, onClose, type, filteredExpen
   const isVisible = open && mounted
 
   const renderChart = () => {
-    if (type === 'bulanIni')   return <ChartBulanIni   filteredExpenses={filteredExpenses} />
-    if (type === 'rataHarian') return <ChartRataHarian expenses={expenses} />
-    if (type === 'proyeksi')   return <ChartProyeksi   expenses={expenses} budgetPlans={budgetPlans} />
+    if (type === 'bulanIni')   return <ChartPeriodeIni expenses={refExpenses} period={refPeriod} />
+    if (type === 'rataHarian') return <ChartRataHarianPeriode expenses={expenses} periods={periods} />
+    if (type === 'proyeksi')   return <ChartProyeksiPeriode expenses={expenses} budgetPlans={budgetPlans} periods={periods} />
     if (type === 'sisaBudget') return <ChartSisaBudgetPeriode budgetPeriode={budgetPeriode} />
     return null
   }

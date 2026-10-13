@@ -4,8 +4,9 @@ import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
-import { fmt, BULAN_ORDER, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
+import { fmt, BULAN_ORDER, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate, filterByPeriod, getCurrentPeriodIndex } from '../../lib/utils'
 import { buildBudgetVsReal } from '../../lib/kategori'
+import { periodDays, sumInPeriod, budgetOfPeriod } from '../../lib/scorecard-period'
 import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, BarChart2, Landmark, CalendarDays, Lightbulb } from 'lucide-react'
@@ -22,22 +23,23 @@ export default function DashboardPage() {
   const {
     summaryPeriode, summaryAll, loading, loadData, periodIdx, setPeriodIdx,
     periods, filteredExpenses, budgetPlans, getUserName,
-    expenses, income, cashRecords, transfers,
+    expenses, income, cashRecords, transfers, payPeriodDate, overrides,
   } = useData()
 
   const s  = summaryPeriode
   const sA = summaryAll
   const now = getLocalDate()
-  const bulanNama = BULAN_ORDER[now.getMonth()]
 
-  const expBulanIni = s.byBulan[bulanNama] || 0
-  const hariIni     = now.getDate()
-  const totalHari   = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const rataHarian  = hariIni > 0 ? Math.round(expBulanIni / hariIni) : 0
+  // Periode acuan untuk kartu Periode Ini / Rata-rata Harian / Proyeksi:
+  // periode yang dipilih, atau periode berjalan kalau chip "Semua" aktif.
+  const refIdx      = periodIdx !== '' ? parseInt(periodIdx) : getCurrentPeriodIndex(payPeriodDate, overrides)
+  const refPeriod   = periods[refIdx] || periods[0]
+  const refExpenses = refPeriod ? filterByPeriod(expenses, refIdx, payPeriodDate, overrides) : []
+  const expPeriode  = refPeriod ? sumInPeriod(refExpenses, refPeriod) : 0
+  const { total: totalHari, elapsed: hariBerjalan } = refPeriod ? periodDays(refPeriod) : { total: 0, elapsed: 0 }
+  const rataHarian  = hariBerjalan > 0 ? Math.round(expPeriode / hariBerjalan) : 0
   const proyeksi    = rataHarian * totalHari
-  const budgetBulan = (budgetPlans || [])
-    .filter(p => p.bulan === bulanNama && p.tahun === now.getFullYear())
-    .reduce((sum, p) => sum + (p.alokasi || 0), 0)
+  const budgetRef   = refPeriod ? budgetOfPeriod(budgetPlans, refPeriod) : 0
 
   // Budget vs Realisasi mengikuti halaman Budget Plan: budget periode terpilih
   // (bulan di tanggal akhir periode), satu baris per kategori. periodIdx '' = Semua.
@@ -68,9 +70,9 @@ export default function DashboardPage() {
   }))
 
   const scorecardItems = [
-    { label: 'Bulan Ini',        rawValue: expBulanIni, value: fmt(expBulanIni), cls: 'red',    Icon: CalendarDays, modalType: 'bulanIni' },
-    { label: 'Rata-rata Harian', rawValue: rataHarian,  value: fmt(rataHarian),  cls: 'yellow', Icon: BarChart2,    modalType: 'rataHarian' },
-    { label: 'Proyeksi Akhir',   rawValue: proyeksi,    value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
+    { label: 'Periode Ini',      rawValue: expPeriode, value: fmt(expPeriode), cls: 'red',    Icon: CalendarDays, modalType: 'bulanIni' },
+    { label: 'Rata-rata Harian', rawValue: rataHarian, value: fmt(rataHarian), cls: 'yellow', Icon: BarChart2,    modalType: 'rataHarian' },
+    { label: 'Proyeksi Akhir',   rawValue: proyeksi,   value: fmt(proyeksi),   cls: proyeksi > budgetRef && budgetRef > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
     {
       label: 'Sisa Budget',
       rawValue: budgetPeriode.totalAlokasi > 0 ? Math.abs(sisaBudget) : undefined,
@@ -146,9 +148,10 @@ export default function DashboardPage() {
       </div>
       <ScorecardChartModal
         open={modalType !== null} onClose={() => setModalType(null)}
-        type={modalType} filteredExpenses={filteredExpenses}
+        type={modalType}
         expenses={expenses} budgetPlans={budgetPlans}
         budgetPeriode={budgetPeriode}
+        periods={periods} refPeriod={refPeriod} refExpenses={refExpenses}
       />
     </>
   )
