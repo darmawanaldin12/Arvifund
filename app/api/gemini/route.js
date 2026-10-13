@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 // Urutan model: coba yang paling capable dulu, fallback ke yang lebih ringan
 // gemini-2.5-flash-lite = gratis, limit lebih longgar, cocok sebagai last resort
@@ -6,6 +7,9 @@ const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite']
 
 // Timeout per request ke Gemini (30 detik)
 const GEMINI_TIMEOUT_MS = 30_000
+
+// Batas ukuran body request (struk yang sudah dikompres ~1MB, jadi 6MB sudah sangat longgar)
+const MAX_BODY_BYTES = 6_000_000
 
 function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController()
@@ -24,8 +28,37 @@ function shuffleArray(arr) {
   return a
 }
 
+// Pastikan pemanggil adalah user Arvifund yang sedang login (token sesi Supabase dikirim
+// client lewat header Authorization: Bearer <access_token>). Tanpa ini, siapa pun di internet
+// bisa memakai kuota Gemini milik kita lewat endpoint ini.
+async function getAuthUser(request) {
+  const header = request.headers.get('authorization') || ''
+  const token  = header.startsWith('Bearer ') ? header.slice(7).trim() : ''
+  if (!token) return null
+  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !anon) return null
+  try {
+    const sb = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
+    const { data, error } = await sb.auth.getUser(token)
+    return error ? null : (data?.user || null)
+  } catch {
+    return null
+  }
+}
+
 export async function POST(request) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized — silakan login ulang' }, { status: 401 })
+    }
+
+    const contentLength = Number(request.headers.get('content-length') || 0)
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Ukuran request terlalu besar' }, { status: 413 })
+    }
+
     const body = await request.json()
     const { model, contents, generationConfig, systemInstruction } = body
 
@@ -69,11 +102,12 @@ export async function POST(request) {
             requestBody.systemInstruction = systemInstruction
           }
 
+          // API key dikirim lewat header (bukan query string) supaya tidak tercatat di log URL
           const res = await fetchWithTimeout(
-            `https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${key}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
               body: JSON.stringify(requestBody),
             },
             GEMINI_TIMEOUT_MS

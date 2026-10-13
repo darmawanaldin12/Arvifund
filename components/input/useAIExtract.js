@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { buildSystemPrompt } from '../../lib/ai-prompt'
 import { parseRupiahToInt } from '../../hooks/useAmountInput'
+import { getAuthHeaders } from '../../lib/supabase'
 
 function isIOS() {
   if (typeof window === 'undefined') return false
@@ -127,8 +128,10 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
         ? [{ inlineData: { mimeType: activeFile.type, data: await fileToBase64(activeFile) } }, { text: `${systemInstruction}\n\nEkstrak dari struk. Catatan: "${activeText}"` }]
         : [{ text: `${systemInstruction}\n\nKalimat: "${activeText}"` }]
 
+      // /api/gemini hanya melayani user yang login → sertakan token sesi Supabase
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/gemini', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }),
       })
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `Server error ${res.status}`) }
