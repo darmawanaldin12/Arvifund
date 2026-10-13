@@ -19,6 +19,8 @@ import {
   AnomaliCard, RecentTransactionsCard,
 } from '../../components/dashboard/DashboardCards'
 import { ScorecardCard } from '../../components/dashboard/ScorecardPeriodCard'
+import { BudgetAlertCard } from '../../components/dashboard/BudgetAlertCard'
+import { RecurringDueCard } from '../../components/dashboard/RecurringDueCard'
 
 export default function DashboardPage() {
   const {
@@ -31,7 +33,7 @@ export default function DashboardPage() {
   const sA = summaryAll
   const now = getLocalDate()
 
-  // Periode acuan untuk kartu Periode Ini / Rata-rata Harian / Proyeksi / MoM / carousel:
+  // Periode acuan untuk kartu Periode Ini / Rata-rata Harian / Proyeksi / MoM / carousel / peringatan:
   // periode yang dipilih, atau periode berjalan kalau chip "Semua" aktif.
   const refIdx      = periodIdx !== '' ? parseInt(periodIdx) : getCurrentPeriodIndex(payPeriodDate, overrides)
   const refPeriod   = periods[refIdx] || periods[0]
@@ -47,6 +49,13 @@ export default function DashboardPage() {
   const selectedPeriod = periodIdx !== '' ? periods[parseInt(periodIdx)] || null : null
   const budgetPeriode  = buildBudgetVsReal({ budgetPlans, expenses: filteredExpenses, period: selectedPeriod })
   const sisaBudget      = budgetPeriode.totalAlokasi - budgetPeriode.totalRealisasi
+
+  // Peringatan: kategori yang sudah ≥ 80% budget pada periode acuan (paling parah di atas)
+  const budgetAlerts = refPeriod
+    ? buildBudgetVsReal({ budgetPlans, expenses: refExpenses, period: refPeriod }).items
+        .filter(b => b.pct >= 80)
+        .sort((a, b) => b.pct - a.pct)
+    : []
 
   // Perbandingan dengan periode gajian sebelumnya (bukan bulan kalender)
   const prevPeriod   = periods[refIdx + 1] || null
@@ -133,6 +142,8 @@ export default function DashboardPage() {
           ))}
         </div>
         <div className="bento-grid">
+          <BudgetAlertCard items={budgetAlerts} periodLabel={refPeriod?.label} />
+          <RecurringDueCard />
           <ScorecardCard items={scorecardItems} onItemClick={setModalType} />
           <WeeklySummaryCard weekStart={weekStart} weekEnd={weekEnd} weeklyTotal={weeklyTotal} filteredExpenses={filteredExpenses} now={now} />
           <UserSpendingCard userSplit={userSplit} />
