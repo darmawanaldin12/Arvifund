@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
-import { ChartBulanIni, ChartRataHarian, ChartProyeksi, ChartSisaBudget, RED, ACCENT, YELLOW, GREEN } from './ScorecardCharts'
+import { ChartBulanIni, ChartRataHarian, ChartProyeksi, RED, ACCENT, YELLOW, GREEN } from './ScorecardCharts'
+import { ChartSisaBudgetPeriode } from './ScorecardSisaBudget'
 
 function useMount(open) {
   const [mounted, setMounted] = useState(false)
@@ -15,10 +16,10 @@ const CONFIGS = {
   bulanIni:   { title: 'Pengeluaran Bulan Ini',   subtitle: 'Per hari — tabel expenses',                icon: 'calendar_today',  color: RED    },
   rataHarian: { title: 'Rata-rata Harian',         subtitle: '12 bulan terakhir — tabel expenses',     icon: 'query_stats',     color: YELLOW },
   proyeksi:   { title: 'Proyeksi Akhir Bulan',     subtitle: '6 bulan: actual vs proyeksi vs budget',   icon: 'insights',        color: ACCENT },
-  sisaBudget: { title: 'Sisa Budget per Kategori', subtitle: 'Bulan ini: alokasi vs realisasi',         icon: 'account_balance', color: GREEN  },
+  sisaBudget: { title: 'Sisa Budget per Kategori', subtitle: 'Periode terpilih: alokasi vs realisasi',  icon: 'account_balance', color: GREEN  },
 }
 
-export default function ScorecardChartModal({ open, onClose, type, filteredExpenses = [], expenses = [], budgetPlans = [] }) {
+export default function ScorecardChartModal({ open, onClose, type, filteredExpenses = [], expenses = [], budgetPlans = [], budgetPeriode = null }) {
   const mounted    = useMount(open)
   const overlayRef = useRef(null)
 
@@ -43,7 +44,7 @@ export default function ScorecardChartModal({ open, onClose, type, filteredExpen
     if (type === 'bulanIni')   return <ChartBulanIni   filteredExpenses={filteredExpenses} />
     if (type === 'rataHarian') return <ChartRataHarian expenses={expenses} />
     if (type === 'proyeksi')   return <ChartProyeksi   expenses={expenses} budgetPlans={budgetPlans} />
-    if (type === 'sisaBudget') return <ChartSisaBudget filteredExpenses={filteredExpenses} budgetPlans={budgetPlans} />
+    if (type === 'sisaBudget') return <ChartSisaBudgetPeriode budgetPeriode={budgetPeriode} />
     return null
   }
 

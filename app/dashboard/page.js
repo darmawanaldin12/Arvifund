@@ -5,6 +5,7 @@ import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
 import ScorecardChartModal from '../../components/ScorecardChartModal'
 import { fmt, BULAN_ORDER, getMoMInfo, parseTanggal, getLocalDateStr, getLocalDate } from '../../lib/utils'
+import { buildBudgetVsReal } from '../../lib/kategori'
 import { cn } from '../../lib/utils-cn'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, BarChart2, Landmark, CalendarDays, Lightbulb } from 'lucide-react'
@@ -37,7 +38,12 @@ export default function DashboardPage() {
   const budgetBulan = (budgetPlans || [])
     .filter(p => p.bulan === bulanNama && p.tahun === now.getFullYear())
     .reduce((sum, p) => sum + (p.alokasi || 0), 0)
-  const sisaBudget  = budgetBulan - expBulanIni
+
+  // Budget vs Realisasi mengikuti halaman Budget Plan: budget periode terpilih
+  // (bulan di tanggal akhir periode), satu baris per kategori. periodIdx '' = Semua.
+  const selectedPeriod = periodIdx !== '' ? periods[parseInt(periodIdx)] || null : null
+  const budgetPeriode  = buildBudgetVsReal({ budgetPlans, expenses: filteredExpenses, period: selectedPeriod })
+  const sisaBudget      = budgetPeriode.totalAlokasi - budgetPeriode.totalRealisasi
 
   const bulanAda     = BULAN_ORDER.filter(b => s.byBulan[b] || s.incomeByBulan[b])
   const bulanIniMom  = bulanAda[bulanAda.length - 1]
@@ -67,8 +73,8 @@ export default function DashboardPage() {
     { label: 'Proyeksi Akhir',   rawValue: proyeksi,    value: fmt(proyeksi),    cls: proyeksi > budgetBulan && budgetBulan > 0 ? 'red' : '', Icon: Lightbulb, modalType: 'proyeksi' },
     {
       label: 'Sisa Budget',
-      rawValue: budgetBulan > 0 ? Math.abs(sisaBudget) : undefined,
-      value: budgetBulan > 0 ? fmt(Math.abs(sisaBudget)) : '—',
+      rawValue: budgetPeriode.totalAlokasi > 0 ? Math.abs(sisaBudget) : undefined,
+      value: budgetPeriode.totalAlokasi > 0 ? fmt(Math.abs(sisaBudget)) : '—',
       cls: sisaBudget < 0 ? 'red' : 'green',
       Icon: Landmark, modalType: 'sisaBudget',
     },
@@ -124,7 +130,7 @@ export default function DashboardPage() {
           <WeeklySummaryCard weekStart={weekStart} weekEnd={weekEnd} weeklyTotal={weeklyTotal} filteredExpenses={filteredExpenses} now={now} />
           <UserSpendingCard userSplit={userSplit} />
           <Top5KategoriCard top5={top5} totalExpenses={s.totalExpenses} />
-          <BudgetCard budgetVsReal={s.budgetVsReal} />
+          <BudgetCard budgetVsReal={budgetPeriode.items} />
           <AnomaliCard anomali={anomali} />
           <div className="bento-12">
             <ChartCarousel expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode} />
@@ -142,6 +148,7 @@ export default function DashboardPage() {
         open={modalType !== null} onClose={() => setModalType(null)}
         type={modalType} filteredExpenses={filteredExpenses}
         expenses={expenses} budgetPlans={budgetPlans}
+        budgetPeriode={budgetPeriode}
       />
     </>
   )
