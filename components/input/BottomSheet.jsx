@@ -1,10 +1,11 @@
 'use client'
 import { TrendingDown, TrendingUp, Landmark, Check, ArrowLeftRight } from 'lucide-react'
+import { fmtFull } from '../../lib/utils'
 
 // Bottom nav height — popup harus di atas ini
 const BOTTOM_NAV_H = 60
 
-// ── BottomSheet wrapper ────────────────────────────────────────────────────
+// ── BottomSheet wrapper ───────────────────────────────────────────────────────────────────────
 export default function BottomSheet({ onBackdropClick, children }) {
   return (
     <div
@@ -36,8 +37,9 @@ export default function BottomSheet({ onBackdropClick, children }) {
   )
 }
 
-// ── SavedToast ─────────────────────────────────────────────────────────────
-export function SavedToast({ show, tipe, amount }) {
+// ── SavedToast ────────────────────────────────────────────────────────────────────────────────
+// budget (opsional): { kategori, alokasi, terpakai, sisa, pct } — hanya untuk pengeluaran
+export function SavedToast({ show, tipe, amount, budget }) {
   if (!show) return null
   const label = tipe === 'income' ? 'Pemasukan'
     : tipe === 'cash'     ? 'Tarik Tunai'
@@ -51,6 +53,10 @@ export function SavedToast({ show, tipe, amount }) {
     : tipe === 'cash'     ? Landmark
     : tipe === 'transfer' ? ArrowLeftRight
     : TrendingDown
+
+  const showBudget = tipe === 'expense' && budget
+  const over = showBudget && budget.sisa < 0
+  const budgetColor = !showBudget ? color : over ? '#f43f5e' : budget.pct >= 80 ? '#f59e0b' : '#10b981'
 
   return (
     <div style={{
@@ -82,11 +88,23 @@ export function SavedToast({ show, tipe, amount }) {
               Rp {Number(amount).toLocaleString('id-ID')}
             </div>
           )}
+          {showBudget && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: budgetColor }}>
+                {over
+                  ? `Over budget ${budget.kategori}: ${fmtFull(Math.abs(budget.sisa))}`
+                  : `Sisa budget ${budget.kategori}: ${fmtFull(budget.sisa)}`}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                {budget.pct}% terpakai dari {fmtFull(budget.alokasi)}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{
           position: 'absolute', bottom: 0, left: 0, height: 3,
           borderRadius: '0 0 16px 16px', background: color, opacity: 0.5,
-          animation: 'toastProgress 2.5s linear 0.1s forwards', width: '100%',
+          animation: `toastProgress ${showBudget ? 4.7 : 2.5}s linear 0.1s forwards`, width: '100%',
         }} />
       </div>
     </div>

@@ -5,7 +5,7 @@ import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
 import { insertTransfer } from '../../lib/data'
 import { BULAN_ORDER } from '../../lib/utils'
-import { normalizeKategori } from '../../lib/kategori'
+import { normalizeKategori, getBudgetStatus } from '../../lib/kategori'
 import { parseRupiahToInt } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
 import { SavedToast } from '../../components/input/BottomSheet'
@@ -20,13 +20,13 @@ import { Sparkles, PenLine } from 'lucide-react'
 const TAB_ORDER = { ai: 0, manual: 1 }
 
 export default function InputPage() {
-  const { user, profiles, loadData } = useData()
+  const { user, profiles, loadData, expenses, budgetPlans, payPeriodDate, overrides } = useData()
   const [mode, setMode]         = useState('ai')
   const [prevMode, setPrevMode] = useState('ai')
   const [tipe, setTipe]         = useState('expense')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
-  const [toast, setToast]       = useState({ show: false, tipe: 'expense', amount: null })
+  const [toast, setToast]       = useState({ show: false, tipe: 'expense', amount: null, budget: null })
   const [showConfirm, setShowConfirm]               = useState(false)
   const [showTransferConfirm, setShowTransferConfirm] = useState(false)
   const [parsedResult, setParsedResult]             = useState(null)
@@ -45,10 +45,11 @@ export default function InputPage() {
   function handleModeChange(newMode) { setPrevMode(mode); setMode(newMode) }
   const tabDirection = TAB_ORDER[mode] > TAB_ORDER[prevMode] ? 'left' : 'right'
 
-  function showToast(tipeVal, amount) {
+  // budget (opsional) = sisa budget kategori, ditampilkan di toast setelah simpan pengeluaran
+  function showToast(tipeVal, amount, budget = null) {
     if (toastTimer.current) clearTimeout(toastTimer.current)
-    setToast({ show: true, tipe: tipeVal, amount })
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2800)
+    setToast({ show: true, tipe: tipeVal, amount, budget })
+    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), budget ? 5000 : 2800)
   }
 
   const ai = useAIExtract({
@@ -71,6 +72,10 @@ export default function InputPage() {
     setSaving(true)
     try {
       const bulan = getBulan(parsedResult.tanggal); const nilai = parseFloat(parsedResult.total); const t = parsedResult.tipe || 'expense'
+      // Hitung sisa budget SEBELUM simpan (data context belum memuat transaksi baru ini)
+      const budget = t === 'expense'
+        ? getBudgetStatus({ kategori: parsedResult.kategori, tanggal: parsedResult.tanggal, nilai, expenses, budgetPlans, payPeriodDate, overrides })
+        : null
       if (t === 'expense') {
         const { error: err } = await supabase.from('expenses').insert([{ toko: parsedResult.toko, tanggal: parsedResult.tanggal, bulan, transaksi: parsedResult.metode || 'Cash', uraian: parsedResult.uraian, kategori: normalizeKategori(parsedResult.kategori), bank: parsedResult.bank || 'Cash', nilai, user_id: parsedResult.user_id }])
         if (err) throw err
@@ -85,7 +90,7 @@ export default function InputPage() {
         if (err) throw err
       }
       await loadData(); setShowConfirm(false)
-      ai.resetAI(); ai.clearPendingShareImage(); showToast(t, nilai)
+      ai.resetAI(); ai.clearPendingShareImage(); showToast(t, nilai, budget)
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -120,6 +125,10 @@ export default function InputPage() {
     setSaving(true)
     try {
       const bulan = getBulan(form.tanggal); const nilai = parseFloat(form.total)
+      // Hitung sisa budget SEBELUM simpan (data context belum memuat transaksi baru ini)
+      const budget = tipe === 'expense'
+        ? getBudgetStatus({ kategori: form.kategori, tanggal: form.tanggal, nilai, expenses, budgetPlans, payPeriodDate, overrides })
+        : null
       if (tipe === 'expense') {
         const { error: err } = await supabase.from('expenses').insert([{ toko: form.toko, tanggal: form.tanggal, bulan, transaksi: form.metode, uraian: form.uraian, kategori: normalizeKategori(form.kategori), bank: form.bank, nilai, user_id: form.user_id }])
         if (err) throw err
@@ -134,7 +143,7 @@ export default function InputPage() {
       }
       await loadData()
       setForm({ tanggal: today, toko: '', uraian: '', total: '', kategori: '', metode: 'Cash', bank: 'BCA', user_id: user?.id || '' })
-      showToast(tipe, nilai)
+      showToast(tipe, nilai, budget)
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -188,7 +197,7 @@ export default function InputPage() {
         />
       )}
 
-      <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} />
+      <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} budget={toast.budget} />
       <AppHeader title="Input Transaksi" />
 
       <div className="page-container" style={{ maxWidth: 560 }}>
