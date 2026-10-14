@@ -1,0 +1,16 @@
+/* ── Kompatibilitas Android & iPhone ── */
+
+/* Kontrol bawaan browser (daftar pilihan <select>, scrollbar, date picker) ikut mode gelap/terang.
+   Tanpa ini, daftar pilihan <select> di Android bisa tampil putih dengan teks putih (tak terbaca). */
+:root { color-scheme: light dark; }
+
+/* iOS Safari memperbesar (zoom) halaman otomatis saat input/select/textarea difokus
+   kalau font-size-nya di bawah 16px. Hanya berlaku di iOS (-webkit-touch-callout). */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea, .form-input, .form-select { font-size: 16px; }
+}
+
+/* Target sentuh minimal ±44px (iOS HIG 44pt, Material 48dp) untuk tombol kecil di layar sentuh */
+@media (pointer: coarse) {
+  .btn-touch { min-height: 44px; }
+}

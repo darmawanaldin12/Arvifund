@@ -88,44 +88,44 @@ export default function RecurringPage() {
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Tambah tagihan rutin</div>
 
               <div className="form-group">
-                <label className="form-label">Nama tagihan</label>
-                <input className="form-input" value={form.toko} onChange={e => setF('toko', e.target.value)} placeholder="mis. Listrik PLN" />
+                <label className="form-label" htmlFor="rc-toko">Nama tagihan</label>
+                <input id="rc-toko" className="form-input" value={form.toko} onChange={e => setF('toko', e.target.value)} placeholder="mis. Listrik PLN" autoComplete="off" />
               </div>
               <div className="form-group">
-                <label className="form-label">Keterangan (opsional)</label>
-                <input className="form-input" value={form.uraian} onChange={e => setF('uraian', e.target.value)} placeholder="mis. Token listrik" />
+                <label className="form-label" htmlFor="rc-uraian">Keterangan (opsional)</label>
+                <input id="rc-uraian" className="form-input" value={form.uraian} onChange={e => setF('uraian', e.target.value)} placeholder="mis. Token listrik" autoComplete="off" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div className="form-group">
-                  <label className="form-label">Nominal</label>
-                  <input className="form-input" type="number" inputMode="numeric" value={form.nilai} onChange={e => setF('nilai', e.target.value)} placeholder="350000" />
+                  <label className="form-label" htmlFor="rc-nilai">Nominal</label>
+                  <input id="rc-nilai" className="form-input" type="number" inputMode="numeric" value={form.nilai} onChange={e => setF('nilai', e.target.value)} placeholder="350000" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Tanggal tiap bulan</label>
-                  <input className="form-input" type="number" inputMode="numeric" min="1" max="31" value={form.hari} onChange={e => setF('hari', e.target.value)} placeholder="5" />
+                  <label className="form-label" htmlFor="rc-hari">Tanggal tiap bulan</label>
+                  <input id="rc-hari" className="form-input" type="number" inputMode="numeric" min="1" max="31" value={form.hari} onChange={e => setF('hari', e.target.value)} placeholder="5" />
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Kategori</label>
-                <select className="form-input" value={form.kategori} onChange={e => setF('kategori', e.target.value)}>
+                <label className="form-label" htmlFor="rc-kategori">Kategori</label>
+                <select id="rc-kategori" className="form-select" value={form.kategori} onChange={e => setF('kategori', e.target.value)}>
                   {KATEGORI_EXPENSE.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div className="form-group">
-                  <label className="form-label">Metode</label>
-                  <select className="form-input" value={form.metode} onChange={e => setF('metode', e.target.value)}>
+                  <label className="form-label" htmlFor="rc-metode">Metode</label>
+                  <select id="rc-metode" className="form-select" value={form.metode} onChange={e => setF('metode', e.target.value)}>
                     {METODE_LIST.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Rekening</label>
-                  <select className="form-input" value={form.bank} onChange={e => setF('bank', e.target.value)}>
+                  <label className="form-label" htmlFor="rc-bank">Rekening</label>
+                  <select id="rc-bank" className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)}>
                     {BANK_LIST.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 4 }} disabled={saving}>
+              <button type="submit" className="btn btn-primary btn-touch" style={{ width: '100%', marginTop: 4 }} disabled={saving}>
                 {saving ? 'Menyimpan...' : 'Tambah'}
               </button>
             </form>
@@ -160,8 +160,8 @@ export default function RecurringPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: statusColor }}>{statusText}</span>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleToggle(t)}>{t.aktif ? 'Jeda' : 'Aktifkan'}</button>
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDelete(t)}>Hapus</button>
+                        <button type="button" className="btn btn-ghost btn-sm btn-touch" onClick={() => handleToggle(t)}>{t.aktif ? 'Jeda' : 'Aktifkan'}</button>
+                        <button type="button" className="btn btn-ghost btn-sm btn-touch" onClick={() => handleDelete(t)}>Hapus</button>
                       </div>
                     </div>
                   </div>

@@ -158,7 +158,7 @@ export default function BudgetPage() {
             <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, lineHeight: 1.5 }}>
               {copyable.length} kategori belum diset di periode ini: {copyable.map(c => `${c.kategori} ${fmt(c.alokasi)}`).join(', ')}. Kategori yang sudah diset tidak diubah.
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 10, width: '100%' }} onClick={handleCopy} disabled={copying}>
+            <button className="btn btn-primary btn-touch" style={{ marginTop: 10, width: '100%' }} onClick={handleCopy} disabled={copying}>
               {copying ? 'Menyalin...' : 'Salin ke periode ini'}
             </button>
           </div>
@@ -217,9 +217,10 @@ export default function BudgetPage() {
                     role="button"
                     tabIndex={0}
                     aria-expanded={isOpen}
+                    className="tappable"
                     onClick={() => setOpenKat(isOpen ? null : kat)}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenKat(isOpen ? null : kat) } }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, minWidth: 0 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, minWidth: 0, minHeight: 44 }}
                   >
                     <KategoriIcon kategori={kat} size={18} />
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{kat}</span>
@@ -231,7 +232,7 @@ export default function BudgetPage() {
                   </div>
                   {!isAll && (
                     <button
-                      className="btn btn-ghost btn-sm"
+                      className="btn btn-ghost btn-sm btn-touch"
                       onClick={() => { setEditKat(isEdit ? null : kat); setEditVal(alokasi || '') }}
                     >
                       {isEdit ? 'Batal' : alokasi > 0 ? 'Edit' : '+ Set'}
@@ -251,7 +252,7 @@ export default function BudgetPage() {
                       style={{ flex: 1 }}
                       autoFocus
                     />
-                    <button className="btn btn-primary" onClick={() => handleSave(kat)} disabled={saving} style={{ flexShrink: 0 }}>
+                    <button className="btn btn-primary btn-touch" onClick={() => handleSave(kat)} disabled={saving} style={{ flexShrink: 0 }}>
                       {saving ? '...' : 'Simpan'}
                     </button>
                   </div>
@@ -295,7 +296,7 @@ export default function BudgetPage() {
                     {rincian.length === 0 ? (
                       <div style={{ fontSize: 12, color: 'var(--text3)' }}>Belum ada pengeluaran di periode ini</div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                         {rincian.map(r => (
                           <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                             <div style={{ minWidth: 0 }}>

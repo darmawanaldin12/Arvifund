@@ -48,7 +48,7 @@ export function RecurringDueCard() {
           <span className="dash-card-header mb-0" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Repeat size={15} /> Transaksi Berulang
           </span>
-          <Link href="/recurring" style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Kelola</Link>
+          <Link href="/recurring" style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', padding: '12px 4px', margin: '-12px -4px' }}>Kelola</Link>
         </div>
 
         {items.length === 0 ? (
@@ -71,7 +71,7 @@ export function RecurringDueCard() {
                   </div>
                 </div>
                 <button
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm btn-touch"
                   style={{ flexShrink: 0 }}
                   disabled={busyId === t.id}
                   onClick={() => handleCatat(t, occ)}
