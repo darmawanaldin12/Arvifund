@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import ChartCarousel from '../../components/ChartCarousel'
@@ -15,12 +15,14 @@ import ExportPDFButton from '../../components/dashboard/ExportPDFButton'
 import { AnimatedAmount } from '../../hooks/useCountUp'
 import {
   WeeklySummaryCard, UserSpendingCard,
-  Top5KategoriCard, BudgetCard,
   AnomaliCard, RecentTransactionsCard,
 } from '../../components/dashboard/DashboardCards'
 import { ScorecardCard } from '../../components/dashboard/ScorecardPeriodCard'
 import { BudgetAlertCard } from '../../components/dashboard/BudgetAlertCard'
 import { RecurringDueCard } from '../../components/dashboard/RecurringDueCard'
+import { Top5KategoriDetailCard, BudgetDetailCard, MoreToggle } from '../../components/dashboard/DashboardExtras'
+
+const MORE_KEY = 'arvifund:dash-more'
 
 export default function DashboardPage() {
   const {
@@ -105,21 +107,38 @@ export default function DashboardPage() {
 
   const [modalType, setModalType] = useState(null)
 
+  // Kartu tambahan (mingguan, per anggota, anomali) bisa dilipat; pilihan diingat di perangkat
+  const [showMore, setShowMore] = useState(false)
+  useEffect(() => {
+    try { setShowMore(localStorage.getItem(MORE_KEY) === '1') } catch (_) {}
+  }, [])
+  function toggleMore() {
+    setShowMore(v => {
+      const next = !v
+      try { localStorage.setItem(MORE_KEY, next ? '1' : '0') } catch (_) {}
+      return next
+    })
+  }
+
   if (loading) return <DashboardLoadingState onRefresh={loadData} />
 
   return (
     <>
       <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
       <div className="page-container">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <div className="period-filter-bar" style={{ marginBottom: 0, flex: 1 }}>
-            <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
-            {periods.map((p,i) => (
-              <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
-            ))}
+        {/* Chip periode menempel di bawah header saat halaman digulir */}
+        <div className="period-sticky">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div className="period-filter-bar" style={{ marginBottom: 0, flex: 1 }}>
+              <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
+              {periods.map((p,i) => (
+                <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
+              ))}
+            </div>
+            <ExportPDFButton />
           </div>
-          <ExportPDFButton />
         </div>
+
         <div className="kpi-grid">
           {kpiItems.map(item => (
             <Link key={item.href+item.label} href={item.href} className="no-underline block">
@@ -141,21 +160,14 @@ export default function DashboardPage() {
             </Link>
           ))}
         </div>
+
+        {/* Urutan: yang paling perlu perhatian di atas, detail tambahan dilipat di bawah */}
         <div className="bento-grid">
           <BudgetAlertCard items={budgetAlerts} periodLabel={refPeriod?.label} />
           <RecurringDueCard />
           <ScorecardCard items={scorecardItems} onItemClick={setModalType} />
-          <WeeklySummaryCard weekStart={weekStart} weekEnd={weekEnd} weeklyTotal={weeklyTotal} filteredExpenses={filteredExpenses} now={now} />
-          <UserSpendingCard userSplit={userSplit} />
-          <Top5KategoriCard top5={top5} totalExpenses={s.totalExpenses} />
-          <BudgetCard budgetVsReal={budgetPeriode.items} />
-          <AnomaliCard anomali={anomali} />
-          <div className="bento-12">
-            <ChartCarousel
-              expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode}
-              periods={periods} refPeriod={refPeriod} refExpenses={refExpenses}
-            />
-          </div>
+          <BudgetDetailCard budgetVsReal={budgetPeriode.items} expenses={filteredExpenses} />
+          <Top5KategoriDetailCard top5={top5} totalExpenses={s.totalExpenses} expenses={filteredExpenses} />
           <RecentTransactionsCard
             expenses={expenses}
             income={income}
@@ -163,6 +175,20 @@ export default function DashboardPage() {
             transfers={transfers}
             getUserName={getUserName}
           />
+          <div className="bento-12">
+            <ChartCarousel
+              expenses={expenses} income={income} budgetPlans={budgetPlans} summaryPeriode={summaryPeriode}
+              periods={periods} refPeriod={refPeriod} refExpenses={refExpenses}
+            />
+          </div>
+          <MoreToggle open={showMore} onToggle={toggleMore} anomaliCount={anomali.length} />
+          {showMore && (
+            <>
+              <WeeklySummaryCard weekStart={weekStart} weekEnd={weekEnd} weeklyTotal={weeklyTotal} filteredExpenses={filteredExpenses} now={now} />
+              <UserSpendingCard userSplit={userSplit} />
+              <AnomaliCard anomali={anomali} />
+            </>
+          )}
         </div>
       </div>
       <ScorecardChartModal
