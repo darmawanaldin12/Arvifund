@@ -752,3 +752,130 @@ tr:hover td.table-actions-cell { background: var(--surface2); }
 @media (prefers-reduced-motion: reduce) {
   .trx-tile, .trx-row, .trx-cta { transition: none; }
 }
+
+
+/* ── PREMIUM INPUT TRANSACTION EXPERIENCE ──
+   Input-page only; existing handlers, data flows and transaction list remain unchanged. */
+.page-intro {
+  margin: 4px 0 22px;
+  padding: 2px 0 0;
+}
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  margin-bottom: 9px;
+}
+.page-eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-light);
+}
+.page-intro h2 {
+  color: var(--text1);
+  font-size: clamp(21px, 3vw, 27px);
+  line-height: 1.2;
+  letter-spacing: -.045em;
+  font-weight: 800;
+  margin: 0;
+}
+.page-intro p {
+  max-width: 520px;
+  margin-top: 8px;
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.input-page-container {
+  max-width: 640px !important;
+  padding-top: 22px;
+}
+.input-page-intro { margin-bottom: 20px; }
+.input-page-container .card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 22px !important;
+}
+.input-mode-tabs {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 15px !important;
+  padding: 5px !important;
+  gap: 5px !important;
+  margin-bottom: 16px !important;
+}
+.input-mode-tabs button {
+  min-height: 44px;
+  border-radius: 11px !important;
+}
+.input-page-container .form-group { margin-bottom: 18px; }
+.input-page-container .form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.input-page-container .form-input,
+.input-page-container .form-select {
+  min-height: 46px;
+  border-radius: 12px;
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text1);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.input-page-container .form-input:focus,
+.input-page-container .form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.input-page-container textarea.form-input { min-height: 116px; }
+.input-page-container .btn-primary {
+  min-height: 50px;
+  border-radius: 13px;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.input-page-container .btn-primary:disabled {
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.input-page-container .form-group input[type="text"][inputmode="numeric"] {
+  min-height: 58px;
+  font-size: 24px !important;
+  border-radius: 14px;
+}
+.input-page-container .form-group input[type="text"][inputmode="numeric"]:focus {
+  background: var(--surface);
+}
+.input-page-container .form-group input[type="text"][inputmode="numeric"] + div {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--accent-light);
+}
+.input-page-container :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .page-intro { margin: 2px 0 18px; }
+  .page-intro h2 { font-size: 22px; }
+  .page-intro p { font-size: 12px; }
+  .input-page-container { padding-top: 16px; }
+  .input-page-container .card { padding: 16px !important; border-radius: 17px; }
+  .input-page-container .form-group { margin-bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .input-page-container .form-input,
+  .input-page-container .form-select { transition: none; }
+}
