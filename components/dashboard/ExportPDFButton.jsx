@@ -9,7 +9,8 @@ import { generateNarrative, buildFallbackNarrative } from '../../lib/pdfNarrativ
 import { renderTrendChartImage, renderDonutChartImage, renderBudgetChartImage } from '../../lib/pdfChartImages'
 import PDFReportDocument from './PDFReportDocument'
 
-export default function ExportPDFButton() {
+// iconOnly: tombol ikon kecil (untuk header) — tanpa teks, tidak memakan tempat chip periode
+export default function ExportPDFButton({ iconOnly = false }) {
   const {
     expenses, income, cashRecords, budgetPlans,
     periods, payPeriodDate, overrides, getUserName,
@@ -101,9 +102,27 @@ export default function ExportPDFButton() {
 
   return (
     <>
-      <button className="trx-export-btn" onClick={handleOpen} type="button">
-        <FileDown size={14} /> Export Laporan PDF
-      </button>
+      {iconOnly ? (
+        <button
+          type="button"
+          onClick={handleOpen}
+          aria-label="Export laporan PDF"
+          title="Export laporan PDF"
+          className="tappable"
+          style={{
+            width: 36, height: 36, flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 8, border: '1px solid var(--border)',
+            background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer',
+          }}
+        >
+          <FileDown size={16} />
+        </button>
+      ) : (
+        <button className="trx-export-btn" onClick={handleOpen} type="button">
+          <FileDown size={14} /> Export Laporan PDF
+        </button>
+      )}
 
       {open && mounted && createPortal(
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>

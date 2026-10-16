@@ -124,18 +124,21 @@ export default function DashboardPage() {
 
   return (
     <>
-      <AppHeader title="Financial Overview" onRefresh={loadData} loading={loading} />
+      {/* Tombol Export PDF berupa ikon di header, supaya tidak memakan tempat chip periode */}
+      <AppHeader
+        title="Financial Overview"
+        onRefresh={loadData}
+        loading={loading}
+        actions={<ExportPDFButton iconOnly />}
+      />
       <div className="page-container">
-        {/* Chip periode menempel di bawah header saat halaman digulir */}
+        {/* Chip periode menempel di atas area scroll */}
         <div className="period-sticky">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-            <div className="period-filter-bar" style={{ marginBottom: 0, flex: 1 }}>
-              <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
-              {periods.map((p,i) => (
-                <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
-              ))}
-            </div>
-            <ExportPDFButton />
+          <div className="period-filter-bar" style={{ marginBottom: 0 }}>
+            <button onClick={() => setPeriodIdx('')} className={cn('filter-chip', periodIdx === '' && 'active')}>Semua</button>
+            {periods.map((p,i) => (
+              <button key={i} onClick={() => setPeriodIdx(String(i))} className={cn('filter-chip', periodIdx === String(i) && 'active')}>{p.label}</button>
+            ))}
           </div>
         </div>
 

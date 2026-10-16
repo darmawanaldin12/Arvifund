@@ -5,7 +5,8 @@ import { cn } from '../../lib/utils-cn'
 import { Button } from '../ui/button'
 import { RefreshCw } from 'lucide-react'
 
-export default function AppHeader({ title, subtitle, onRefresh, loading }) {
+// actions (opsional): elemen tambahan di sisi kanan header, sebelum tombol refresh (mis. tombol ikon export)
+export default function AppHeader({ title, subtitle, onRefresh, loading, actions }) {
   const [time, setTime] = useState('')
   const { profile, user, profiles } = useData() || {}
 
@@ -60,7 +61,7 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
         </div>
       </div>
 
-      {/* Right: user chip + refresh */}
+      {/* Right: user chip + actions + refresh */}
       <div className="flex items-center gap-2 shrink-0">
 
         {/* User identity chip */}
@@ -110,6 +111,9 @@ export default function AppHeader({ title, subtitle, onRefresh, loading }) {
             </span>
           </div>
         )}
+
+        {/* Aksi tambahan dari halaman (opsional) */}
+        {actions}
 
         {/* Refresh button */}
         {onRefresh && (

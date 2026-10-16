@@ -15,22 +15,20 @@
   .btn-touch { min-height: 44px; }
 }
 
-/* ── Chip periode menempel di bawah header saat halaman digulir (dashboard) ── */
-
-/* overflow-x: hidden pada .page-container membuat elemen itu jadi "scroll container" sendiri
-   sehingga position: sticky di dalamnya tidak berfungsi. clip memotong konten yang sama
-   tanpa membuat scroll container. (Safari < 16 mengabaikan clip → chip tidak menempel, tetap aman.) */
-.page-container { overflow-x: clip; }
-
+/* ── Chip periode menempel di atas area scroll (dashboard) ──
+   Struktur: .app-main > [header.app-header] + [div.page-container].
+   .page-container-lah yang menjadi area scroll (lihat ".app-main > div" di base.css) dan header
+   berada DI LUAR area scroll, jadi chip cukup menempel di top: 0 (bukan di bawah tinggi header).
+   margin negatif membuat latar chip selebar layar & menutup padding atas halaman. */
 .period-sticky {
   position: sticky;
-  top: var(--header-h);
+  top: 0;
   z-index: 30;
   background: var(--bg);
-  margin: 0 -12px 12px;
+  margin: -12px -12px 12px;
   padding: 8px 12px 6px;
   border-bottom: 1px solid var(--border2);
 }
 @media (min-width: 768px) {
-  .period-sticky { margin: 0 -24px 14px; padding: 8px 24px 6px; }
+  .period-sticky { margin: -24px -24px 14px; padding: 8px 24px 6px; }
 }
