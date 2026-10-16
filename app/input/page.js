@@ -200,8 +200,13 @@ export default function InputPage() {
       <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} budget={toast.budget} />
       <AppHeader title="Input Transaksi" />
 
-      <div className="page-container" style={{ maxWidth: 560 }}>
-        <div style={tabBarS.tabBar}>
+      <div className="page-container input-page-container" style={{ maxWidth: 640 }}>
+        <section className="page-intro input-page-intro" aria-labelledby="input-page-title">
+          <div className="page-eyebrow"><span className="page-eyebrow-dot" /> CATAT KEUANGAN</div>
+          <h2 id="input-page-title">Catat transaksi dengan mudah</h2>
+          <p>Pilih input berbantuan AI atau isi detail secara manual. Data tetap tersimpan seperti biasa.</p>
+        </section>
+        <div className="input-mode-tabs" style={tabBarS.tabBar}>
           {[{ id: 'ai', label: 'Input AI', Icon: Sparkles }, { id: 'manual', label: 'Manual', Icon: PenLine }].map(m => (
             <button key={m.id} type="button" onClick={() => handleModeChange(m.id)} style={tabBarS.tabBtn(mode === m.id)}>
               <m.Icon size={15} />{m.label}
