@@ -338,7 +338,13 @@ export default function TransaksiPage() {
   return (
     <>
       <AppHeader title="Transaksi" onRefresh={loadData} loading={loading} />
-      <div className="page-container">
+      <div className="page-container transactions-page-container">
+
+        <section className="page-intro transactions-page-intro" aria-labelledby="transactions-page-title">
+          <div className="page-eyebrow"><span className="page-eyebrow-dot" /> KEUANGAN / RIWAYAT</div>
+          <h2 id="transactions-page-title">Semua aktivitas keuangan</h2>
+          <p>Pantau pemasukan, pengeluaran, tarik tunai, dan transfer dalam satu tempat.</p>
+        </section>
 
         <TipeFilterGrid
           tab={tab}
