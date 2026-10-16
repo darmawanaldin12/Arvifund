@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useData } from '../../components/DataContext'
 import AppHeader from '../../components/layout/AppHeader'
 import { supabase } from '../../lib/supabase'
@@ -8,7 +8,7 @@ import { BULAN_ORDER } from '../../lib/utils'
 import { normalizeKategori, getBudgetStatus } from '../../lib/kategori'
 import { parseRupiahToInt } from '../../hooks/useAmountInput'
 import TabTransition from '../../components/TabTransition'
-import { SavedToast } from '../../components/input/BottomSheet'
+import SuccessSheet from '../../components/input/SuccessSheet'
 import TransferConfirmPopup from '../../components/input/TransferConfirmPopup'
 import { useAIExtract } from '../../components/input/useAIExtract'
 import AIInputTab from '../../components/input/AIInputTab'
@@ -26,11 +26,10 @@ export default function InputPage() {
   const [tipe, setTipe]         = useState('expense')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
-  const [toast, setToast]       = useState({ show: false, tipe: 'expense', amount: null, budget: null })
+  const [success, setSuccess]   = useState(null) // info untuk layar "Transaksi Berhasil Disimpan"
   const [showConfirm, setShowConfirm]               = useState(false)
   const [showTransferConfirm, setShowTransferConfirm] = useState(false)
   const [parsedResult, setParsedResult]             = useState(null)
-  const toastTimer = useRef(null)
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
 
@@ -45,12 +44,8 @@ export default function InputPage() {
   function handleModeChange(newMode) { setPrevMode(mode); setMode(newMode) }
   const tabDirection = TAB_ORDER[mode] > TAB_ORDER[prevMode] ? 'left' : 'right'
 
-  // budget (opsional) = sisa budget kategori, ditampilkan di toast setelah simpan pengeluaran
-  function showToast(tipeVal, amount, budget = null) {
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    setToast({ show: true, tipe: tipeVal, amount, budget })
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), budget ? 5000 : 2800)
-  }
+  // info: { tipe, amount, toko, uraian, kategori, tanggal, budget } — budget = sisa budget kategori (pengeluaran)
+  function showSuccess(info) { setSuccess(info) }
 
   const ai = useAIExtract({
     user, profiles, today,
@@ -90,7 +85,12 @@ export default function InputPage() {
         if (err) throw err
       }
       await loadData(); setShowConfirm(false)
-      ai.resetAI(); ai.clearPendingShareImage(); showToast(t, nilai, budget)
+      ai.resetAI(); ai.clearPendingShareImage()
+      showSuccess({
+        tipe: t, amount: nilai, toko: parsedResult.toko, uraian: parsedResult.uraian,
+        kategori: t === 'expense' ? normalizeKategori(parsedResult.kategori) : null,
+        tanggal: parsedResult.tanggal, budget,
+      })
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -113,7 +113,11 @@ export default function InputPage() {
         jumlah: parseFloat(formData.jumlah), catatan: formData.catatan || null,
       }, user?.id)
       await loadData(); setShowTransferConfirm(false)
-      ai.resetAI(); ai.clearPendingShareImage(); showToast('transfer', parseFloat(formData.jumlah))
+      ai.resetAI(); ai.clearPendingShareImage()
+      showSuccess({
+        tipe: 'transfer', amount: parseFloat(formData.jumlah), toko: '', uraian: formData.catatan || '',
+        kategori: null, tanggal: formData.tanggal, budget: null,
+      })
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
@@ -141,19 +145,27 @@ export default function InputPage() {
         const { error: err } = await supabase.from('cash_records').insert([{ tanggal: form.tanggal, bulan, transaksi: form.uraian || 'Tarik Tunai', kategori: 'Pengeluaran', bank: form.bank, nilai, alamat: form.toko, metode: 'Cash', user_id: form.user_id }])
         if (err) throw err
       }
+      // Ambil data untuk layar sukses SEBELUM form direset
+      const info = {
+        tipe, amount: nilai, toko: form.toko, uraian: form.uraian,
+        kategori: tipe === 'expense' ? normalizeKategori(form.kategori) : null,
+        tanggal: form.tanggal, budget,
+      }
       await loadData()
       setForm({ tanggal: today, toko: '', uraian: '', total: '', kategori: '', metode: 'Cash', bank: 'BCA', user_id: user?.id || '' })
-      showToast(tipe, nilai, budget)
+      showSuccess(info)
     } catch (err) { setError('Gagal simpan: ' + err.message) }
     finally { setSaving(false) }
   }
 
+  // Pilihan metode input: AI (scan struk) atau manual
   const tabBarS = {
-    tabBar: { display: 'flex', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: 4, marginBottom: 20, gap: 4 },
+    tabBar: { display: 'flex', gap: 8, marginBottom: 16 },
     tabBtn: (active) => ({
-      flex: 1, padding: '11px 8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-      background: active ? 'var(--accent)' : 'transparent',
-      color: active ? 'white' : 'var(--text3)',
+      flex: 1, height: 46, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+      border: active ? 'none' : '1px solid var(--border)',
+      background: active ? 'var(--accent)' : 'var(--surface2)',
+      color: active ? '#fff' : 'var(--text2)',
       fontWeight: 700, fontSize: 13, transition: 'all 0.2s', touchAction: 'manipulation',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
       boxShadow: active ? '0 2px 8px rgba(0,61,155,0.25)' : 'none',
@@ -197,18 +209,24 @@ export default function InputPage() {
         />
       )}
 
-      <SavedToast show={toast.show} tipe={toast.tipe} amount={toast.amount} budget={toast.budget} />
+      <SuccessSheet info={success} onClose={() => setSuccess(null)} />
       <AppHeader title="Input Transaksi" />
 
-      <div className="page-container input-page-container" style={{ maxWidth: 640 }}>
-        <section className="page-intro input-page-intro" aria-labelledby="input-page-title">
-          <div className="page-eyebrow"><span className="page-eyebrow-dot" /> CATAT KEUANGAN</div>
-          <h2 id="input-page-title">Catat transaksi dengan mudah</h2>
-          <p>Pilih input berbantuan AI atau isi detail secara manual. Data tetap tersimpan seperti biasa.</p>
-        </section>
-        <div className="input-mode-tabs" style={tabBarS.tabBar}>
-          {[{ id: 'ai', label: 'Input AI', Icon: Sparkles }, { id: 'manual', label: 'Manual', Icon: PenLine }].map(m => (
-            <button key={m.id} type="button" onClick={() => handleModeChange(m.id)} style={tabBarS.tabBtn(mode === m.id)}>
+      <div className="page-container" style={{ maxWidth: 560 }}>
+        {/* Judul halaman */}
+        <div style={{ margin: '4px 2px 18px' }}>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--text1)' }}>
+            Catat Transaksi<br />Kelola Keuanganmu
+          </h2>
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text3)', lineHeight: 1.5 }}>
+            Pilih metode input yang paling nyaman untuk kamu, dengan cepat dan mudah.
+          </p>
+        </div>
+
+        <div style={tabBarS.tabBar} role="tablist" aria-label="Metode input">
+          {[{ id: 'ai', label: 'AI (Scan Struk)', Icon: Sparkles }, { id: 'manual', label: 'Manual', Icon: PenLine }].map(m => (
+            <button key={m.id} type="button" role="tab" aria-selected={mode === m.id}
+              onClick={() => handleModeChange(m.id)} style={tabBarS.tabBtn(mode === m.id)}>
               <m.Icon size={15} />{m.label}
             </button>
           ))}
