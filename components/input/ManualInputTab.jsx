@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Save, TrendingDown, TrendingUp, Landmark, ChevronDown, CalendarDays, Tag } from 'lucide-react'
-import { BANK_LIST, METODE_LIST } from '../../lib/utils'
+import { METODE_LIST } from '../../lib/utils'
 import { useAmountInput } from '../../hooks/useAmountInput'
 import KategoriPicker from './KategoriPicker'
 import { KATEGORI_ICON_MAP } from '../ui/KategoriIcon'
@@ -12,16 +12,20 @@ const TIPE_LIST = [
   { id: 'cash',    label: 'Tarik Tunai', Icon: Landmark },
 ]
 
-// Pilihan Bank / Dompet khusus input manual (urutan sesuai preferensi pengguna)
-const BANK_DOMPET_LIST = ['Mandiri', 'BCA', 'Cash'].filter(b => BANK_LIST.includes(b))
-
-// Bank yang bisa jadi sumber tarik tunai (exclude Cash)
-const BANK_ASAL_LIST = BANK_LIST.filter(b => b !== 'Cash')
+// Pilihan menu "Bank / Dompet" di form input: hanya BCA, Mandiri, dan Cash.
+// (QRIS/Transfer/Card/Cardless adalah METODE pembayaran, bukan bank — ada di menu Metode.)
+const BANK_PILIHAN      = ['BCA', 'Mandiri', 'Cash']
+// Sumber tarik tunai: bank saja (tanpa Cash)
+const BANK_ASAL_PILIHAN = ['BCA', 'Mandiri']
 
 export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, saving, error, onSubmit }) {
   const manualAmt = useAmountInput(form.total, v => setF('total', v))
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [bankPickerOpen, setBankPickerOpen] = useState(false)
+
+  // Kalau nilai bank yang sedang terisi di luar daftar (mis. dari hasil AI "Edit Manual"),
+  // tetap ditampilkan sebagai satu pilihan tambahan supaya nilainya tidak berubah diam-diam.
+  const baseBankOptions = tipe === 'cash' ? BANK_ASAL_PILIHAN : BANK_PILIHAN
+  const bankOptions = !form.bank || baseBankOptions.includes(form.bank) ? baseBankOptions : [...baseBankOptions, form.bank]
 
   // Saat user ganti metode ke Cash, otomatis set bank = Cash
   function handleMetodeChange(val) {
@@ -162,42 +166,9 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
             <label className="form-label" htmlFor="manual-bank">
               {tipe === 'cash' ? 'Bank Asal (sumber tarik tunai)' : 'Bank / Dompet'}
             </label>
-            {tipe === 'cash' ? (
-              <select id="manual-bank" className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)} style={{ height: 48 }}>
-                {BANK_ASAL_LIST.map(b => <option key={b}>{b}</option>)}
-              </select>
-            ) : (
-              <div style={{ position: 'relative' }}>
-                <button id="manual-bank" type="button" className="form-select" aria-haspopup="listbox" aria-expanded={bankPickerOpen}
-                  onClick={() => setBankPickerOpen(v => !v)}
-                  style={{ width: '100%', height: 48, display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '0 12px', cursor: 'pointer' }}>
-                  {form.bank === 'BCA' || form.bank === 'Mandiri' ? (
-                    <img src={form.bank === 'BCA' ? '/images/bca-logo.svg' : '/images/mandiri-logo.svg'} alt="" style={{ width: 54, height: 28, objectFit: 'contain', flexShrink: 0 }} />
-                  ) : (
-                    <span aria-hidden="true" style={{ width: 30, height: 30, display: 'grid', placeItems: 'center', borderRadius: 9, background: 'rgba(16,185,129,.14)', color: '#059669', flexShrink: 0 }}>₨</span>
-                  )}
-                  <span style={{ flex: 1, fontWeight: 650 }}>{form.bank || 'Pilih bank / dompet'}</span>
-                  <ChevronDown size={17} color="var(--text3)" />
-                </button>
-                {bankPickerOpen && (
-                  <div role="listbox" aria-label="Pilih bank atau dompet" style={{ position: 'absolute', zIndex: 40, inset: 'calc(100% + 6px) 0 auto', padding: 6, border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', boxShadow: '0 16px 38px rgba(0,0,0,.18)' }}>
-                    {BANK_DOMPET_LIST.map(b => (
-                      <button key={b} type="button" role="option" aria-selected={form.bank === b}
-                        onClick={() => { setF('bank', b); setBankPickerOpen(false) }}
-                        style={{ width: '100%', minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', border: 0, borderRadius: 10, background: form.bank === b ? 'var(--accent-light)' : 'transparent', color: 'var(--text1)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {b === 'BCA' || b === 'Mandiri' ? (
-                          <img src={b === 'BCA' ? '/images/bca-logo.svg' : '/images/mandiri-logo.svg'} alt="" style={{ width: 58, height: 30, objectFit: 'contain', flexShrink: 0 }} />
-                        ) : (
-                          <span aria-hidden="true" style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', borderRadius: 9, background: 'rgba(16,185,129,.14)', color: '#059669', fontSize: 18, flexShrink: 0 }}>₨</span>
-                        )}
-                        <span style={{ flex: 1, fontWeight: 650 }}>{b}</span>
-                        {form.bank === b && <span aria-hidden="true" style={{ color: 'var(--accent)', fontWeight: 800 }}>✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <select id="manual-bank" className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)} style={{ height: 48 }}>
+              {bankOptions.map(b => <option key={b}>{b}</option>)}
+            </select>
           </div>
         </div>
         {tipe === 'cash' && (
