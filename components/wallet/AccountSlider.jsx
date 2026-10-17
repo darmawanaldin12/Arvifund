@@ -44,8 +44,10 @@ export default function AccountSlider({ userId, userName, bankBalances, accounts
           return (
             <div className="wallet-account-row" key={acc.id}>
               <button className="wallet-account-open" onClick={() => !acc.needsSetup && onViewHistory(acc)} disabled={acc.needsSetup} aria-label={`Lihat riwayat ${acc.name}`}>
-                <span className="wallet-bank-logo" style={{ background: bank.bg, color: bank.color }}>
-                  {acc.name === 'Cash' ? <Banknote size={23} strokeWidth={2.4} /> : <span>{bank.label}</span>}
+                <span className={`wallet-bank-logo ${acc.name === 'Mandiri' || acc.name === 'BCA' ? 'wallet-bank-logo-image' : ''}`} style={{ background: bank.bg, color: bank.color }}>
+                  {acc.name === 'Mandiri' ? <img src="/logos/mandiri.svg" alt="Logo Bank Mandiri" /> :
+                   acc.name === 'BCA' ? <img src="/logos/bca.svg" alt="Logo BCA" /> :
+                   acc.name === 'Cash' ? <Banknote size={23} strokeWidth={2.4} /> : <span>{bank.label}</span>}
                 </span>
                 <span className="wallet-account-meta">
                   <strong>{acc.name}</strong>
