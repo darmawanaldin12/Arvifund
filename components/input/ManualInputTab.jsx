@@ -4,6 +4,7 @@ import { Save, TrendingDown, TrendingUp, Landmark, ChevronDown, CalendarDays, Ta
 import { METODE_LIST } from '../../lib/utils'
 import { useAmountInput } from '../../hooks/useAmountInput'
 import KategoriPicker from './KategoriPicker'
+import BankPicker from './BankPicker'
 import { KATEGORI_ICON_MAP } from '../ui/KategoriIcon'
 
 const TIPE_LIST = [
@@ -153,27 +154,25 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
         {/* Detail pembayaran */}
         <div style={S.sectionTitle}>Detail pembayaran</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: tipe === 'cash' ? '1fr' : '1fr 1fr', gap: 10 }}>
-          {tipe !== 'cash' && (
-            <div className="form-group">
-              <label className="form-label" htmlFor="manual-metode">Metode</label>
-              <select id="manual-metode" className="form-select" value={form.metode} onChange={e => handleMetodeChange(e.target.value)} style={{ height: 48 }}>
-                {METODE_LIST.map(m => <option key={m}>{m}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label" htmlFor="manual-bank">
-              {tipe === 'cash' ? 'Bank Asal (sumber tarik tunai)' : 'Bank / Dompet'}
-            </label>
-            <select id="manual-bank" className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)} style={{ height: 48 }}>
-              {bankOptions.map(b => <option key={b}>{b}</option>)}
-            </select>
-          </div>
+        {/* Bank / Dompet — kartu berlogo */}
+        <div className="form-group">
+          <label className="form-label" id="manual-bank-label">
+            {tipe === 'cash' ? 'Bank Asal (sumber tarik tunai)' : 'Bank / Dompet'}
+          </label>
+          <BankPicker options={bankOptions} value={form.bank} onChange={v => setF('bank', v)} labelledBy="manual-bank-label" />
         </div>
         {tipe === 'cash' && (
           <div style={{ ...S.infoBox, marginBottom: 14 }}>
             💡 Saldo bank ini akan berkurang & saldo Cash otomatis bertambah
+          </div>
+        )}
+
+        {tipe !== 'cash' && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="manual-metode">Metode</label>
+            <select id="manual-metode" className="form-select" value={form.metode} onChange={e => handleMetodeChange(e.target.value)} style={{ height: 48 }}>
+              {METODE_LIST.map(m => <option key={m}>{m}</option>)}
+            </select>
           </div>
         )}
 
