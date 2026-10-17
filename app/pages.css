@@ -879,3 +879,146 @@ tr:hover td.table-actions-cell { background: var(--surface2); }
   .input-page-container .form-input,
   .input-page-container .form-select { transition: none; }
 }
+
+
+/* ── PREMIUM WALLET PAGE — visual-only polish ── */
+.wallet-page-container {
+  max-width: 920px;
+  padding-top: 20px;
+  padding-bottom: 28px;
+}
+.wallet-page-intro {
+  margin: 2px 0 20px;
+  padding: 0 2px;
+}
+.wallet-page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  margin-bottom: 9px;
+}
+.wallet-page-eyebrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-light);
+}
+.wallet-page-intro h2 {
+  margin: 0;
+  color: var(--text1);
+  font-size: clamp(22px, 3.5vw, 28px);
+  line-height: 1.18;
+  font-weight: 800;
+  letter-spacing: -.045em;
+}
+.wallet-page-intro p {
+  margin: 8px 0 0;
+  max-width: 540px;
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.wallet-period-filter {
+  gap: 7px;
+  margin-bottom: 16px !important;
+  padding-bottom: 5px;
+}
+.wallet-period-filter .filter-chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 15px;
+  font-size: 11px;
+  font-weight: 700;
+  border-width: 1px;
+}
+.wallet-tabs {
+  border: 1px solid var(--border);
+  border-radius: 15px !important;
+  padding: 5px !important;
+  gap: 5px !important;
+  margin-bottom: 18px !important;
+}
+.wallet-tabs button {
+  min-height: 43px;
+  border-radius: 11px !important;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.wallet-account-groups {
+  gap: 16px !important;
+}
+.wallet-account-groups > * {
+  min-width: 0;
+}
+.wallet-transfer-list {
+  gap: 10px !important;
+}
+.wallet-transfer-new-btn {
+  min-height: 48px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+  border-radius: 14px !important;
+  background: var(--accent-light) !important;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+.wallet-transfer-new-btn:hover {
+  border-color: var(--accent) !important;
+  background: var(--surface2) !important;
+}
+.wallet-transfer-new-btn:active { transform: scale(.985); }
+.wallet-transfer-row {
+  border-radius: 15px !important;
+  padding: 14px !important;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.wallet-transfer-row:hover {
+  border-color: var(--surface3) !important;
+  box-shadow: var(--shadow);
+}
+.wallet-transfer-row > div:nth-child(2) { min-width: 0; }
+.wallet-transfer-row button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px !important;
+  transition: background .15s ease, color .15s ease;
+}
+.wallet-transfer-row button:hover { background: var(--surface2) !important; }
+.wallet-transfer-total {
+  border: 1px solid var(--border);
+  border-radius: 13px !important;
+  padding: 13px 15px !important;
+}
+.wallet-page-container .empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 28px 16px;
+  background: var(--surface);
+}
+.wallet-page-container :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .wallet-page-container { padding-top: 14px; padding-bottom: 22px; }
+  .wallet-page-intro { margin-bottom: 16px; }
+  .wallet-page-intro h2 { font-size: 22px; }
+  .wallet-page-intro p { font-size: 12px; }
+  .wallet-period-filter .filter-chip { padding: 7px 13px; }
+  .wallet-transfer-row { gap: 8px !important; padding: 11px !important; }
+  .wallet-transfer-row > div:nth-child(3) { font-size: 12px !important; }
+  .wallet-transfer-row button { width: 30px; height: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallet-tabs button, .wallet-transfer-new-btn, .wallet-transfer-row,
+  .wallet-transfer-row button { transition: none; }
+}
