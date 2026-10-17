@@ -7,7 +7,7 @@ import { setAccountBalance, insertTransfer, updateTransfer, deleteTransfer } fro
 import { supabase } from '../../lib/supabase'
 import { authenticateWithBiometric, isBiometricSupported, isBiometricRegistered } from '../../lib/biometric'
 import { fmtFull, fmtTanggalShort } from '../../lib/utils'
-import { ArrowLeftRight, Plus, Trash2, Pencil, ShieldCheck } from 'lucide-react'
+import { ArrowLeftRight, Plus, Trash2, Pencil, ShieldCheck, Wallet } from 'lucide-react'
 import AccountSlider from '../../components/wallet/AccountSlider'
 import RiwayatDrawer from '../../components/wallet/RiwayatDrawer'
 import { SetSaldoModal, TransferForm } from '../../components/wallet/WalletModals'
@@ -103,8 +103,19 @@ export default function WalletPage() {
       <div className="page-container wallet-page-container">
         <div className="wallet-page-intro">
           <span className="wallet-page-eyebrow">ARVIFUND · FINANCIAL OVERVIEW</span>
-          <h2>Semua dompet, satu kendali</h2>
-          <p>Pantau saldo setiap user dan kelola perpindahan dana dengan lebih mudah.</p>
+          <h2>Wallet</h2>
+          <p>Kelola saldo, dompet, dan rekening dengan mudah.</p>
+        </div>
+        <div className="wallet-total-card">
+          <div className="wallet-total-copy">
+            <span>Total Saldo</span>
+            <strong>{fmtFull(accounts.reduce((sum, acc) => {
+              const balance = bankBalances[acc.user_id]?.[acc.name]
+              return sum + (balance && !balance.needsSetup ? Number(balance.saldo) || 0 : 0)
+            }, 0))}</strong>
+            <small><span className="wallet-total-dot" /> Saldo gabungan semua rekening aktif</small>
+          </div>
+          <div className="wallet-total-icon"><Wallet size={27} /></div>
         </div>
         <div className="filter-bar wallet-period-filter" style={{ marginBottom: 14 }}>
           <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
