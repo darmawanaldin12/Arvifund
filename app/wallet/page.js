@@ -100,15 +100,20 @@ export default function WalletPage() {
       )}
 
       <AppHeader title="Wallet" onRefresh={loadData} loading={loading} />
-      <div className="page-container">
-        <div className="filter-bar" style={{ marginBottom: 14 }}>
+      <div className="page-container wallet-page-container">
+        <div className="wallet-page-intro">
+          <span className="wallet-page-eyebrow">ARVIFUND · FINANCIAL OVERVIEW</span>
+          <h2>Semua dompet, satu kendali</h2>
+          <p>Pantau saldo setiap user dan kelola perpindahan dana dengan lebih mudah.</p>
+        </div>
+        <div className="filter-bar wallet-period-filter" style={{ marginBottom: 14 }}>
           <div className={`filter-chip${periodIdx === '' ? ' active' : ''}`} onClick={() => setPeriodIdx('')}>Semua</div>
           {periods.map((p, i) => (
             <div key={i} className={`filter-chip${periodIdx === String(i) ? ' active' : ''}`} onClick={() => setPeriodIdx(String(i))}>{p.label}</div>
           ))}
         </div>
 
-        <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 }}>
+        <div className="wallet-tabs" style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 }}>
           {[{ id: 'summary', label: 'Rekening' }, { id: 'transfer', label: `Transfer (${filteredTransfers.length})` }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex: 1, padding: '9px 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -122,7 +127,7 @@ export default function WalletPage() {
         </div>
 
         {tab === 'summary' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="wallet-account-groups" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {users.map(u => (
               <AccountSlider key={u.id} userId={u.id} userName={u.username}
                 bankBalances={bankBalances} accounts={accounts}
@@ -133,8 +138,8 @@ export default function WalletPage() {
         )}
 
         {tab === 'transfer' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button onClick={() => setShowAddModal(true)}
+          <div className="wallet-transfer-list" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button className="wallet-transfer-new-btn" onClick={() => setShowAddModal(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 12, border: '2px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               <Plus size={18} /> Catat Transfer Baru
             </button>
@@ -150,7 +155,7 @@ export default function WalletPage() {
               const toName     = getUserName(t.to_user)
               const isInternal = t.from_user === t.to_user
               return (
-                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div key={t.id} className="wallet-transfer-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: isInternal ? 'rgba(245,158,11,0.1)' : 'rgba(56,189,248,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ArrowLeftRight size={16} color={isInternal ? 'var(--yellow)' : 'var(--accent)'} />
                   </div>
@@ -175,7 +180,7 @@ export default function WalletPage() {
               )
             })}
             {filteredTransfers.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 13 }}>
+              <div className="wallet-transfer-total" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, fontSize: 13 }}>
                 <span style={{ color: 'var(--text3)' }}>Total periode ini</span>
                 <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{fmtFull(filteredTransfers.reduce((s, r) => s + (r.jumlah || 0), 0))}</span>
               </div>
