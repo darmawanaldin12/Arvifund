@@ -36,8 +36,8 @@ export default function AccountSlider({ userId, userName, bankBalances, accounts
   if (allItems.length === 0) return null
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: `color-mix(in srgb, ${color} 5%, var(--surface))`, borderBottom: '1px solid var(--border)' }}>
+    <div className="wallet-user-panel" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+      <div className="wallet-user-panel-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: `color-mix(in srgb, ${color} 5%, var(--surface))`, borderBottom: '1px solid var(--border)' }}>
         <div style={{ width: 36, height: 36, borderRadius: 11, background: `color-mix(in srgb, ${color} 15%, transparent)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color, flexShrink: 0 }}>
           {initial}
         </div>
@@ -54,11 +54,11 @@ export default function AccountSlider({ userId, userName, bankBalances, accounts
           </div>
         </div>
       </div>
-      <div style={{ padding: '14px 0 6px' }}>
+      <div className="wallet-account-slider" style={{ padding: '14px 0 6px' }}>
         <div ref={sliderRef} onScroll={handleScroll}
           style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', paddingLeft: 14, paddingRight: 14 }}>
           {allItems.map((acc, i) => (
-            <div key={acc.id}
+            <div key={acc.id} className="wallet-account-slide"
               style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 'calc(100% - 28px)', marginRight: i < allItems.length - 1 ? 10 : 0 }}>
               <AtmCard bankName={acc.name} saldo={acc.saldo} userName={userName} needsSetup={acc.needsSetup}
                 onClick={() => !acc.needsSetup && onViewHistory(acc)} />
@@ -75,7 +75,7 @@ export default function AccountSlider({ userId, userName, bankBalances, accounts
         )}
       </div>
       {activeAcc && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 14px', borderTop: '1px solid var(--border)' }}>
+        <div className="wallet-user-panel-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 14px', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
             {activeAcc.needsSetup ? (
               <span style={{ color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 4 }}>
