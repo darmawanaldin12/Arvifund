@@ -9,26 +9,25 @@ import { fmtFull, fmtTanggalShort } from '../../lib/utils'
 export const MASK = 'Rp ••••••'
 export const money = (v, hide) => (hide ? MASK : fmtFull(v))
 
-/* Logo rekening: tile berwarna per bank */
+// Logo resmi (file di /public/icons/banks)
+const LOGO = { bca: '/icons/banks/bca.svg', mandiri: '/icons/banks/mandiri.svg' }
+
+/* Logo rekening: logo resmi di pelat putih (terbaca di mode gelap), Cash & BRI berupa tile berwarna */
 export function BankLogo({ name, size = 52 }) {
   const n = (name || '').toLowerCase()
   const base = {
     width: size, height: size, borderRadius: 14, flexShrink: 0, overflow: 'hidden',
     display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
   }
-  if (n === 'cash') {
-    return <div style={{ ...base, background: '#16a34a' }}><Banknote size={Math.round(size * 0.5)} color="#fff" /></div>
-  }
-  if (n === 'bca') {
-    return <div style={{ ...base, background: '#0a5bd8', color: '#fff', fontStyle: 'italic', fontWeight: 900, fontSize: Math.round(size * 0.32), letterSpacing: '-0.04em' }}>BCA</div>
-  }
-  if (n === 'mandiri') {
+  if (LOGO[n]) {
     return (
-      <div style={{ ...base, background: '#0b2a6b', gap: 3 }}>
-        <span style={{ color: '#fff', fontWeight: 800, fontSize: Math.round(size * 0.2), letterSpacing: '-0.02em' }}>mandiri</span>
-        <span style={{ width: Math.round(size * 0.5), height: 3, borderRadius: 2, background: '#f5b800' }} />
+      <div style={{ ...base, background: '#fff', border: '1px solid rgba(0,0,0,0.06)' }}>
+        <img src={LOGO[n]} alt={name} draggable={false} style={{ width: '78%', maxHeight: '60%', objectFit: 'contain', display: 'block' }} />
       </div>
     )
+  }
+  if (n === 'cash') {
+    return <div style={{ ...base, background: '#16a34a' }}><Banknote size={Math.round(size * 0.5)} color="#fff" /></div>
   }
   if (n === 'bri') {
     return (
