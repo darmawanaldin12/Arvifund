@@ -15,7 +15,7 @@ export default function AtmCard({ bankName, saldo, userName, needsSetup, onClick
   const theme = CARD_THEME[bankName] || CARD_THEME.default
   const isNeg = saldo < 0
   return (
-    <div onClick={onClick} style={{
+    <div className="wallet-atm-card" onClick={onClick} style={{
       width: '100%', aspectRatio: '1.586 / 1', borderRadius: 18,
       background: theme.bg, padding: '18px 20px',
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
