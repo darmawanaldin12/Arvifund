@@ -3,12 +3,12 @@ import { ChevronRight } from 'lucide-react'
 import { fmtFull } from '../../lib/utils'
 
 export const CARD_THEME = {
-  BCA:     { bg: 'linear-gradient(135deg, #003d82 0%, #0066cc 60%, #0099ff 100%)', chip: '#f5c842', label: '#a8d4ff' },
-  Mandiri: { bg: 'linear-gradient(135deg, #1a3a00 0%, #2d6a00 60%, #4a9e00 100%)', chip: '#f5d442', label: '#b8e87a' },
-  BRI:     { bg: 'linear-gradient(135deg, #7a0000 0%, #c0001a 60%, #e8003d 100%)', chip: '#ffd700', label: '#ffb3c0' },
-  BNI:     { bg: 'linear-gradient(135deg, #001a4d 0%, #003399 60%, #0055cc 100%)', chip: '#f0c000', label: '#99bbff' },
-  Cash:    { bg: 'linear-gradient(135deg, #3a2a00 0%, #7a5a00 60%, #b88a00 100%)', chip: '#ffe066', label: '#ffe8a0' },
-  default: { bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)', chip: '#e0c97f', label: '#9eafd4' },
+  BCA:     { bg: 'linear-gradient(135deg, #06162c 0%, #0b2b50 58%, #075ca8 100%)', chip: '#d9e8f5', label: '#b8d8f5' },
+  Mandiri: { bg: 'linear-gradient(135deg, #101827 0%, #17304a 58%, #2764a5 100%)', chip: '#d9e8f5', label: '#c0d9f3' },
+  BRI:     { bg: 'linear-gradient(135deg, #211019 0%, #421b2c 58%, #812d4c 100%)', chip: '#ead9df', label: '#f0c4d3' },
+  BNI:     { bg: 'linear-gradient(135deg, #111827 0%, #1e3150 58%, #365d91 100%)', chip: '#e0e7ef', label: '#c5d5ed' },
+  Cash:    { bg: 'linear-gradient(135deg, #171717 0%, #292929 58%, #414141 100%)', chip: '#dedede', label: '#d4d4d4' },
+  default: { bg: 'linear-gradient(135deg, #111318 0%, #20242d 58%, #343b49 100%)', chip: '#dedfe4', label: '#c6cad4' },
 }
 
 export default function AtmCard({ bankName, saldo, userName, needsSetup, onClick }) {
