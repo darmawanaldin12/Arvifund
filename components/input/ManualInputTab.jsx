@@ -12,6 +12,9 @@ const TIPE_LIST = [
   { id: 'cash',    label: 'Tarik Tunai', Icon: Landmark },
 ]
 
+// Pilihan Bank / Dompet khusus input manual (urutan sesuai preferensi pengguna)
+const BANK_DOMPET_LIST = ['Mandiri', 'BCA', 'Cash'].filter(b => BANK_LIST.includes(b))
+
 // Bank yang bisa jadi sumber tarik tunai (exclude Cash)
 const BANK_ASAL_LIST = BANK_LIST.filter(b => b !== 'Cash')
 
@@ -159,7 +162,7 @@ export default function ManualInputTab({ tipe, setTipe, form, setF, profiles, sa
               {tipe === 'cash' ? 'Bank Asal (sumber tarik tunai)' : 'Bank / Dompet'}
             </label>
             <select id="manual-bank" className="form-select" value={form.bank} onChange={e => setF('bank', e.target.value)} style={{ height: 48 }}>
-              {(tipe === 'cash' ? BANK_ASAL_LIST : BANK_LIST).map(b => <option key={b}>{b}</option>)}
+              {(tipe === 'cash' ? BANK_ASAL_LIST : BANK_DOMPET_LIST).map(b => <option key={b}>{b}</option>)}
             </select>
           </div>
         </div>
