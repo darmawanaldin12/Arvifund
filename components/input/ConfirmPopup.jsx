@@ -1,5 +1,5 @@
 'use client'
-import { X, Check, PenLine, TrendingDown, TrendingUp, Landmark } from 'lucide-react'
+import { X, Check, PenLine, TrendingDown, TrendingUp, Landmark, AlertTriangle } from 'lucide-react'
 import GeminiIcon from '../GeminiIcon'
 import BottomSheet from './BottomSheet'
 import { useAmountInput } from '../../hooks/useAmountInput'
@@ -22,7 +22,7 @@ export default function ConfirmPopup({ parsedResult, setParsedResult, profiles, 
         {parsedResult.tipe === 'expense' ? 'Pengeluaran' : parsedResult.tipe === 'income' ? 'Pemasukan' : 'Tarik Tunai'}
       </span>
     )},
-    { label: 'Tanggal', value: parsedResult.tanggal },
+    { label: 'Tanggal', isDateInput: true },
     { label: parsedResult.tipe === 'income' ? 'Sumber' : parsedResult.tipe === 'cash' ? 'ATM / Lokasi' : 'Merchant', value: parsedResult.toko || '—' },
     { label: 'Uraian', value: parsedResult.uraian || '—' },
     { label: 'Jumlah', isAmountInput: true },
@@ -44,11 +44,19 @@ export default function ConfirmPopup({ parsedResult, setParsedResult, profiles, 
             <div style={{ fontSize: 11, color: 'var(--text3)' }}>Periksa sebelum simpan</div>
           </div>
         </div>
-        <button onClick={onCancel}
-          style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface2)', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={onCancel} aria-label="Tutup"
+          style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--surface2)', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <X size={16} />
         </button>
       </div>
+
+      {/* Tanggal hasil baca AI tidak wajar → sudah diganti hari ini; beri tahu supaya bisa dicek */}
+      {parsedResult.tanggalDikoreksi && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', marginBottom: 12, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: 10, color: 'var(--yellow)', fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+          <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>Tanggal di struk terbaca "{parsedResult.tanggalDikoreksi}" dan tidak wajar, jadi diganti ke tanggal hari ini. Ketuk tanggal untuk mengubahnya bila perlu.</span>
+        </div>
+      )}
 
       <div style={{ borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 16 }}>
         {rows.map((row, i, arr) => (
@@ -56,7 +64,11 @@ export default function ConfirmPopup({ parsedResult, setParsedResult, profiles, 
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none', fontSize: 13 }}>
             <span style={{ color: 'var(--text3)', fontWeight: 500 }}>{row.label}</span>
 
-            {row.isAmountInput ? (
+            {row.isDateInput ? (
+              <input type="date" value={parsedResult.tanggal || ''} aria-label="Tanggal transaksi"
+                onChange={e => setParsedResult(p => ({ ...p, tanggal: e.target.value, tanggalDikoreksi: null }))}
+                style={{ background: 'var(--bg)', color: 'var(--text1)', border: '1.5px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', outline: 'none', minHeight: 36 }} />
+            ) : row.isAmountInput ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                 <input type="text" inputMode="numeric"
                   value={confirmAmt.display} onChange={confirmAmt.onChange} onKeyDown={confirmAmt.onKeyDown}

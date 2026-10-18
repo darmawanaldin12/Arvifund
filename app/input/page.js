@@ -19,6 +19,34 @@ import { Sparkles, PenLine } from 'lucide-react'
 
 const TAB_ORDER = { ai: 0, manual: 1 }
 
+// ── Validasi tanggal transaksi (format YYYY-MM-DD, zona WIB) ──
+function isValidDate(t) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(t || '') && !isNaN(Date.parse(t + 'T00:00:00Z'))
+}
+// Selisih hari: positif = tanggal t di masa lalu, negatif = di masa depan
+function daysAgo(t, today) {
+  return Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(t + 'T00:00:00Z')) / 86400000)
+}
+// Tanggal hasil baca AI yang tak wajar (mis. tahun struk salah baca → 2018) diganti hari ini
+function fixTanggal(t, today) {
+  if (!isValidDate(t)) return { tanggal: today, original: t || '(kosong)' }
+  const d = daysAgo(t, today)
+  if (d < -1 || d > 45) return { tanggal: today, original: t }
+  return { tanggal: t, original: null }
+}
+// Pesan error kalau tanggal tidak boleh disimpan, atau null kalau aman
+function checkTanggal(t, today) {
+  if (!isValidDate(t)) return 'Tanggal tidak valid'
+  if (daysAgo(t, today) < -1) return 'Tanggal tidak boleh di masa depan'
+  return null
+}
+// Tanggal lebih dari 90 hari lalu: minta konfirmasi karena tidak akan muncul di periode berjalan
+function confirmOldDate(t, today) {
+  const d = daysAgo(t, today)
+  if (d <= 90) return true
+  return window.confirm(`Tanggal transaksi ${t} sudah ${d} hari yang lalu, jadi tidak akan muncul di periode berjalan. Tetap simpan dengan tanggal itu?`)
+}
+
 export default function InputPage() {
   const { user, profiles, loadData, expenses, budgetPlans, payPeriodDate, overrides } = useData()
   const [mode, setMode]         = useState('ai')
@@ -50,20 +78,29 @@ export default function InputPage() {
   const ai = useAIExtract({
     user, profiles, today,
     onModeChange: handleModeChange,
-    // Kategori hasil AI disamakan dengan kategori Budget Plan sebelum ditampilkan
+    // Kategori hasil AI disamakan dengan kategori Budget Plan, tanggal yang tak wajar diganti hari ini
     onResult: (result) => {
-      setParsedResult((result?.tipe || 'expense') === 'expense'
+      const fx   = fixTanggal(result?.tanggal, today)
+      const base = (result?.tipe || 'expense') === 'expense'
         ? { ...result, kategori: normalizeKategori(result.kategori) }
-        : result)
+        : result
+      setParsedResult({ ...base, tanggal: fx.tanggal, tanggalDikoreksi: fx.original })
       setShowConfirm(true)
     },
-    onTransferResult: (result) => { setParsedResult(result); setShowTransferConfirm(true) },
+    onTransferResult: (result) => {
+      const fx = fixTanggal(result?.tanggal, today)
+      setParsedResult({ ...result, tanggal: fx.tanggal, tanggalDikoreksi: fx.original })
+      setShowTransferConfirm(true)
+    },
   })
 
   async function handleConfirmSave() {
     setError('')
     if (!parsedResult.total || isNaN(parseFloat(parsedResult.total))) { setError('Total harus diisi'); return }
     if (!parsedResult.user_id) { setError('User harus dipilih'); return }
+    const tErr = checkTanggal(parsedResult.tanggal, today)
+    if (tErr) { setError(tErr); return }
+    if (!confirmOldDate(parsedResult.tanggal, today)) return
     setSaving(true)
     try {
       const bulan = getBulan(parsedResult.tanggal); const nilai = parseFloat(parsedResult.total); const t = parsedResult.tipe || 'expense'
@@ -105,6 +142,9 @@ export default function InputPage() {
       return setError('Rekening asal dan tujuan tidak boleh sama')
     if (!formData.jumlah || isNaN(parseFloat(formData.jumlah)) || parseFloat(formData.jumlah) <= 0)
       return setError('Jumlah harus lebih dari 0')
+    const tErr = checkTanggal(formData.tanggal, today)
+    if (tErr) return setError(tErr)
+    if (!confirmOldDate(formData.tanggal, today)) return
     setSaving(true)
     try {
       await insertTransfer({
@@ -126,6 +166,9 @@ export default function InputPage() {
     e.preventDefault(); setError('')
     if (!form.total || isNaN(parseFloat(form.total))) { setError('Total harus diisi'); return }
     if (!form.user_id) { setError('User harus dipilih'); return }
+    const tErr = checkTanggal(form.tanggal, today)
+    if (tErr) { setError(tErr); return }
+    if (!confirmOldDate(form.tanggal, today)) return
     setSaving(true)
     try {
       const bulan = getBulan(form.tanggal); const nilai = parseFloat(form.total)
