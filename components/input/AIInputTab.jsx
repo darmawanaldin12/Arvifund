@@ -126,7 +126,7 @@ export default function AIInputTab({
 
         {iosDevice && (
           <div style={S.iosTip}>
-            📱 <strong>iPhone:</strong> Tap tombol mikrofon → bicara → otomatis diproses. Berhenti otomatis setelah diam atau 10 detik.
+            📱 <strong>iPhone:</strong> Tap tombol mikrofon → bicara → tap lagi untuk berhenti. Rekaman otomatis berhenti setelah 10 detik, lalu langsung diproses AI.
           </div>
         )}
 
