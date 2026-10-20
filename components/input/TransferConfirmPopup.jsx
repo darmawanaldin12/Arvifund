@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ArrowLeftRight, Bot, X } from 'lucide-react'
+import { ArrowLeftRight, ArrowUpRight, ArrowDownLeft, Bot, Calendar, FileText, Landmark, X } from 'lucide-react'
 import { useAmountInput } from '../../hooks/useAmountInput'
 import BottomSheet from './BottomSheet'
 
@@ -9,6 +9,14 @@ const BANK_BY_USER = {
   '42b635cc-a32d-4b15-95d6-d9afb504a850': ['BCA', 'Mandiri', 'Cash'],
 }
 const DEFAULT_BANKS = ['BCA', 'Mandiri', 'BRI', 'Cash']
+
+// Gaya claymorphism (sama dengan ConfirmPopup): sudut besar + "tepi" 3D di bawah kartu/tombol.
+// Semua warna memakai token dari base.css, jadi otomatis mengikuti mode terang/gelap.
+const CLAY_CARD = { background: 'var(--surface2)', borderRadius: 26, boxShadow: '0 6px 0 var(--surface3)' }
+const CLAY_TILE = { background: 'var(--surface2)', borderRadius: 20, boxShadow: '0 4px 0 var(--surface3)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, minHeight: 60, minWidth: 0 }
+const BUBBLE = { width: 32, height: 32, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+const TILE_LABEL = { fontSize: 11, color: 'var(--text3)', fontWeight: 500, display: 'block', marginBottom: 2 }
+const FIELD = { background: 'var(--surface)', color: 'var(--text1)', border: '1.5px solid var(--border2)', borderRadius: 10, padding: '5px 10px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', outline: 'none', width: '100%', minHeight: 36 }
 
 export default function TransferConfirmPopup({ result, profiles, onSave, onCancel, saving, error }) {
   const [form, setForm] = useState({ ...result })
@@ -19,127 +27,142 @@ export default function TransferConfirmPopup({ result, profiles, onSave, onCance
   const isInternal = form.from_user === form.to_user && form.from_user !== ''
   const fromName = profiles.find(p => p.id === form.from_user)?.username || ''
   const toName   = profiles.find(p => p.id === form.to_user)?.username   || ''
+  const routeReady = form.from_user && form.to_user && form.from_bank && form.to_bank
 
   const transferAmt = useAmountInput(form.jumlah, v => setF('jumlah', v))
+  const amtColor = transferAmt.previewColor || 'var(--accent)'
 
   return (
     <BottomSheet onBackdropClick={onCancel}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bot size={22} color="var(--accent)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 14, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bot size={20} color="var(--accent)" />
+          </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>Transfer Terdeteksi</div>
             <div style={{ fontSize: 11, color: 'var(--text3)' }}>Periksa detail transfer</div>
           </div>
         </div>
-        <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
-          <X size={20} />
+        <button onClick={onCancel} aria-label="Tutup"
+          style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--surface2)', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <X size={18} />
         </button>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">Tanggal</label>
-        <input className="form-input" type="date" value={form.tanggal} onChange={e => setF('tanggal', e.target.value)} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
-        <div>
-          <label className="form-label">Dari</label>
-          <select className="form-select" value={form.from_user} onChange={e => {
-            const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS
-            setForm(f => ({ ...f, from_user: e.target.value, from_bank: b[0] || '' }))
-          }}>
-            <option value="">Pilih pengirim</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-          </select>
-        </div>
-        <div style={{ paddingBottom: 10, color: 'var(--text3)' }}><ArrowLeftRight size={16} /></div>
-        <div>
-          <label className="form-label">Ke</label>
-          <select className="form-select" value={form.to_user} onChange={e => {
-            const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS
-            setForm(f => ({ ...f, to_user: e.target.value, to_bank: b[0] || '' }))
-          }}>
-            <option value="">Pilih penerima</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end', marginBottom: 14 }}>
-        <div>
-          <label className="form-label">Rekening asal</label>
-          <select className="form-select" value={form.from_bank} onChange={e => setF('from_bank', e.target.value)} disabled={!form.from_user}>
-            {!form.from_user && <option value="">Pilih pengirim dulu</option>}
-            {fromBanks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-        <div style={{ paddingBottom: 10, color: 'var(--text3)' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </div>
-        <div>
-          <label className="form-label">Rekening tujuan</label>
-          <select className="form-select" value={form.to_bank} onChange={e => setF('to_bank', e.target.value)} disabled={!form.to_user}>
-            {!form.to_user && <option value="">Pilih penerima dulu</option>}
-            {toBanks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {form.from_user && form.to_user && form.from_bank && form.to_bank && (
-        <div style={{
-          padding: '8px 12px', marginBottom: 14,
-          background: isInternal ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)',
-          border: `1px solid ${isInternal ? 'rgba(245,158,11,0.3)' : 'rgba(56,189,248,0.3)'}`,
-          borderRadius: 8, fontSize: 12, color: 'var(--text2)'
-        }}>
-          {isInternal
-            ? `Pindah rekening ${fromName}: ${form.from_bank} → ${form.to_bank}`
-            : `${fromName} (${form.from_bank}) → ${toName} (${form.to_bank})`}
-        </div>
-      )}
-
-      <div className="form-group">
-        <label className="form-label">Jumlah</label>
-        <input
-          className="form-input"
-          type="text"
-          inputMode="numeric"
-          placeholder="0"
-          value={transferAmt.display}
-          onChange={transferAmt.onChange}
-          onKeyDown={transferAmt.onKeyDown}
-          style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}
-        />
-        {transferAmt.formatted && (
-          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: transferAmt.previewColor, textAlign: 'center', letterSpacing: '-0.02em', transition: 'color 0.2s' }}>
-            {transferAmt.formatted}
+      {/* Kartu utama: rute + jumlah */}
+      <div style={{ ...CLAY_CARD, padding: 16, marginBottom: 16 }}>
+        {routeReady && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 12px', marginBottom: 14, borderRadius: 14, background: isInternal ? 'var(--yellow-bg)' : 'var(--accent-light)', color: isInternal ? 'var(--yellow)' : 'var(--accent)', fontSize: 12, fontWeight: 700, textAlign: 'center', lineHeight: 1.4 }}>
+            <ArrowLeftRight size={13} style={{ flexShrink: 0 }} />
+            <span>
+              {isInternal
+                ? `Pindah rekening ${fromName}: ${form.from_bank} → ${form.to_bank}`
+                : `${fromName} (${form.from_bank}) → ${toName} (${form.to_bank})`}
+            </span>
           </div>
         )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <input type="text" inputMode="numeric" placeholder="0" aria-label="Jumlah transfer"
+            value={transferAmt.display} onChange={transferAmt.onChange} onKeyDown={transferAmt.onKeyDown}
+            style={{ background: 'var(--surface)', color: amtColor, border: '1.5px solid var(--border2)', borderRadius: 16, padding: '8px 14px', fontSize: 30, fontWeight: 800, fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: '100%', minHeight: 56, letterSpacing: '-0.01em' }} />
+          {transferAmt.formatted && (
+            <span style={{ fontSize: 12, color: amtColor, opacity: 0.85, fontWeight: 600 }}>{transferAmt.formatted}</span>
+          )}
+        </div>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">Catatan (opsional)</label>
-        <input className="form-input" type="text" placeholder="Contoh: buat belanja bulan ini"
-          value={form.catatan || ''} onChange={e => setF('catatan', e.target.value)} />
+      {/* Tile detail */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
+        <label style={{ ...CLAY_TILE, gridColumn: 'span 2' }}>
+          <span style={{ ...BUBBLE, background: 'var(--yellow-bg)', color: 'var(--yellow)' }}><Calendar size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Tanggal</span>
+            <input type="date" value={form.tanggal || ''} aria-label="Tanggal transfer"
+              onChange={e => setF('tanggal', e.target.value)}
+              style={{ background: 'transparent', color: 'var(--text1)', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', outline: 'none', width: '100%', minHeight: 24 }} />
+          </span>
+        </label>
+
+        <label style={CLAY_TILE}>
+          <span style={{ ...BUBBLE, background: 'var(--red-bg)', color: 'var(--red)' }}><ArrowUpRight size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Dari</span>
+            <select value={form.from_user} aria-label="Pengirim" style={FIELD} onChange={e => {
+              const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS
+              setForm(f => ({ ...f, from_user: e.target.value, from_bank: b[0] || '' }))
+            }}>
+              <option value="">Pilih pengirim</option>
+              {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
+            </select>
+          </span>
+        </label>
+
+        <label style={CLAY_TILE}>
+          <span style={{ ...BUBBLE, background: 'var(--green-bg)', color: 'var(--green)' }}><ArrowDownLeft size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Ke</span>
+            <select value={form.to_user} aria-label="Penerima" style={FIELD} onChange={e => {
+              const b = BANK_BY_USER[e.target.value] || DEFAULT_BANKS
+              setForm(f => ({ ...f, to_user: e.target.value, to_bank: b[0] || '' }))
+            }}>
+              <option value="">Pilih penerima</option>
+              {profiles.map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
+            </select>
+          </span>
+        </label>
+
+        <label style={CLAY_TILE}>
+          <span style={{ ...BUBBLE, background: 'var(--accent-light)', color: 'var(--accent)' }}><Landmark size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Rekening asal</span>
+            <select value={form.from_bank} aria-label="Rekening asal" style={{ ...FIELD, opacity: form.from_user ? 1 : 0.6 }}
+              onChange={e => setF('from_bank', e.target.value)} disabled={!form.from_user}>
+              {!form.from_user && <option value="">Pilih pengirim dulu</option>}
+              {fromBanks.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </span>
+        </label>
+
+        <label style={CLAY_TILE}>
+          <span style={{ ...BUBBLE, background: 'var(--orange-bg)', color: 'var(--orange)' }}><Landmark size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Rekening tujuan</span>
+            <select value={form.to_bank} aria-label="Rekening tujuan" style={{ ...FIELD, opacity: form.to_user ? 1 : 0.6 }}
+              onChange={e => setF('to_bank', e.target.value)} disabled={!form.to_user}>
+              {!form.to_user && <option value="">Pilih penerima dulu</option>}
+              {toBanks.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </span>
+        </label>
+
+        <label style={{ ...CLAY_TILE, gridColumn: 'span 2' }}>
+          <span style={{ ...BUBBLE, background: 'var(--accent-light)', color: 'var(--accent)' }}><FileText size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={TILE_LABEL}>Catatan (opsional)</span>
+            <input type="text" placeholder="Contoh: buat belanja bulan ini" aria-label="Catatan"
+              value={form.catatan || ''} onChange={e => setF('catatan', e.target.value)}
+              style={{ background: 'transparent', color: 'var(--text1)', border: 'none', padding: 0, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', outline: 'none', width: '100%', minHeight: 24 }} />
+          </span>
+        </label>
       </div>
 
       {error && (
-        <div style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 8, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>
+        <div style={{ padding: '10px 14px', marginBottom: 12, background: 'var(--red-bg)', borderRadius: 14, color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>
           {error}
         </div>
       )}
 
-      <button
-        onClick={() => onSave({ ...form, jumlah: form.jumlah })}
-        disabled={saving}
-        className="btn btn-primary btn-full"
-        style={{ height: 48, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-      >
-        <ArrowLeftRight size={18} />{saving ? 'Menyimpan...' : 'Simpan Transfer'}
-      </button>
+      <div style={{ paddingBottom: 8 }}>
+        <button
+          onClick={() => onSave({ ...form, jumlah: form.jumlah })}
+          disabled={saving}
+          className="btn btn-primary btn-full"
+          style={{ height: 52, fontSize: 15, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 5px 0 color-mix(in srgb, var(--accent) 70%, black)' }}
+        >
+          <ArrowLeftRight size={18} />{saving ? 'Menyimpan...' : 'Simpan Transfer'}
+        </button>
+      </div>
     </BottomSheet>
   )
 }
