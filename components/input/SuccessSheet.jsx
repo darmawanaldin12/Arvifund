@@ -1,9 +1,12 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Landmark, ArrowLeftRight } from 'lucide-react'
 import KategoriIcon, { KATEGORI_ICON_MAP } from '../ui/KategoriIcon'
 import { fmtFull, parseTanggal } from '../../lib/utils'
+
+// Aman dipakai di server (tidak memicu peringatan useLayoutEffect)
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 // Ikon, warna, dan label per jenis transaksi
 function metaOf(info) {
@@ -25,9 +28,23 @@ const CONFETTI = [
 // Gaya claymorphism (sama dengan form konfirmasi & edit): sudut besar + "tepi" 3D
 const CLAY_BTN = { height: 52, fontSize: 15, fontWeight: 700, borderRadius: 20 }
 
+// Timeline animasi (ms)
+const POP_MS      = 450   // badge centang muncul (pop)
+const DRAW_DELAY  = 350   // mulai menggambar garis centang
+const DRAW_MS     = 500   // durasi menggambar centang
+const COUNT_DELAY = 450   // mulai nominal naik dari 0
+const COUNT_MS    = 900   // durasi nominal naik
+const HAPTIC_AT   = 1000  // getar singkat di akhir
+
 /* Layar "Transaksi Berhasil Disimpan!" — menggantikan toast sebelumnya */
 export default function SuccessSheet({ info, onClose }) {
   const router = useRouter()
+  const badgeRef = useRef(null)
+  const checkRef = useRef(null)
+  // null = tampilkan nominal asli; angka = nilai sementara saat hitung naik
+  const [shownAmount, setShownAmount] = useState(null)
+  const open   = !!info
+  const amount = info?.amount
 
   useEffect(() => {
     if (!info) return
@@ -35,6 +52,66 @@ export default function SuccessSheet({ info, onClose }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [info, onClose])
+
+  // Animasi: centang tergambar + nominal naik dari 0 + getar halus (haptic)
+  useIsoLayoutEffect(() => {
+    if (!open) return
+    const badge = badgeRef.current
+    const check = checkRef.current
+    const showFinal = () => {
+      setShownAmount(null)
+      if (check) check.style.strokeDashoffset = '0'
+    }
+
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduce || !check?.animate) { showFinal(); return }
+
+    const anims = []
+    const timers = []
+    let raf = 0
+
+    // 1) Badge pop, lalu garis centang digambar pelan
+    if (badge?.animate) {
+      anims.push(badge.animate(
+        [{ transform: 'scale(0)' }, { transform: 'scale(1.12)', offset: 0.7 }, { transform: 'scale(1)' }],
+        { duration: POP_MS, easing: 'ease-out', fill: 'both' }
+      ))
+    }
+    anims.push(check.animate(
+      [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }],
+      { duration: DRAW_MS, delay: DRAW_DELAY, easing: 'ease-out', fill: 'both' }
+    ))
+
+    // 3) Nominal naik dari 0 sampai nilai akhir (ease-out)
+    const total = Math.round(Number(amount))
+    if (Number.isFinite(total) && total > 0) {
+      setShownAmount(0)
+      timers.push(setTimeout(() => {
+        const start = performance.now()
+        const tick = now => {
+          const t = Math.min(1, (now - start) / COUNT_MS)
+          if (t < 1) {
+            setShownAmount(Math.round(total * (1 - Math.pow(1 - t, 3))))
+            raf = requestAnimationFrame(tick)
+          } else {
+            setShownAmount(null)
+          }
+        }
+        raf = requestAnimationFrame(tick)
+      }, COUNT_DELAY))
+    }
+
+    // 7) Getar halus (hanya di perangkat/browser yang mendukung)
+    timers.push(setTimeout(() => {
+      try { navigator.vibrate?.(30) } catch {}
+    }, HAPTIC_AT))
+
+    return () => {
+      anims.forEach(a => a.cancel())
+      timers.forEach(clearTimeout)
+      cancelAnimationFrame(raf)
+    }
+  }, [open, amount])
 
   if (!info) return null
 
@@ -62,9 +139,15 @@ export default function SuccessSheet({ info, onClose }) {
         {/* Badge centang clay + titik warna */}
         <svg viewBox="0 0 200 120" role="img" aria-label="Berhasil" style={{ display: 'block', width: '100%', maxWidth: 260, margin: '0 auto' }}>
           {CONFETTI.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.r} fill={d.c} />)}
-          <rect x="64" y="30" width="72" height="72" rx="26" fill="#0b9467" />
-          <rect x="64" y="24" width="72" height="72" rx="26" fill="#10b981" />
-          <path d="M85 61 L96 72 L116 49" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+          <g ref={badgeRef} style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
+            <rect x="64" y="30" width="72" height="72" rx="26" fill="#0b9467" />
+            <rect x="64" y="24" width="72" height="72" rx="26" fill="#10b981" />
+            <path
+              ref={checkRef}
+              d="M85 61 L96 72 L116 49" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"
+              pathLength={1} style={{ strokeDasharray: 1, strokeDashoffset: 1 }}
+            />
+          </g>
         </svg>
 
         <h2 style={{ textAlign: 'center', margin: '4px 0 6px', fontSize: 22, fontWeight: 800, color: 'var(--text1)', letterSpacing: '-0.02em' }}>
@@ -89,8 +172,8 @@ export default function SuccessSheet({ info, onClose }) {
             </div>
           </div>
 
-          <div style={{ fontSize: 30, fontWeight: 800, color: amountColor, textAlign: 'center', margin: '18px 0', letterSpacing: '-0.02em' }}>
-            {m.sign}{m.sign ? ' ' : ''}{fmtFull(info.amount)}
+          <div style={{ fontSize: 30, fontWeight: 800, color: amountColor, textAlign: 'center', margin: '18px 0', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+            {m.sign}{m.sign ? ' ' : ''}{fmtFull(shownAmount ?? info.amount)}
           </div>
 
           {b && (
