@@ -96,12 +96,19 @@ export function DataProvider({ children }) {
   const periods       = buildPeriods(payPeriodDate, overrides)
   const [periodIdx, setPeriodIdx] = useState('')
 
+  // Periode aktif diset ke periode berjalan hanya saat profil pertama kali dimuat atau saat
+  // pengaturan periode gajian berubah. Sebelumnya efek ini bergantung pada objek `profile`,
+  // yang diganti baru setiap kali loadData() jalan (mis. setelah menyimpan budget), sehingga
+  // periode yang sedang dipilih user selalu kembali ke periode sekarang.
+  const periodSettingsKey = profile
+    ? `${profile.pay_period_date || 25}|${JSON.stringify(profile.pay_period_overrides || {})}`
+    : ''
   useEffect(() => {
-    if (profile) {
-      const idx = getCurrentPeriodIndex(profile.pay_period_date || 25, profile.pay_period_overrides || {})
-      setPeriodIdx(String(idx))
-    }
-  }, [profile])
+    if (!periodSettingsKey) return
+    const idx = getCurrentPeriodIndex(profile.pay_period_date || 25, profile.pay_period_overrides || {})
+    setPeriodIdx(String(idx))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodSettingsKey])
 
   const loadData = useCallback(async () => {
     try {
