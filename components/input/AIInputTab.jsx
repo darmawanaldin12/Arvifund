@@ -36,6 +36,14 @@ export default function AIInputTab({
 }) {
   const disabled = aiLoading || (!aiText.trim() && !imageFile)
 
+  // Ambil file lalu reset nilai input, supaya memilih foto yang sama lagi
+  // (mis. setelah dihapus) tetap memicu onChange
+  function onPickFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    handleImageFile(file)
+  }
+
   const S = {
     hintRow:    { fontSize: 12, color: 'var(--text3)', marginBottom: 3, lineHeight: 1.6 },
     hintAccent: { color: 'var(--accent)', fontWeight: 700 },
@@ -77,9 +85,9 @@ export default function AIInputTab({
           <ImageIcon size={17} />Pilih dari Galeri
         </button>
         <input id="input-page-camera"  type="file" accept="image/*" capture="environment"
-          onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
+          onChange={onPickFile} style={{ display: 'none' }} />
         <input id="input-page-gallery" type="file" accept="image/*"
-          onChange={e => handleImageFile(e.target.files?.[0])} style={{ display: 'none' }} />
+          onChange={onPickFile} style={{ display: 'none' }} />
 
         {imagePreview && (
           <div style={S.imgPreview}>
