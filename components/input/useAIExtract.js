@@ -431,7 +431,7 @@ export function useAIExtract({ user, profiles, today, onResult, onTransferResult
     aiText, setAiText, aiTextRef,
     aiLoading,
     extractProgress,
-    imageFile, setImageFile,
+    imageFile, setImageFile, imageFileRef,
     imagePreview, setImagePreview,
     isRecording, voiceSupported, iosDevice,
     error, setError,
