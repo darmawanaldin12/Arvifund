@@ -1,4 +1,13 @@
 /* Kompatibilitas WebView Android TV lama: tanpa `inset`, dan animasi tidak boleh meninggalkan konten transparan */
-.tv-root { top: 0; right: 0; bottom: 0; left: 0; }
+.tv-root, .tv-root * { box-sizing: border-box; }
+.tv-root { top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100vh; }
 .tv-chart-in { top: 0; right: 0; bottom: 0; left: 0; }
 .tv-main { animation: tvIn .45s ease; }
+/* `gap` pada flex belum didukung WebView lama — beri jarak lewat margin */
+.tv-footer > * + * { margin-top: 1vh; }
+.tv-tabs > * + * { margin-left: .5em; }
+.tv-header-mid > * + * { margin-left: .8em; }
+.tv-brand > * + * { margin-left: .7em; }
+.tv-leg > * + * { margin-left: .6em; }
+.tv-tx > * + * { margin-left: .8em; }
+.tv-title > * + * { margin-left: .7em; }
