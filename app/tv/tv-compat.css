@@ -1,0 +1,4 @@
+/* Kompatibilitas WebView Android TV lama: tanpa `inset`, dan animasi tidak boleh meninggalkan konten transparan */
+.tv-root { top: 0; right: 0; bottom: 0; left: 0; }
+.tv-chart-in { top: 0; right: 0; bottom: 0; left: 0; }
+.tv-main { animation: tvIn .45s ease; }

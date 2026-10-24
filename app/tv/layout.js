@@ -1,5 +1,6 @@
 'use client'
 import './tv.css'
+import './tv-compat.css'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
