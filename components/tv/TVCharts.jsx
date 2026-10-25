@@ -5,7 +5,11 @@ import {
   XAxis, YAxis, CartesianGrid, Legend,
   ResponsiveContainer, ReferenceLine, Area, AreaChart,
 } from 'recharts'
-import { C, fmtTick } from '../CarouselCharts'
+import { fmtTick } from '../CarouselCharts'
+
+// Palet TV: mint = masuk, coral = keluar, saffron = saldo, sky = pelengkap
+export const TV_COLORS = ['#f2c14e', '#7fd48a', '#ff7a66', '#6ec6d9', '#b79ced', '#e9a0c0', '#c9d36a']
+const K = { mint: '#7fd48a', coral: '#ff7a66', gold: '#f2c14e', sky: '#6ec6d9', teal: '#4f8f86' }
 
 // Ukuran font chart mengikuti lebar layar (TV biasanya 960–1920 px CSS)
 export function useTvFont() {
@@ -19,7 +23,7 @@ export function useTvFont() {
   return fs
 }
 
-const grid = { strokeDasharray: '3 3', stroke: 'var(--border)', vertical: false }
+const grid = { strokeDasharray: '2 5', stroke: 'var(--border)', vertical: false }
 const legendFmt = (v) => <span style={{ color: 'var(--text2)' }}>{v}</span>
 
 export function TvIncExp({ data }) {
@@ -30,20 +34,20 @@ export function TvIncExp({ data }) {
       <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="tvInc" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={C.green} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={C.green} stopOpacity={0} />
+            <stop offset="5%" stopColor={K.mint} stopOpacity={0.28} />
+            <stop offset="95%" stopColor={K.mint} stopOpacity={0} />
           </linearGradient>
           <linearGradient id="tvExp" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={C.red} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={C.red} stopOpacity={0} />
+            <stop offset="5%" stopColor={K.coral} stopOpacity={0.28} />
+            <stop offset="95%" stopColor={K.coral} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid {...grid} />
         <XAxis dataKey="label" tick={ax} tickLine={false} axisLine={false} />
         <YAxis tickFormatter={fmtTick} tick={ax} tickLine={false} axisLine={false} width={fs * 3.6} />
         <Legend iconType="circle" iconSize={fs * 0.7} wrapperStyle={{ fontSize: fs, paddingTop: 6 }} formatter={legendFmt} />
-        <Area type="monotone" dataKey="Income" stroke={C.green} strokeWidth={3} fill="url(#tvInc)" dot={{ r: 4, fill: C.green, strokeWidth: 0 }} />
-        <Area type="monotone" dataKey="Pengeluaran" stroke={C.red} strokeWidth={3} fill="url(#tvExp)" dot={{ r: 4, fill: C.red, strokeWidth: 0 }} />
+        <Area type="monotone" dataKey="Income" stroke={K.mint} strokeWidth={3.5} fill="url(#tvInc)" dot={{ r: 4, fill: K.mint, strokeWidth: 0 }} />
+        <Area type="monotone" dataKey="Pengeluaran" stroke={K.coral} strokeWidth={3.5} fill="url(#tvExp)" dot={{ r: 4, fill: K.coral, strokeWidth: 0 }} />
       </AreaChart>
     </ResponsiveContainer>
   )
@@ -53,21 +57,21 @@ export function TvSaldo({ data }) {
   const fs = useTvFont()
   const ax = { fontSize: fs, fill: 'var(--text3)' }
   const last = data[data.length - 1]?.Saldo || 0
-  const color = last >= 0 ? C.blue : C.red
+  const color = last >= 0 ? K.gold : K.coral
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="tvSaldo" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="5%" stopColor={color} stopOpacity={0.32} />
             <stop offset="95%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid {...grid} />
         <XAxis dataKey="label" tick={ax} tickLine={false} axisLine={false} />
         <YAxis tickFormatter={fmtTick} tick={ax} tickLine={false} axisLine={false} width={fs * 3.6} />
-        <ReferenceLine y={0} stroke={C.gray} strokeDasharray="4 3" />
-        <Area type="monotone" dataKey="Saldo" stroke={color} strokeWidth={3.5} fill="url(#tvSaldo)" dot={{ r: 4, fill: color, strokeWidth: 0 }} />
+        <ReferenceLine y={0} stroke="var(--text3)" strokeDasharray="4 3" />
+        <Area type="monotone" dataKey="Saldo" stroke={color} strokeWidth={4} fill="url(#tvSaldo)" dot={{ r: 4, fill: color, strokeWidth: 0 }} />
       </AreaChart>
     </ResponsiveContainer>
   )
@@ -99,7 +103,7 @@ export function TvDow({ data }) {
         <XAxis dataKey="label" tick={ax} tickLine={false} axisLine={false} />
         <YAxis tickFormatter={fmtTick} tick={ax} tickLine={false} axisLine={false} width={fs * 3.6} />
         <Bar dataKey="value" name="Rata-rata" radius={[6, 6, 0, 0]}>
-          {data.map((d, i) => <Cell key={i} fill={d.isPeak ? C.red : C.blue} opacity={d.isPeak ? 1 : 0.7} />)}
+          {data.map((d, i) => <Cell key={i} fill={d.isPeak ? K.coral : K.teal} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -110,7 +114,7 @@ export function TvMetode({ data }) {
   const fs = useTvFont()
   const ax = { fontSize: fs, fill: 'var(--text3)' }
   const keys = ['Cash', 'Transfer', 'QRIS']
-  const colors = [C.yellow, C.accent, C.green]
+  const colors = [K.gold, K.sky, K.mint]
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }} barCategoryGap="28%">

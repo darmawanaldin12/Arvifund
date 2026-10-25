@@ -3,8 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrendingDown, TrendingUp, ArrowLeftRight, Landmark } from 'lucide-react'
 import { useData } from '../../components/DataContext'
-import { DONUT_COLORS } from '../../components/CarouselCharts'
-import { TvIncExp, TvSaldo, TvDonut, TvDow, TvMetode } from '../../components/tv/TVCharts'
+import { TvIncExp, TvSaldo, TvDonut, TvDow, TvMetode, TV_COLORS } from '../../components/tv/TVCharts'
 import { AnimatedAmount } from '../../hooks/useCountUp'
 import {
   fmt, fmtFull, fmtTanggalShort, BULAN_ORDER, getMoMInfo, parseTanggal,
@@ -20,25 +19,25 @@ const ROTATE_MS  = 15000          // ganti slide tiap 15 detik
 const REFRESH_MS = 5 * 60 * 1000  // data diperbarui tiap 5 menit
 
 const SLIDES = [
-  { key: 'ringkasan', tab: 'Ringkasan',  title: 'Ringkasan Keuangan' },
-  { key: 'tren',      tab: 'Tren',       title: 'Tren Keuangan',        sub: 'periode gajian terakhir' },
-  { key: 'kategori',  tab: 'Kategori',   title: 'Kategori & Budget' },
-  { key: 'pola',      tab: 'Pola',       title: 'Pola Pengeluaran' },
-  { key: 'aktivitas', tab: 'Aktivitas',  title: 'Aktivitas Terbaru' },
+  { key: 'ringkasan', tab: 'Ringkasan', title: 'Ringkasan keuangan' },
+  { key: 'tren',      tab: 'Tren',      title: 'Tren keuangan' },
+  { key: 'kategori',  tab: 'Kategori',  title: 'Ke mana uang pergi' },
+  { key: 'pola',      tab: 'Pola',      title: 'Kapan uang paling banyak keluar' },
+  { key: 'aktivitas', tab: 'Aktivitas', title: 'Transaksi terbaru' },
 ]
 
 const TIPE = {
-  expense:  { color: 'var(--red)',    bg: 'rgba(244,63,94,.14)',  Icon: TrendingDown },
-  income:   { color: 'var(--green)',  bg: 'rgba(34,197,94,.14)',  Icon: TrendingUp },
-  transfer: { color: 'var(--accent)', bg: 'rgba(59,130,246,.16)', Icon: ArrowLeftRight },
-  cash:     { color: 'var(--yellow)', bg: 'rgba(245,158,11,.14)', Icon: Landmark },
+  expense:  { color: '#ff7a66', bg: 'rgba(255,122,102,.16)', Icon: TrendingDown },
+  income:   { color: '#7fd48a', bg: 'rgba(127,212,138,.16)', Icon: TrendingUp },
+  transfer: { color: '#6ec6d9', bg: 'rgba(110,198,217,.16)', Icon: ArrowLeftRight },
+  cash:     { color: '#f2c14e', bg: 'rgba(242,193,78,.16)',  Icon: Landmark },
 }
 
 function ChartBox({ children }) {
   return <div className="tv-chart"><div className="tv-chart-in">{children}</div></div>
 }
 
-const momCls = (m) => (m && (m.cls === 'good' || m.cls === 'mom-good') ? 'good' : 'bad')
+const momCls = (m) => (m && (m.cls === 'good' || m.cls === 'mom-good') ? 'good' : m && m.cls === 'bad' ? 'bad' : 'neutral')
 
 export default function TvPage() {
   const router = useRouter()
@@ -64,7 +63,6 @@ export default function TvPage() {
     setPeriodIdx(String(next))
   }, [periodIdx, payPeriodDate, overrides, periods.length, setPeriodIdx])
 
-  // Jam
   useEffect(() => {
     const tick = () => setClock(new Date())
     tick()
@@ -72,20 +70,17 @@ export default function TvPage() {
     return () => clearInterval(t)
   }, [])
 
-  // Auto-rotate slide
   useEffect(() => {
     if (paused || loading) return
     const t = setTimeout(() => go(1), ROTATE_MS)
     return () => clearTimeout(t)
   }, [cycle, paused, loading, go])
 
-  // Segarkan data berkala (tanpa layar loading, DataContext sudah menanganinya)
   useEffect(() => {
     const t = setInterval(() => loadData(), REFRESH_MS)
     return () => clearInterval(t)
   }, [loadData])
 
-  // Jaga layar tetap menyala (kalau browser/TV mendukung)
   useEffect(() => {
     let lock = null
     async function request() {
@@ -107,8 +102,8 @@ export default function TvPage() {
       switch (e.key) {
         case 'ArrowRight': go(1); break
         case 'ArrowLeft':  go(-1); break
-        case 'ArrowUp':    goPeriod(-1); break   // periode lebih baru
-        case 'ArrowDown':  goPeriod(1); break    // periode lebih lama
+        case 'ArrowUp':    goPeriod(-1); break
+        case 'ArrowDown':  goPeriod(1); break
         case 'Enter':
         case ' ':
         case 'MediaPlayPause':
@@ -138,9 +133,11 @@ export default function TvPage() {
   const budgetRef   = refPeriod ? budgetOfPeriod(budgetPlans, refPeriod) : 0
 
   const budgetPeriode = buildBudgetVsReal({ budgetPlans, expenses: refExpenses, period: refPeriod || null })
-  const sisaBudget    = budgetPeriode.totalAlokasi - budgetPeriode.totalRealisasi
   const budgetItems   = [...budgetPeriode.items].sort((a, b) => b.pct - a.pct)
   const budgetAlerts  = budgetItems.filter(b => b.pct >= 80)
+  const budgetPct     = budgetPeriode.totalAlokasi > 0 ? Math.round(budgetPeriode.totalRealisasi / budgetPeriode.totalAlokasi * 100) : null
+  const timePct       = totalHari > 0 ? Math.min(100, Math.round(hariBerjalan / totalHari * 100)) : 0
+  const budgetColor   = budgetPct === null ? 'var(--text3)' : budgetPct > timePct + 10 ? '#ff7a66' : budgetPct > timePct ? '#f2c14e' : '#7fd48a'
 
   const prevPeriod   = periods[refIdx + 1] || null
   const bulanLaluMom = prevPeriod ? BULAN_ORDER[prevPeriod.end.getMonth()] : ''
@@ -152,7 +149,7 @@ export default function TvPage() {
 
   const data12     = buildIncExpPeriode(expenses, income, periods)
   const dataSaldo  = buildSaldoPeriode(data12)
-  const pieData    = buildPieData(s, DONUT_COLORS)
+  const pieData    = buildPieData(s, TV_COLORS)
   const dataDow    = buildDowData(expenses)
   const dataMetode = buildMetodePeriode(expenses, periods)
   const pieTotal   = pieData.reduce((a, d) => a + (d.value || 0), 0)
@@ -166,11 +163,10 @@ export default function TvPage() {
     .sort((a, b) => (parseTanggal(b.tanggal)?.getTime() || 0) - (parseTanggal(a.tanggal)?.getTime() || 0))
     .slice(0, 10)
 
-  const kpis = [
-    { label: 'Total Pemasukan',   value: s.totalIncome,   cls: 'green',  mom: momIncome },
-    { label: 'Total Pengeluaran', value: s.totalExpenses, cls: 'red',    mom: momExpense, sub: `${s.expensesCount} transaksi` },
-    { label: 'Saldo Periode',     value: s.saldo,         cls: s.saldo >= 0 ? 'accent' : 'red', sub: 'pemasukan − pengeluaran' },
-    { label: 'Saldo Tahun Ini',   value: saldoTahun,      cls: saldoTahun >= 0 ? 'accent' : 'red', sub: 'total semua data' },
+  const ledger = [
+    { label: 'Pemasukan',          value: s.totalIncome,   cls: 'mint', mom: momIncome },
+    { label: 'Pengeluaran',        value: s.totalExpenses, cls: 'coral', mom: momExpense },
+    { label: 'Saldo tahun ini',    value: saldoTahun,      cls: saldoTahun >= 0 ? 'gold' : 'coral' },
   ]
 
   const timeStr = clock ? clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -186,63 +182,67 @@ export default function TvPage() {
         <div className="tv-brand">
           <img src="/logo.png" alt="" onError={e => { e.currentTarget.style.display = 'none' }} />
           Arvifund
-        </div>
-        <div className="tv-header-mid">
-          <div className="tv-period">{refPeriod?.label || 'Semua periode'}</div>
           {error && <span className="tv-err">Gagal menyegarkan data</span>}
         </div>
         <div className="tv-clock">{timeStr}<small>{dateStr}</small></div>
       </header>
 
       <main className="tv-main" key={cur.key}>
-        <div className="tv-title">{cur.title}{cur.sub && <span>{cur.sub}</span>}</div>
+        <div className="tv-title"><h1>{cur.title}</h1><span>{refPeriod?.label || 'Semua periode'}</span></div>
 
         {cur.key === 'ringkasan' && (
-          <div className="tv-grid s1">
-            {kpis.map(k => (
-              <div key={k.label} className="tv-card">
-                <h3>{k.label}</h3>
-                <div className={`tv-big ${k.cls}`}><AnimatedAmount value={k.value ?? 0} formatter={fmt} duration={900} /></div>
-                {k.sub && <div className="tv-sub">{k.sub}</div>}
-                {k.mom && <div className={`tv-mom ${momCls(k.mom)}`}>{k.mom.label} vs {bulanLaluMom}</div>}
+          <div className="tv-s1">
+            <section className="tv-hero">
+              <p className="tv-lab">Saldo periode ini</p>
+              <div className={`tv-hero-num ${s.saldo >= 0 ? 'gold' : 'coral'}`}>
+                {s.saldo < 0 ? '−' : ''}<AnimatedAmount value={Math.abs(s.saldo ?? 0)} formatter={fmt} duration={1100} />
               </div>
-            ))}
-            <div className="tv-card">
-              <h3>Rata-rata Harian</h3>
-              <div className="tv-big md yellow"><AnimatedAmount value={rataHarian} formatter={fmt} duration={900} /></div>
-              <div className="tv-sub">hari ke-{hariBerjalan} dari {totalHari}</div>
-            </div>
-            <div className="tv-card">
-              <h3>Proyeksi Akhir Periode</h3>
-              <div className={`tv-big md ${proyeksi > budgetRef && budgetRef > 0 ? 'red' : ''}`}><AnimatedAmount value={proyeksi} formatter={fmt} duration={900} /></div>
-              <div className="tv-sub">{budgetRef > 0 ? `budget ${fmt(budgetRef)}` : 'budget belum diatur'}</div>
-            </div>
-            <div className="tv-card">
-              <h3>Sisa Budget</h3>
-              {budgetPeriode.totalAlokasi > 0
-                ? <div className={`tv-big md ${sisaBudget < 0 ? 'red' : 'green'}`}>{sisaBudget < 0 ? '−' : ''}<AnimatedAmount value={Math.abs(sisaBudget)} formatter={fmt} duration={900} /></div>
-                : <div className="tv-big md">—</div>}
-              <div className="tv-sub">{sisaBudget < 0 && budgetPeriode.totalAlokasi > 0 ? 'melebihi budget' : 'dari total alokasi'}</div>
-            </div>
-            <div className="tv-card">
-              <h3>Jumlah Transaksi</h3>
-              <div className="tv-big md">{s.expensesCount}</div>
-              <div className="tv-sub">pengeluaran periode ini</div>
-            </div>
+              <p className="tv-hero-sub">pemasukan dikurangi pengeluaran</p>
+
+              <div className="tv-track">
+                <div className="tv-track-top"><span>Waktu berjalan</span><b>hari ke-{hariBerjalan} dari {totalHari}</b></div>
+                <div className="tv-bar"><i style={{ width: `${timePct}%`, background: 'var(--text3)' }} /></div>
+              </div>
+              {budgetPct !== null && (
+                <div className="tv-track">
+                  <div className="tv-track-top"><span>Budget terpakai</span><b>{budgetPct}%</b></div>
+                  <div className="tv-bar"><i style={{ width: `${Math.min(budgetPct, 100)}%`, background: budgetColor }} /></div>
+                </div>
+              )}
+              <p className="tv-hero-note">
+                Rata-rata pengeluaran {fmt(rataHarian)} per hari, proyeksi akhir periode {fmt(proyeksi)}
+                {budgetRef > 0 ? ` dari budget ${fmt(budgetRef)}` : ''}.
+              </p>
+            </section>
+
+            <section className="tv-ledger">
+              {ledger.map(r => (
+                <div key={r.label} className="tv-lrow">
+                  <span>{r.label}</span>
+                  <b className={r.cls}>{(r.value ?? 0) < 0 ? '−' : ''}<AnimatedAmount value={Math.abs(r.value ?? 0)} formatter={fmt} duration={900} /></b>
+                  {r.mom && <em className={momCls(r.mom)}>{r.mom.label} dibanding {bulanLaluMom}</em>}
+                </div>
+              ))}
+              <div className="tv-lrow">
+                <span>Jumlah transaksi</span>
+                <b>{s.expensesCount}</b>
+                <em className="neutral">pengeluaran periode ini</em>
+              </div>
+            </section>
           </div>
         )}
 
         {cur.key === 'tren' && (
           <div className="tv-grid s2">
-            <div className="tv-card"><h3>Income vs Pengeluaran</h3><ChartBox><TvIncExp data={data12} /></ChartBox></div>
-            <div className="tv-card"><h3>Saldo Kumulatif</h3><ChartBox><TvSaldo data={dataSaldo} /></ChartBox></div>
+            <div className="tv-card"><h3>Pemasukan dan pengeluaran</h3><ChartBox><TvIncExp data={data12} /></ChartBox></div>
+            <div className="tv-card"><h3>Saldo kumulatif</h3><ChartBox><TvSaldo data={dataSaldo} /></ChartBox></div>
           </div>
         )}
 
         {cur.key === 'kategori' && (
           <div className="tv-grid s3">
             <div className="tv-card">
-              <h3>Top Kategori <small>periode aktif</small></h3>
+              <h3>Pengeluaran per kategori</h3>
               <div className="tv-donut">
                 <ChartBox><TvDonut pieData={pieData} /></ChartBox>
                 <div className="tv-legend">
@@ -258,19 +258,19 @@ export default function TvPage() {
               </div>
             </div>
             <div className="tv-card">
-              <h3>Budget vs Realisasi <small>{refPeriod?.label}</small></h3>
+              <h3>Budget terpakai</h3>
               {budgetItems.length === 0
-                ? <div className="tv-empty">Belum ada budget plan</div>
+                ? <div className="tv-empty">Budget belum diatur</div>
                 : (
                   <div className="tv-bars">
                     {budgetItems.slice(0, 8).map(b => (
                       <div key={b.kategori}>
                         <div className="tv-bar-top">
                           <b>{b.kategori}</b>
-                          <span>{fmt(b.realisasi)} / {fmt(b.alokasi)} · {b.pct}%</span>
+                          <span>{fmt(b.realisasi)} dari {fmt(b.alokasi)}, {b.pct}%</span>
                         </div>
                         <div className="tv-bar">
-                          <i style={{ width: `${Math.min(b.pct, 100)}%`, background: b.pct >= 100 ? 'var(--red)' : b.pct >= 80 ? 'var(--yellow)' : 'var(--green)' }} />
+                          <i style={{ width: `${Math.min(b.pct, 100)}%`, background: b.pct >= 100 ? '#ff7a66' : b.pct >= 80 ? '#f2c14e' : '#7fd48a' }} />
                         </div>
                       </div>
                     ))}
@@ -282,15 +282,15 @@ export default function TvPage() {
 
         {cur.key === 'pola' && (
           <div className="tv-grid s4">
-            <div className="tv-card"><h3>Hari Paling Boros <small>rata-rata pengeluaran per hari</small></h3><ChartBox><TvDow data={dataDow} /></ChartBox></div>
-            <div className="tv-card"><h3>Metode Pembayaran <small>6 periode terakhir</small></h3><ChartBox><TvMetode data={dataMetode} /></ChartBox></div>
+            <div className="tv-card"><h3>Rata-rata pengeluaran per hari<small>hari tertinggi berwarna coral</small></h3><ChartBox><TvDow data={dataDow} /></ChartBox></div>
+            <div className="tv-card"><h3>Cara membayar<small>enam periode terakhir</small></h3><ChartBox><TvMetode data={dataMetode} /></ChartBox></div>
           </div>
         )}
 
         {cur.key === 'aktivitas' && (
           <div className="tv-grid s5">
             <div className="tv-card">
-              <h3>10 Transaksi Terakhir</h3>
+              <h3>10 transaksi terakhir</h3>
               {rows.length === 0
                 ? <div className="tv-empty">Belum ada transaksi</div>
                 : (
@@ -303,7 +303,7 @@ export default function TvPage() {
                           <div className="tv-tx-ic" style={{ background: t.bg }}><Ic size="1.2em" color={t.color} /></div>
                           <div className="tv-tx-info">
                             <b>{r.label}</b>
-                            <small>{fmtTanggalShort(r.tanggal)}{r.sub ? ` · ${r.sub}` : ''}</small>
+                            <small>{fmtTanggalShort(r.tanggal)}{r.sub ? `, ${r.sub}` : ''}</small>
                           </div>
                           <div className="tv-tx-amt" style={{ color: t.color }}>{r.tipe === 'income' ? '+' : '−'}{fmtFull(r.amount)}</div>
                         </div>
@@ -313,9 +313,9 @@ export default function TvPage() {
                 )}
             </div>
             <div className="tv-card">
-              <h3>Perlu Perhatian <small>budget ≥ 80%</small></h3>
+              <h3>Perlu diperhatikan<small>budget sudah 80% atau lebih</small></h3>
               {budgetAlerts.length === 0
-                ? <div className="tv-empty"><span className="tv-ok">✓ Semua budget masih aman</span></div>
+                ? <div className="tv-empty"><span className="tv-ok">Semua budget masih aman</span></div>
                 : (
                   <div className="tv-alerts">
                     {budgetAlerts.slice(0, 6).map(b => (
@@ -342,7 +342,7 @@ export default function TvPage() {
                 onClick={() => { setSlide(i); setCycle(c => c + 1) }}>{sl.tab}</button>
             ))}
           </div>
-          <div>◀ ▶ ganti slide · ▲ ▼ ganti periode · OK {paused ? 'lanjutkan' : 'jeda'} · diperbarui {updStr}</div>
+          <div>◀ ▶ slide   ▲ ▼ periode   OK {paused ? 'lanjutkan' : 'jeda'}   diperbarui {updStr}</div>
           <button className="tv-link" tabIndex={-1} onClick={exitTv}>Mode HP</button>
         </div>
       </footer>
