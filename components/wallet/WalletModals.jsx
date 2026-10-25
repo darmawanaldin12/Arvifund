@@ -58,7 +58,11 @@ export function TransferForm({ profiles, accounts, user, initial, onClose, onSav
     ? { ...initial, biaya_admin: initial.biaya_admin ?? 0 }
     : {
         tanggal: today, from_user: user?.id || '', to_user: '',
-        from_bank: '', to_bank: '', jumlah: '', catatan: '', biaya_admin: 0,
+        // from_user sudah terisi user yang login, jadi from_bank juga harus langsung
+        // terisi (bank pertama miliknya) — kalau tidak, select menampilkan opsi pertama
+        // tapi state-nya kosong dan validasi "Pilih rekening asal" gagal.
+        from_bank: accounts.find(a => a.user_id === user?.id)?.name || '',
+        to_bank: '', jumlah: '', catatan: '', biaya_admin: 0,
       })
   // Kalau ini edit transfer lama, anggap field biaya admin "sudah disentuh" —
   // biar nilai yang sudah ada tidak ketimpa auto-default 2500.
