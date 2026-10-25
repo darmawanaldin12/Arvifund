@@ -176,9 +176,11 @@ export default function BudgetPage() {
               <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--red)' }}>{fmt(totalRealisasi)}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Sisa</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
+                {totalAlokasi - totalRealisasi >= 0 ? 'Sisa' : 'Over'}
+              </div>
               <div style={{ fontSize: 16, fontWeight: 800, color: totalAlokasi - totalRealisasi >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                {fmt(totalAlokasi - totalRealisasi)}
+                {fmt(Math.abs(totalAlokasi - totalRealisasi))}
               </div>
             </div>
           </div>
@@ -281,7 +283,7 @@ export default function BudgetPage() {
                         {pct}% terpakai{pct >= 100 ? ' ⚠ over' : ''}
                       </span>
                       <span style={{ fontSize: 11, color: sisa >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
-                        Sisa {fmt(Math.abs(sisa))}
+                        {sisa >= 0 ? 'Sisa' : 'Over'} {fmt(Math.abs(sisa))}
                       </span>
                     </div>
                   </>
